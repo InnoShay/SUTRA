@@ -40,6 +40,16 @@ from app.schemas.case import (
     CaseReopenRequest,
 )
 from app.schemas.intervention import InterventionItem
+from app.schemas.ml import (
+    MLAttribution,
+    MLEvidenceCard,
+    MLModelInfo,
+    MLPredictRequest,
+    MLPredictBatchRequest,
+    MLPredictResponse,
+    DAY30_REQUIRED_FEATURES,
+    FORBIDDEN_LEAKED_FEATURES,
+)
 
 __all__ = [
     "HealthResponse",
@@ -82,4 +92,12 @@ __all__ = [
     "CaseOverrideRequest",
     "CaseReopenRequest",
     "InterventionItem",
+    "MLAttribution",
+    "MLEvidenceCard",
+    "MLModelInfo",
+    "MLPredictRequest",
+    "MLPredictBatchRequest",
+    "MLPredictResponse",
+    "DAY30_REQUIRED_FEATURES",
+    "FORBIDDEN_LEAKED_FEATURES",
 ]

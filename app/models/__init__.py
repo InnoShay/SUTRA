@@ -7,6 +7,7 @@ from app.models.signal import EvidencePacket, Signal
 from app.models.case import InterventionCatalog, Case, CaseTask, RestrictedTaskDetail, CaseEvent
 from app.models.followup import FollowUp, CaseOutcome
 from app.models.outbox import NotificationOutbox
+from app.models.ml import MLInferenceLog
 
 __all__ = [
     "Base",
@@ -28,4 +29,5 @@ __all__ = [
     "FollowUp",
     "CaseOutcome",
     "NotificationOutbox",
+    "MLInferenceLog",
 ]

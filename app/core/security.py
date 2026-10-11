@@ -140,3 +140,16 @@ def require_roles(allowed_roles: List[str]):
         return membership
 
     return role_checker
+
+
+def require_role(*roles: str):
+    """Convenience variadic alias for require_roles."""
+    return require_roles(list(roles))
+
+
+async def require_campus_access(
+    membership: CampusMembershipContext = Depends(get_campus_membership),
+) -> uuid.UUID:
+    """Dependency that verifies active campus membership and returns the campus UUID."""
+    return membership.campus_id
+

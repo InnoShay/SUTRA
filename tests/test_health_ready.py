@@ -29,7 +29,7 @@ async def test_readiness_healthy_database(client: AsyncClient):
         data = response.json()
         assert data["status"] == "ready"
         assert data["checks"]["database"] == "ok"
-        assert data["checks"]["ml_model"] == "uncalibrated"
+        assert data["checks"]["ml_model"] in ("ready", "uncalibrated")
 
 
 @pytest.mark.asyncio

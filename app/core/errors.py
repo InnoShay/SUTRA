@@ -59,3 +59,23 @@ class StateConflictError(SutraException):
             code=code,
             message=message,
         )
+
+
+class UnprocessableEntityError(SutraException):
+    def __init__(self, message: str = "Unprocessable entity", code: str = "UNPROCESSABLE_ENTITY", details: Optional[List[Any]] = None):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code=code,
+            message=message,
+            details=details,
+        )
+
+
+class ServiceUnavailableError(SutraException):
+    def __init__(self, message: str = "Service currently unavailable", code: str = "SERVICE_UNAVAILABLE"):
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code=code,
+            message=message,
+        )
+

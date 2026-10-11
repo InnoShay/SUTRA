@@ -124,6 +124,22 @@ def create_application() -> FastAPI:
     # Mount API v1 router
     app.include_router(api_router, prefix=settings.API_V1_STR)
 
+    # Root-level backwards compatibility route aliases (ADR-005, ADR-001)
+    from app.ml.service import ml_service
+    from app.schemas.ml import MLPredictBatchRequest, MLPredictRequest
+
+    @app.get("/model-info", tags=["ML Compatibility"])
+    async def root_model_info():
+        return ml_service.get_metadata()
+
+    @app.post("/predict", tags=["ML Compatibility"])
+    async def root_predict(payload: MLPredictRequest):
+        return ml_service.predict_single(payload)
+
+    @app.post("/predict/batch", tags=["ML Compatibility"])
+    async def root_predict_batch(payload: MLPredictBatchRequest):
+        return ml_service.predict_batch(payload)
+
     return app
 
 

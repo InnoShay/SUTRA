@@ -226,11 +226,37 @@ class PolicyEngineService:
         db.add(packet)
         await db.flush()
 
+        # Check if ML Day-30 early warning can be evaluated
+        from app.ml.service import ml_service
+        from app.schemas.ml import DAY30_REQUIRED_FEATURES, MLPredictRequest
+        from app.core.logging import logger
+
+        ml_evidence = None
+        has_all_ml_features = all(k in metrics for k in DAY30_REQUIRED_FEATURES)
+        if has_all_ml_features and ml_service.get_status() == "ready":
+            try:
+                ml_req = MLPredictRequest(
+                    external_student_ref=student.external_ref,
+                    cutoff_days=30,
+                    features={k: metrics[k] for k in DAY30_REQUIRED_FEATURES},
+                )
+                ml_resp = ml_service.predict_single(ml_req, institution_id=campus_id)
+                ml_evidence = ml_resp.evidence_card.model_dump()
+            except Exception as ml_err:
+                logger.warning(f"ML evaluation skipped during policy run: {ml_err}")
+                ml_evidence = None
+
         explanation = {
             "summary": f"Deterministic evaluation triggered {len(triggered_rules)} rule(s).",
             "triggered_rules": triggered_rules,
             "metrics": metrics,
             "cutoff_used": cutoff.isoformat(),
+            "ml_evidence_card": ml_evidence,
+            "ml_applicability": (
+                "evaluated"
+                if ml_evidence
+                else ("insufficient_oulad_features" if not has_all_ml_features else "ml_service_uncalibrated")
+            ),
         }
 
         evidence_card = EvidenceCardDTO(
