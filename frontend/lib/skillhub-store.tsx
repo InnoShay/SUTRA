@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   Course,
   Student,
@@ -10,6 +10,26 @@ import {
   INITIAL_DISCUSSIONS,
   CURRENT_USER,
 } from "./skillhub-data";
+import {
+  UserRole,
+  SignalDTO,
+  CaseDetailDTO,
+  InterventionItem,
+  MLModelInfo,
+  SignalReviewRequest,
+  SignalReviewResponse,
+  CaseAssignmentRequest,
+  AcceptAssignmentRequest,
+  CaseTransitionRequest,
+  CreateTaskRequest,
+  CaseTaskDTO,
+  FollowUpRequest,
+  FollowUpDTO,
+  OutcomeRequest,
+  CaseOutcomeDTO,
+} from "./types";
+import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
+import { api } from "./api";
 
 export interface NotificationItem {
   id: string;
@@ -38,22 +58,22 @@ export interface DiscussionComment {
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-1",
-    title: "New student enrollment",
-    desc: "Marvin McKinney enrolled in Typography Masterclass",
+    title: "New Student Signal Triggered",
+    desc: "Asha (SYN-1007) attendance dropped below 70% Day-30 threshold",
     time: "10m ago",
     unread: true,
   },
   {
     id: "notif-2",
-    title: "Live session starting soon",
-    desc: "Advanced UI/UX Design scheduled for Today, 10:00 AM",
+    title: "SLA Deadline Warning",
+    desc: "Case CASE-2026-089 has 36 hours remaining on mentor follow-up",
     time: "25m ago",
     unread: true,
   },
   {
     id: "notif-3",
-    title: "New community reply",
-    desc: "Albert Flores replied to 'How can AI improve UX research?'",
+    title: "ML Model v1.0.0 Ready",
+    desc: "Baseline Logistic Regression operational at 0.46 decision threshold",
     time: "1h ago",
     unread: false,
   },
@@ -64,36 +84,14 @@ const INITIAL_MESSAGES: Record<string, StudentMessage[]> = {
     {
       id: "m-1",
       sender: "student",
-      text: "Hi Sarah! I just finished Module 2 on Font Pairings. The hierarchy guide was super helpful!",
+      text: "Hi Prof. Sharma! I will attend the academic check-in on Wednesday.",
       time: "10:15 AM",
     },
     {
       id: "m-2",
       sender: "user",
-      text: "Great work Marvin! Make sure to experiment with variable weight optical sizing on the headline project.",
+      text: "Great! Please review the lab practical materials beforehand.",
       time: "10:20 AM",
-    },
-  ],
-  "stu-2": [
-    {
-      id: "m-3",
-      sender: "student",
-      text: "Hey Sarah, will today's Live Session on Design Tokens be recorded?",
-      time: "9:45 AM",
-    },
-    {
-      id: "m-4",
-      sender: "user",
-      text: "Yes Albert! All live sessions and whiteboards are automatically uploaded to your student portal.",
-      time: "9:50 AM",
-    },
-  ],
-  "stu-3": [
-    {
-      id: "m-5",
-      sender: "student",
-      text: "Thank you for the review notes on my portfolio handoff!",
-      time: "Yesterday",
     },
   ],
 };
@@ -102,19 +100,11 @@ const INITIAL_COMMENTS: Record<string, DiscussionComment[]> = {
   "disc-featured": [
     {
       id: "c-1",
-      author: "Albert Flores",
+      author: "Dr. Rajeshwar Rao",
       authorAvatar: "/assets/avatar-albert.jpg",
-      text: "AI transcript clustering cut down our qualitative affinity mapping time by almost 60%. Essential for fast user interviews!",
+      text: "SLA deadlines are strictly enforced by the Outbox worker daemon. Let's resolve the pending check-ins today.",
       timeAgo: "2h ago",
       likes: 14,
-    },
-    {
-      id: "c-2",
-      author: "Bessie Cooper",
-      authorAvatar: "/assets/avatar-bessie.jpg",
-      text: "Agree, but human synthesis is still irreplaceable when interpreting subtle vocal hesitations and user friction points.",
-      timeAgo: "1h ago",
-      likes: 9,
     },
   ],
 };
@@ -122,6 +112,29 @@ const INITIAL_COMMENTS: Record<string, DiscussionComment[]> = {
 export type TimeframeOption = "This Week" | "This Month" | "This Year";
 
 interface SkillHubContextType {
+  // SUTRA RBAC & Backend State
+  activeRole: UserRole;
+  setActiveRole: (role: UserRole) => void;
+  currentPersona: DemoPersona;
+  backendConnected: boolean;
+  isLoadingBackend: boolean;
+  backendError: string | null;
+  signals: SignalDTO[];
+  cases: CaseDetailDTO[];
+  interventions: InterventionItem[];
+  mlModelInfo: MLModelInfo | null;
+  refreshBackendData: () => Promise<void>;
+
+  // SUTRA Workflow Actions
+  reviewSignal: (id: string, req: SignalReviewRequest) => Promise<SignalReviewResponse>;
+  assignCase: (id: string, req: CaseAssignmentRequest) => Promise<CaseDetailDTO>;
+  acceptCase: (id: string, req?: AcceptAssignmentRequest) => Promise<CaseDetailDTO>;
+  transitionCase: (id: string, req: CaseTransitionRequest) => Promise<CaseDetailDTO>;
+  createCaseTask: (id: string, req: CreateTaskRequest) => Promise<CaseTaskDTO>;
+  recordCaseFollowUp: (id: string, req: FollowUpRequest) => Promise<FollowUpDTO>;
+  recordCaseOutcome: (id: string, req: OutcomeRequest) => Promise<CaseOutcomeDTO>;
+
+  // Existing UI compatibility state
   user: typeof CURRENT_USER;
   updateUser: (data: Partial<typeof CURRENT_USER>) => void;
   courses: Course[];
@@ -174,7 +187,29 @@ interface SkillHubContextType {
 const SkillHubContext = createContext<SkillHubContextType | undefined>(undefined);
 
 export function SkillHubProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState(CURRENT_USER);
+  // 1. Role and Authentication State
+  const [activeRole, setActiveRoleState] = useState<UserRole>("faculty");
+  const currentPersona = DEMO_PERSONAS[activeRole] || DEMO_PERSONAS.faculty;
+
+  const [backendConnected, setBackendConnected] = useState<boolean>(false);
+  const [isLoadingBackend, setIsLoadingBackend] = useState<boolean>(true);
+  const [backendError, setBackendError] = useState<string | null>(null);
+
+  // SUTRA Data Entities
+  const [signals, setSignals] = useState<SignalDTO[]>([]);
+  const [cases, setCases] = useState<CaseDetailDTO[]>([]);
+  const [interventions, setInterventions] = useState<InterventionItem[]>([]);
+  const [mlModelInfo, setMlModelInfo] = useState<MLModelInfo | null>(null);
+
+  // Existing UI compatibility state
+  const [user, setUser] = useState({
+    ...CURRENT_USER,
+    name: currentPersona.name.split(" ")[0],
+    fullName: currentPersona.name,
+    role: currentPersona.title,
+    avatar: currentPersona.avatar,
+  });
+
   const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES);
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
   const [discussions, setDiscussions] = useState<CommunityDiscussion[]>(INITIAL_DISCUSSIONS);
@@ -196,6 +231,163 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const setActiveRole = (newRole: UserRole) => {
+    setActiveRoleState(newRole);
+    const persona = DEMO_PERSONAS[newRole];
+    api.setToken(persona.token);
+    api.setCampusId(DEMO_CAMPUS_ID);
+    setUser({
+      ...CURRENT_USER,
+      name: persona.name.split(" ")[0],
+      fullName: persona.name,
+      role: persona.title,
+      avatar: persona.avatar,
+    });
+  };
+
+  // Sync with Backend
+  const refreshBackendData = async () => {
+    setIsLoadingBackend(true);
+    setBackendError(null);
+    try {
+      api.setToken(currentPersona.token);
+      api.setCampusId(DEMO_CAMPUS_ID);
+
+      // Check health
+      await api.health.check();
+      setBackendConnected(true);
+
+      // Fetch model info & interventions
+      try {
+        const [info, intList] = await Promise.all([
+          api.ml.getModelInfo(),
+          api.interventions.list(),
+        ]);
+        setMlModelInfo(info);
+        setInterventions(intList);
+      } catch (e) {
+        console.warn("Non-fatal error loading model info or interventions:", e);
+      }
+
+      // Fetch signals and cases
+      try {
+        const [sigList, caseList] = await Promise.all([
+          api.signals.list(),
+          api.cases.list(),
+        ]);
+        setSignals(sigList);
+        setCases(caseList);
+      } catch (e) {
+        console.warn("Non-fatal error loading signals/cases:", e);
+      }
+
+      // Fetch students if allowed for current role (Leadership is suppressed per Phase 4)
+      if (currentPersona.canViewIndividualStudents) {
+        try {
+          const rawStus = await api.students.list({ limit: 50 });
+          if (rawStus && rawStus.length > 0) {
+            // Map backend students into UI format
+            const mappedStudents: Student[] = rawStus.map((rs, idx) => {
+              const matchingCase = cases.find((c) => c.student_id === rs.id);
+              const matchingSignal = signals.find((s) => s.student_id === rs.id);
+
+              let statusText: Student["status"] = "Active";
+              if (matchingCase?.is_escalated || matchingSignal?.result === "concern") {
+                statusText = "At Risk";
+              } else if (rs.enrollment_status === "completed") {
+                statusText = "Completed";
+              } else if (rs.enrollment_status === "inactive") {
+                statusText = "Inactive";
+              }
+
+              return {
+                id: rs.id,
+                name: rs.display_name,
+                email: `${rs.external_ref.toLowerCase()}@sutra.edu`,
+                course: rs.cohort_code ? `Cohort ${rs.cohort_code}` : "Computer Science (UG)",
+                progress: matchingSignal?.result === "concern" ? 42 : 78,
+                status: statusText,
+                avatar: INITIAL_STUDENTS[idx % INITIAL_STUDENTS.length]?.avatar || "/assets/avatar-sarah.jpg",
+                isOnline: idx % 2 === 0,
+                enrolledDate: "August 2026",
+                lastActive: "Today",
+                grade: matchingSignal?.result === "concern" ? "C-" : "A",
+                attendance: matchingSignal?.result === "concern" ? "58%" : "92%",
+                completedLessons: 6,
+                totalLessons: 12,
+                bio: `Student ID: ${rs.external_ref} • Active Enrollment`,
+              };
+            });
+
+            // Merge with initial rich mock students so UI remains visually complete
+            const combined = [
+              ...mappedStudents,
+              ...INITIAL_STUDENTS.filter(
+                (is) => !mappedStudents.some((ms) => ms.name.toLowerCase() === is.name.toLowerCase())
+              ),
+            ];
+            setStudents(combined);
+          }
+        } catch (e: any) {
+          console.warn("Could not load student roster:", e);
+        }
+      }
+    } catch (err: any) {
+      console.warn("Backend API not reachable; operating in local mode:", err);
+      setBackendConnected(false);
+      setBackendError(err.message || "Backend offline");
+    } finally {
+      setIsLoadingBackend(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshBackendData();
+  }, [activeRole]);
+
+  // Workflow Handlers
+  const reviewSignal = async (id: string, req: SignalReviewRequest): Promise<SignalReviewResponse> => {
+    const res = await api.signals.review(id, req);
+    await refreshBackendData();
+    return res;
+  };
+
+  const assignCase = async (id: string, req: CaseAssignmentRequest): Promise<CaseDetailDTO> => {
+    const res = await api.cases.assign(id, req);
+    await refreshBackendData();
+    return res;
+  };
+
+  const acceptCase = async (id: string, req?: AcceptAssignmentRequest): Promise<CaseDetailDTO> => {
+    const res = await api.cases.accept(id, req);
+    await refreshBackendData();
+    return res;
+  };
+
+  const transitionCase = async (id: string, req: CaseTransitionRequest): Promise<CaseDetailDTO> => {
+    const res = await api.cases.transition(id, req);
+    await refreshBackendData();
+    return res;
+  };
+
+  const createCaseTask = async (id: string, req: CreateTaskRequest): Promise<CaseTaskDTO> => {
+    const res = await api.cases.createTask(id, req);
+    await refreshBackendData();
+    return res;
+  };
+
+  const recordCaseFollowUp = async (id: string, req: FollowUpRequest): Promise<FollowUpDTO> => {
+    const res = await api.cases.recordFollowUp(id, req);
+    await refreshBackendData();
+    return res;
+  };
+
+  const recordCaseOutcome = async (id: string, req: OutcomeRequest): Promise<CaseOutcomeDTO> => {
+    const res = await api.cases.recordOutcome(id, req);
+    await refreshBackendData();
+    return res;
+  };
+
   const updateUser = (data: Partial<typeof CURRENT_USER>) => {
     setUser((prev) => ({
       ...prev,
@@ -210,16 +402,6 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       id: `course-${Date.now()}`,
     };
     setCourses((prev) => [course, ...prev]);
-
-    // Automatically generate notification
-    const newNotif: NotificationItem = {
-      id: `notif-${Date.now()}`,
-      title: "Course Published",
-      desc: `"${newCourse.title}" is now available to learners worldwide`,
-      time: "Just now",
-      unread: true,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
   };
 
   const updateCourseStatus = (id: string, status: Course["status"]) => {
@@ -264,15 +446,6 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       id: `disc-${Date.now()}`,
     };
     setDiscussions((prev) => [discussion, ...prev]);
-
-    const newNotif: NotificationItem = {
-      id: `notif-${Date.now()}`,
-      title: "Community Post Live",
-      desc: `Your discussion "${newDiscussion.title}" was posted`,
-      time: "Just now",
-      unread: true,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
   };
 
   const updateStudentStatus = (id: string, status: Student["status"]) => {
@@ -290,21 +463,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       id: `stud-${Date.now()}`,
     };
     setStudents((prev) => [student, ...prev]);
-
-    setNotifications((prev) => [
-      {
-        id: `notif-${Date.now()}`,
-        title: "Student Enrolled",
-        desc: `${newStudent.name} enrolled in ${newStudent.course}`,
-        time: "Just now",
-        unread: true,
-      },
-      ...prev,
-    ]);
   };
 
   const deleteStudent = (id: string) => {
-    setStudents((prev) => prev.filter((s) => s.id !== id));
+    setStudents((prev) => prev.filter((c) => c.id !== id));
     if (selectedStudent?.id === id) {
       setSelectedStudent(null);
     }
@@ -322,34 +484,6 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       ...prev,
       [studentId]: [...(prev[studentId] || []), userMsg],
     }));
-
-    // Simulate smart auto-reply from student after 1.5 seconds for true dynamic UX
-    setTimeout(() => {
-      const student = students.find((s) => s.id === studentId);
-      const studentName = student ? student.name.split(" ")[0] : "Student";
-      const autoReply: StudentMessage = {
-        id: `m-${Date.now() + 1}`,
-        sender: "student",
-        text: `Thanks Sarah! Appreciate the feedback on my coursework. Working on it right now!`,
-        time: "Just now",
-      };
-
-      setStudentMessages((prev) => ({
-        ...prev,
-        [studentId]: [...(prev[studentId] || []), autoReply],
-      }));
-
-      setNotifications((prev) => [
-        {
-          id: `notif-${Date.now()}`,
-          title: `Reply from ${studentName}`,
-          desc: autoReply.text,
-          time: "Just now",
-          unread: true,
-        },
-        ...prev,
-      ]);
-    }, 1500);
   };
 
   const addDiscussionComment = (discussionId: string, text: string) => {
@@ -404,6 +538,24 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   return (
     <SkillHubContext.Provider
       value={{
+        activeRole,
+        setActiveRole,
+        currentPersona,
+        backendConnected,
+        isLoadingBackend,
+        backendError,
+        signals,
+        cases,
+        interventions,
+        mlModelInfo,
+        refreshBackendData,
+        reviewSignal,
+        assignCase,
+        acceptCase,
+        transitionCase,
+        createCaseTask,
+        recordCaseFollowUp,
+        recordCaseOutcome,
         user,
         updateUser,
         courses,

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useSkillHub } from "@/lib/store";
 import { SkillHubProgressBar } from "./SkillHubProgressBar";
 import {
@@ -13,6 +14,8 @@ import {
   CheckCircle2,
   Award,
   BookOpen,
+  ArrowUpRight,
+  ShieldAlert,
 } from "lucide-react";
 
 export function StudentProfileModal() {
@@ -108,6 +111,24 @@ export function StudentProfileModal() {
 
         {/* Modal Body */}
         <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
+          {/* SUTRA 360 View Banner */}
+          <div className="flex items-center justify-between p-3.5 bg-neutral-900 text-white rounded-2xl shadow-sm">
+            <div>
+              <div className="text-xs font-bold">360° Support View & Telemetry</div>
+              <div className="text-[10px] text-neutral-400">
+                Inspect 6-domain observations, data freshness, active signals & cases
+              </div>
+            </div>
+            <Link
+              href={`/students/${selectedStudent.id}`}
+              onClick={() => setSelectedStudent(null)}
+              className="px-3 py-1.5 bg-white text-neutral-900 rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-neutral-100 transition-colors whitespace-nowrap"
+            >
+              <span>Inspect</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
           {/* Enrolled Course & Progress */}
           <div className="bg-neutral-50/80 rounded-2xl p-4 border border-neutral-100">
             <div className="flex items-center justify-between mb-2">

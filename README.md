@@ -125,6 +125,26 @@ Interactive API documentation will be available at:
 - ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 - Health check: [http://localhost:8000/health](http://localhost:8000/health)
 
+### Running the Frontend (Next.js 14 App Router)
+
+The adapted frontend integrates with the verified backend while preserving its Apple-inspired aesthetic and design tokens:
+
+```bash
+cd frontend
+npm install
+npm test       # Runs TypeScript type-check and SUTRA contract validation
+npm run dev    # Starts local Next.js dev server on http://localhost:3000
+npm run build  # Compiles optimized production bundle
+```
+
+### Seeding Synthetic Demo Fixtures
+
+To populate local development with multi-campus students, policy engine signals, and active support cases:
+
+```bash
+python scripts/seed_demo_data.py --fixture docs/fixtures/demo_seed.json
+```
+
 ---
 
 ## 🧪 Running Automated Tests

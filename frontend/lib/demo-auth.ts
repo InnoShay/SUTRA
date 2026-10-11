@@ -1,0 +1,102 @@
+/**
+ * SUTRA Demo Authenticated Personas & Tokens.
+ * Provides cryptographically valid JWT tokens signed with development secret
+ * matching app/core/config.py SUPABASE_JWT_SECRET for zero-friction local testing.
+ */
+
+import { UserRole } from './types';
+
+export const DEMO_CAMPUS_ID = '00000000-0000-0000-0000-000000000001';
+
+export interface DemoPersona {
+  role: UserRole;
+  name: string;
+  title: string;
+  email: string;
+  userId: string;
+  avatar: string;
+  badge: string;
+  token: string;
+  canViewIndividualStudents: boolean;
+  canReassignCases: boolean;
+  canViewCounselling: boolean;
+  canViewFinance: boolean;
+}
+
+export const DEMO_PERSONAS: Record<UserRole, DemoPersona> = {
+  faculty: {
+    role: 'faculty',
+    name: 'Prof. Ananya Sharma',
+    title: 'Course Instructor & Faculty Mentor',
+    email: 'faculty@sutra.edu',
+    userId: '11111111-1111-1111-1111-111111111111',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    badge: 'Viewing as Prof. Sharma (Faculty)',
+    token:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTExMTExMS0xMTExLTExMTEtMTExMS0xMTExMTExMTExMTEiLCJlbWFpbCI6ImZhY3VsdHlAc3V0cmEuZWR1IiwiYXVkIjoiYXV0aGVudGljYXRlZCIsInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoyNTAwMDAwMDAwfQ.-XqzBWdmxSOFB6mfXFAiyK2qswqmtTDLc8kPuTsQT9Y',
+    canViewIndividualStudents: true,
+    canReassignCases: false,
+    canViewCounselling: false,
+    canViewFinance: false,
+  },
+  counselor: {
+    role: 'counselor',
+    name: 'Dr. Meera Nambiar',
+    title: 'Senior Student Counselor & Wellbeing Specialist',
+    email: 'counselor@sutra.edu',
+    userId: '22222222-2222-2222-2222-222222222222',
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    badge: 'Viewing as Dr. Nambiar (Counselor)',
+    token:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMjIyMjIyMi0yMjIyLTIyMjItMjIyMi0yMjIyMjIyMjIyMjIiLCJlbWFpbCI6ImNvdW5zZWxvckBzdXRyYS5lZHUiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJleHAiOjI1MDAwMDAwMDB9.1ZZBdtxlnitadjk9T7GY7JlvWViSU1hgkLY7RJctrc8',
+    canViewIndividualStudents: true,
+    canReassignCases: false,
+    canViewCounselling: true,
+    canViewFinance: false,
+  },
+  dean: {
+    role: 'dean',
+    name: 'Dr. Rajeshwar Rao',
+    title: 'Dean of Academic Affairs & HOD',
+    email: 'dean@sutra.edu',
+    userId: '33333333-3333-3333-3333-333333333333',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    badge: 'Viewing as Dr. Rao (Dean & HOD)',
+    token:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMzMzMzMzMy0zMzMzLTMzMzMtMzMzMy0zMzMzMzMzMzMzMzMiLCJlbWFpbCI6ImRlYW5Ac3V0cmEuZWR1IiwiYXVkIjoiYXV0aGVudGljYXRlZCIsInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoyNTAwMDAwMDAwfQ.AF-iViTbW3YqItnnK3KGjbLmFSeryH5U8SdqnFzGHtQ',
+    canViewIndividualStudents: true,
+    canReassignCases: true,
+    canViewCounselling: false,
+    canViewFinance: false,
+  },
+  leadership: {
+    role: 'leadership',
+    name: 'Prof. S. K. Kulkarni',
+    title: 'Institutional Leadership & Vice Chancellor',
+    email: 'leadership@sutra.edu',
+    userId: '44444444-4444-4444-4444-444444444444',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    badge: 'Viewing as Prof. Kulkarni (Leadership)',
+    token:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0NDQ0NDQ0NC00NDQ0LTQ0NDQtNDQ0NC00NDQ0NDQ0NDQ0NDQiLCJlbWFpbCI6ImxlYWRlcnNoaXBAc3V0cmEuZWR1IiwiYXVkIjoiYXV0aGVudGljYXRlZCIsInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoyNTAwMDAwMDAwfQ.vwA7lh2IBO8B4aW0JRO569eBtlBtbnMdv7Mw3MD_d9A',
+    canViewIndividualStudents: false, // Privacy restriction strictly enforced in Phase 4
+    canReassignCases: true,
+    canViewCounselling: false,
+    canViewFinance: false,
+  },
+  superadmin: {
+    role: 'superadmin',
+    name: 'SUTRA Admin',
+    title: 'System Administrator & Governance Lead',
+    email: 'admin@sutra.edu',
+    userId: '55555555-5555-5555-5555-555555555555',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    badge: 'Viewing as System Admin',
+    token:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTU1NTU1NS01NTU1LTU1NTUtNTU1NS01NTU1NTU1NTU1NTUiLCJlbWFpbCI6ImFkbWluQHN1dHJhLmVkdSIsImF1ZCI6ImF1dGhlbnRpY2F0ZWQiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImV4cCI6MjUwMDAwMDAwMH0.xyE1VfsMWuiCnlxBmusZxY45JfH-k6P4a7A4MxJyXQc',
+    canViewIndividualStudents: true,
+    canReassignCases: true,
+    canViewCounselling: true,
+    canViewFinance: true,
+  },
+};

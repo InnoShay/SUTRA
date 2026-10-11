@@ -31,6 +31,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const {
     user,
+    activeRole,
+    setActiveRole,
+    currentPersona,
+    backendConnected,
     setIsSearchOpen,
     isNotificationOpen,
     setIsNotificationOpen,
@@ -344,8 +348,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
             </div>
 
-            {/* Actions: Messages + Notifications + Profile Avatar */}
+            {/* Actions: Persona Switcher + Backend Status + Messages + Notifications + Profile Avatar */}
             <div className="flex items-center gap-2.5">
+              {/* Backend Status Pill */}
+              <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-[#F8F9FA] border border-neutral-200/70 rounded-full text-[11px] font-medium text-neutral-600 shadow-2xs">
+                <span className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+                <span>{backendConnected ? "Backend Online" : "Demo Mode"}</span>
+              </div>
+
+              {/* Persona Switcher Selector */}
+              <div className="relative">
+                <select
+                  value={activeRole}
+                  onChange={(e) => setActiveRole(e.target.value as any)}
+                  className="px-3 py-1.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] border border-neutral-200/70 rounded-xl text-xs font-semibold text-neutral-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-neutral-900 cursor-pointer transition-colors"
+                  title="Switch Active Persona"
+                >
+                  <option value="faculty">Faculty (Prof. Sharma)</option>
+                  <option value="counselor">Counselor (Dr. Nambiar)</option>
+                  <option value="dean">Dean / HOD (Dr. Rao)</option>
+                  <option value="leadership">Leadership (Prof. Kulkarni)</option>
+                  <option value="superadmin">Superadmin</option>
+                </select>
+              </div>
+
               {/* Messages Trigger */}
               <button
                 onClick={() => setIsMessagesOpen(!isMessagesOpen)}
@@ -368,15 +394,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </button>
 
-              {/* Sarah's Profile Avatar */}
+              {/* Profile Avatar */}
               <Link
                 href="/settings"
                 className="flex items-center gap-2 pl-1 cursor-pointer group"
-                title="View Profile Settings"
+                title={`${currentPersona.name} (${currentPersona.title})`}
               >
                 <img
-                  src={user.avatar}
-                  alt={user.fullName}
+                  src={currentPersona.avatar}
+                  alt={currentPersona.name}
                   className="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-100 group-hover:ring-neutral-300 shadow-sm transition-all"
                 />
               </Link>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useSkillHub } from "@/lib/store";
+import { CaseState } from "@/lib/types";
 import {
   X,
   MessageSquare,
@@ -11,12 +12,33 @@ import {
   Users,
   Share2,
   Check,
+  AlertTriangle,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  ListTodo,
+  PhoneCall,
+  Clock,
+  Layers,
 } from "lucide-react";
 
 interface DiscussionDetailModalProps {
   discussionId: string | null;
   onClose: () => void;
 }
+
+const CASE_LIFECYCLE_STATES: CaseState[] = [
+  "NEW",
+  "TRIAGED",
+  "UNDER_REVIEW",
+  "ACTIONABLE",
+  "ASSIGNED",
+  "ACCEPTED",
+  "IN_PROGRESS",
+  "FOLLOW_UP_REQUIRED",
+  "RESOLVED",
+  "CLOSED",
+];
 
 export function DiscussionDetailModal({
   discussionId,
@@ -28,15 +50,53 @@ export function DiscussionDetailModal({
     addDiscussionComment,
     likeDiscussion,
     user,
+    cases,
+    transitionCase,
+    createCaseTask,
+    recordCaseFollowUp,
+    recordCaseOutcome,
   } = useSkillHub();
 
   const [commentText, setCommentText] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Case Workflow State
+  const [isAdvancingState, setIsAdvancingState] = useState(false);
+  const [targetState, setTargetState] = useState<CaseState>("IN_PROGRESS");
+  const [transitionRationale, setTransitionRationale] = useState("");
+  const [isLoggingFollowUp, setIsLoggingFollowUp] = useState(false);
+  const [followUpChannel, setFollowUpChannel] = useState<
+    "in_person" | "phone" | "email" | "lms"
+  >("in_person");
+  const [followUpNotes, setFollowUpNotes] = useState("");
+  const [followUpProof, setFollowUpProof] = useState("");
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   if (!discussionId) return null;
 
-  const discussion = discussions.find((d) => d.id === discussionId);
-  if (!discussion) return null;
+  // Check if this modal is bound to a case ID or a discussion
+  const boundCase = cases.find(
+    (c) => c.id === discussionId || discussionId.includes(c.id.slice(0, 6))
+  ) || cases[0];
+
+  const discussion = discussions.find((d) => d.id === discussionId) || {
+    id: discussionId,
+    title: boundCase
+      ? `Case #${boundCase.id.slice(0, 8)}: ${(boundCase.selected_intervention_key || "academic_support").replace(/_/g, " ")}`
+      : "Student Support Case Review",
+    summary: boundCase
+      ? `Intervention case for ${boundCase.student_display_name || boundCase.student_id.slice(0, 8)} (${boundCase.external_student_ref}). State: ${boundCase.state}. Tasks: ${boundCase.tasks?.length || 0}.`
+      : "Active multi-disciplinary intervention case.",
+    author: boundCase?.primary_owner_user_id ? `Owner: ${boundCase.primary_owner_user_id.slice(0, 8)}` : "Faculty Lead",
+    authorRole: boundCase ? String(boundCase.state) : "Case Coordinator",
+    authorAvatar: "/assets/avatar-sarah.jpg",
+    timeAgo: "Active",
+    repliesCount: 4,
+    viewsCount: 18,
+    participantsCount: 3,
+    tags: ["Academic", "Attendance", "Intervention"],
+  };
 
   const comments = discussionComments[discussionId] || [];
 
@@ -45,6 +105,56 @@ export function DiscussionDetailModal({
     if (!commentText.trim()) return;
     addDiscussionComment(discussionId, commentText.trim());
     setCommentText("");
+  };
+
+  const handleTransition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!boundCase) return;
+    if (!transitionRationale.trim() || transitionRationale.trim().length < 5) {
+      setActionError("Rationale must be at least 5 characters per SUTRA audit requirements.");
+      return;
+    }
+    setActionError(null);
+    try {
+      await transitionCase(boundCase.id, {
+        to_state: targetState,
+        reason_code: transitionRationale.trim(),
+        metadata: { rationale: transitionRationale.trim() },
+      });
+      setActionSuccess(`Case successfully transitioned to ${targetState}.`);
+      setIsAdvancingState(false);
+      setTransitionRationale("");
+      setTimeout(() => setActionSuccess(null), 2500);
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to transition state. Check transition validity.");
+    }
+  };
+
+  const handleFollowUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!boundCase) return;
+    if (!followUpNotes.trim()) {
+      setActionError("Follow-up notes cannot be empty.");
+      return;
+    }
+    setActionError(null);
+    try {
+      await recordCaseFollowUp(boundCase.id, {
+        follow_up_type: followUpChannel,
+        contact_status: "completed",
+        proof_kind: "verification_note",
+        occurred_at: new Date().toISOString(),
+        note: followUpNotes.trim(),
+        proof_ref: followUpProof ? followUpProof.trim() : "follow_up_note_v1",
+      });
+      setActionSuccess("Follow-up proof logged successfully.");
+      setIsLoggingFollowUp(false);
+      setFollowUpNotes("");
+      setFollowUpProof("");
+      setTimeout(() => setActionSuccess(null), 2500);
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to record follow-up.");
+    }
   };
 
   const handleShare = () => {
@@ -57,15 +167,15 @@ export function DiscussionDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/35 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-100 overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200"
+        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-100 overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 sm:p-6 pb-4 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
+        <div className="p-4 sm:p-6 pb-4 border-b border-neutral-100 flex items-center justify-between flex-shrink-0 bg-neutral-50/50">
           <div className="flex items-center gap-3">
             <img
               src={discussion.authorAvatar || "/assets/avatar-sarah.jpg"}
@@ -77,12 +187,12 @@ export function DiscussionDetailModal({
                 <span className="text-xs sm:text-sm font-bold text-neutral-900">
                   {discussion.author}
                 </span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
-                  {discussion.authorRole || "Instructor"}
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-700">
+                  {discussion.authorRole || "Case Owner"}
                 </span>
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5">
-                Posted {discussion.timeAgo}
+                {boundCase ? `Case ID: #${boundCase.id.slice(0, 8)}` : `Posted ${discussion.timeAgo}`}
               </p>
             </div>
           </div>
@@ -90,8 +200,8 @@ export function DiscussionDetailModal({
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleShare}
-              className="p-2 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors"
-              title="Share Discussion"
+              className="p-2 rounded-full hover:bg-neutral-200/50 text-neutral-400 hover:text-neutral-700 transition-colors"
+              title="Share Case"
             >
               {copied ? (
                 <Check className="w-4 h-4 text-emerald-600" />
@@ -101,7 +211,7 @@ export function DiscussionDetailModal({
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors"
+              className="p-2 rounded-full hover:bg-neutral-200/50 text-neutral-400 hover:text-neutral-700 transition-colors"
               aria-label="Close"
             >
               <X className="w-4 h-4" />
@@ -111,68 +221,223 @@ export function DiscussionDetailModal({
 
         {/* Content Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
-          {/* Tags */}
-          {discussion.tags && discussion.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {discussion.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2.5 py-1 rounded-full bg-neutral-100/80 text-neutral-700 text-[10px] font-semibold"
-                >
-                  #{tag}
-                </span>
-              ))}
+          {actionSuccess && (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-semibold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>{actionSuccess}</span>
             </div>
           )}
 
+          {actionError && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <span>{actionError}</span>
+            </div>
+          )}
+
+          {/* SUTRA 10-State Lifecycle Progress Indicator */}
+          {boundCase && (
+            <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/70 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-neutral-500" /> 10-State Lifecycle Status
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-neutral-900 text-white">
+                  {boundCase.state}
+                </span>
+              </div>
+
+              {/* State Pills horizontal scroll */}
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
+                {CASE_LIFECYCLE_STATES.map((st, idx) => {
+                  const isCurrent = boundCase.state === st;
+                  const isPast =
+                    CASE_LIFECYCLE_STATES.indexOf(boundCase.state as CaseState) > idx;
+
+                  return (
+                    <div
+                      key={st}
+                      className={`text-[9px] font-mono px-2 py-0.5 rounded-md whitespace-nowrap transition-colors ${
+                        isCurrent
+                          ? "bg-neutral-900 text-white font-bold ring-1 ring-neutral-900"
+                          : isPast
+                          ? "bg-emerald-100 text-emerald-800 font-semibold"
+                          : "bg-neutral-200/60 text-neutral-400"
+                      }`}
+                    >
+                      {st}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Action Buttons for Case Advancement */}
+              <div className="pt-2 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    setIsAdvancingState(!isAdvancingState);
+                    setIsLoggingFollowUp(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-full bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+                >
+                  <ArrowRight className="w-3 h-3" />
+                  <span>Advance State</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsLoggingFollowUp(!isLoggingFollowUp);
+                    setIsAdvancingState(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-full bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+                >
+                  <PhoneCall className="w-3 h-3" />
+                  <span>Log Follow-Up &amp; Proof</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Form: Advance State */}
+          {isAdvancingState && boundCase && (
+            <form onSubmit={handleTransition} className="p-4 rounded-2xl bg-neutral-100/70 border border-neutral-200 space-y-3">
+              <h4 className="text-xs font-bold text-neutral-900">
+                Advance 10-State Case Lifecycle
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">
+                    Target State
+                  </label>
+                  <select
+                    value={targetState}
+                    onChange={(e) => setTargetState(e.target.value as CaseState)}
+                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900"
+                  >
+                    {CASE_LIFECYCLE_STATES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">
+                    Transition Rationale (Required)
+                  </label>
+                  <input
+                    type="text"
+                    value={transitionRationale}
+                    onChange={(e) => setTransitionRationale(e.target.value)}
+                    placeholder="Enter audit rationale (min 5 chars)..."
+                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAdvancingState(false)}
+                  className="px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-200 rounded-full"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-neutral-900 text-white rounded-full text-xs font-semibold"
+                >
+                  Confirm Transition
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Form: Log Follow-Up Proof */}
+          {isLoggingFollowUp && boundCase && (
+            <form onSubmit={handleFollowUpSubmit} className="p-4 rounded-2xl bg-neutral-100/70 border border-neutral-200 space-y-3">
+              <h4 className="text-xs font-bold text-neutral-900">
+                Record Case Follow-Up with Evidence
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">
+                    Contact Channel
+                  </label>
+                  <select
+                    value={followUpChannel}
+                    onChange={(e) => setFollowUpChannel(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900"
+                  >
+                    <option value="in_person">In-Person Meeting</option>
+                    <option value="phone">Phone Consultation</option>
+                    <option value="email">Institutional Email</option>
+                    <option value="lms">LMS Direct Messaging</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">
+                    Evidence Proof Artifact
+                  </label>
+                  <input
+                    type="text"
+                    value={followUpProof}
+                    onChange={(e) => setFollowUpProof(e.target.value)}
+                    placeholder="e.g. attendance_slip_2026_10.pdf"
+                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">
+                  Interaction Notes &amp; Next Action
+                </label>
+                <textarea
+                  rows={2}
+                  value={followUpNotes}
+                  onChange={(e) => setFollowUpNotes(e.target.value)}
+                  placeholder="Record summary of discussion and agreed academic targets..."
+                  className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsLoggingFollowUp(false)}
+                  className="px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-200 rounded-full"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-neutral-900 text-white rounded-full text-xs font-semibold"
+                >
+                  Save Follow-Up
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* Title & Summary */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <h2 className="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight leading-snug">
               {discussion.title}
             </h2>
             <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed whitespace-pre-line">
-              {discussion.summary ||
-                "Join our community of designers and educators to exchange ideas, share real-world portfolio feedback, and explore modern design systems."}
+              {discussion.summary}
             </p>
           </div>
 
-          {/* Stats Bar & Upvote */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-neutral-100">
-            <div className="flex items-center gap-4 text-xs text-neutral-400">
-              <span className="flex items-center gap-1.5 font-medium">
-                <MessageSquare className="w-4 h-4" />
-                <span>{discussion.repliesCount} replies</span>
-              </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <Eye className="w-4 h-4" />
-                <span>{discussion.viewsCount} views</span>
-              </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <Users className="w-4 h-4" />
-                <span>{discussion.participantsCount} participants</span>
-              </span>
-            </div>
-
-            <button
-              onClick={() => likeDiscussion(discussion.id)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-xs font-semibold active:scale-95 transition-all"
-            >
-              <Heart className="w-3.5 h-3.5 fill-rose-500" />
-              <span>Upvote</span>
-            </button>
-          </div>
-
-          {/* Comments List */}
+          {/* Existing Comments / Case Collaboration Notes */}
           <div className="pt-4 space-y-4">
             <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wider text-neutral-400">
-              Replies ({comments.length})
+              Case Collaboration Notes ({comments.length})
             </h4>
 
             {comments.length === 0 ? (
-              <div className="text-center py-8 rounded-2xl bg-neutral-50/70 border border-dashed border-neutral-200">
-                <MessageSquare className="w-6 h-6 text-neutral-300 mx-auto mb-2" />
+              <div className="text-center py-6 rounded-2xl bg-neutral-50/70 border border-dashed border-neutral-200">
+                <MessageSquare className="w-5 h-5 text-neutral-300 mx-auto mb-1.5" />
                 <p className="text-xs font-medium text-neutral-500">
-                  No replies yet. Be the first to share your perspective!
+                  No notes recorded yet. Add an update below.
                 </p>
               </div>
             ) : (
@@ -221,14 +486,14 @@ export function DiscussionDetailModal({
             type="text"
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Share your thoughts or answer questions..."
+            placeholder="Log an internal collaboration note or resolution update..."
             className="flex-1 bg-white border border-neutral-200/80 rounded-full px-4 py-2.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 min-h-[40px]"
           />
           <button
             type="submit"
             disabled={!commentText.trim()}
             className="w-9 h-9 rounded-full bg-neutral-900 text-white flex items-center justify-center hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex-shrink-0"
-            aria-label="Send reply"
+            aria-label="Send note"
           >
             <Send className="w-4 h-4" />
           </button>

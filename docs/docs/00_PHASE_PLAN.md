@@ -70,3 +70,14 @@ Every implementation phase must satisfy all of the following criteria before dec
 ### If Schedule Slips:
 Preserve: **Campus Authorization → Core Case Lifecycle → Temporal Anti-Leakage → Human Review Audit → Dashboard Correctness**.  
 Cut First: Optional AI summarization, Rust CLI, PWA service worker, external webhook notifications, and advanced UI animations.
+
+---
+
+## 6. Phase Completion Record
+
+- **Phase 0:** COMPLETED & FROZEN (Canonical OpenAPI 3.1 & Modular Monolith architecture locked).
+- **Phase 1:** COMPLETED & VERIFIED (FastAPI foundation, Supabase JWT auth, multi-campus scoping, health probes).
+- **Phase 2:** COMPLETED & VERIFIED (6-domain ingestion, deterministic policy engine, 10-state case machine, audit trail).
+- **Phase 3:** COMPLETED & VERIFIED (Day-30 inference, Platt-calibrated 0.46 threshold, Evidence Card generation).
+- **Phase 4:** COMPLETED & VERIFIED (Request idempotency, transactional outbox worker, negative authorization matrix, 61/61 tests passing).
+- **Phase 5:** COMPLETED & VERIFIED (Next.js 14 frontend adapted to verified FastAPI contracts; Apple-inspired design preserved; "No Alert Without Action" triage queue; 360° support view; ADR-004 leadership privacy protection; automated contract suite `npm test` & `npm run build` passing).

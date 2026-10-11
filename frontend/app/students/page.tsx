@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSkillHub } from "@/lib/store";
 import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
+import Link from "next/link";
 import {
   MoreVertical,
   MessageSquare,
@@ -13,6 +14,8 @@ import {
   Trash2,
   Check,
   AlertCircle,
+  Lock,
+  ArrowUpRight,
 } from "lucide-react";
 
 export default function StudentsPage() {
@@ -25,6 +28,7 @@ export default function StudentsPage() {
     addStudent,
     deleteStudent,
     courses,
+    activeRole,
   } = useSkillHub();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,8 +38,45 @@ export default function StudentsPage() {
   // New Student Form State
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newCourse, setNewCourse] = useState(courses[0]?.title || "Figma UI/UX Design Essentials");
+  const [newCourse, setNewCourse] = useState(courses[0]?.title || "Computer Science (UG)");
   const [newStatus, setNewStatus] = useState<"Active" | "At Risk" | "Completed" | "Inactive">("Active");
+
+  // Leadership Institutional Privacy Safeguard
+  if (activeRole === "leadership") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
+            Students Directory
+          </h1>
+          <p className="text-xs text-neutral-400 mt-1">
+            Student records and individual profile evaluation
+          </p>
+        </div>
+
+        <div className="skill-card p-8 bg-white border border-neutral-200/80 rounded-3xl flex flex-col items-center text-center max-w-xl mx-auto space-y-4 my-8">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-neutral-900">
+            Institutional Privacy Safeguard (ADR-004)
+          </h3>
+          <p className="text-xs text-neutral-600 leading-relaxed max-w-md">
+            Per institutional governance and data minimization requirements, executive leadership accounts cannot inspect individual student profiles or identifiable telemetry.
+          </p>
+          <p className="text-xs text-neutral-400">
+            Please navigate to Cohort Analytics to review aggregate institutional KPIs, retention trends, and multi-campus indicators.
+          </p>
+          <Link
+            href="/analytics"
+            className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-sm transition-all"
+          >
+            Go to Cohort Analytics
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const tabs = ["All Students", "Active", "At Risk", "Completed", "Inactive"];
 
@@ -287,8 +328,16 @@ export default function StudentsPage() {
                 onClick={() => setSelectedStudent(student)}
                 className="flex-1 py-2 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-full text-xs font-semibold text-neutral-800 transition-colors text-center shadow-sm"
               >
-                View Profile
+                Quick View
               </button>
+
+              <Link
+                href={`/students/${student.id}`}
+                className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold transition-all shadow-sm flex items-center gap-1 whitespace-nowrap"
+              >
+                <span>360° View</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         ))}

@@ -34,3 +34,7 @@ ml/artifacts/models/*
 build/
 dist/
 *.egg-info/
+
+# Databases
+*.db
+*.sqlite3
