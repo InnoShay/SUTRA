@@ -1,0 +1,68 @@
+[
+  {
+    "experiment_id": "EXP-00-BASELINE",
+    "description": "Production Baseline: All 25 features, C=1.0, balanced weights, L2 penalty",
+    "feature_count": 25,
+    "cv_roc_auc": 0.723,
+    "cv_pr_auc": 0.6939,
+    "cv_recall_t46": 0.7159,
+    "cv_precision_t46": 0.5983,
+    "cv_brier_score": 0.2117,
+    "cv_ece": 0.0384,
+    "cv_alert_rate_pct": 54.61,
+    "cv_false_alarms": 4007
+  },
+  {
+    "experiment_id": "EXP-01-COLLINEARITY-PRUNING",
+    "description": "Pruned 6 collinear sub-activity click features, retaining 19 core features",
+    "feature_count": 19,
+    "cv_roc_auc": 0.72,
+    "cv_pr_auc": 0.691,
+    "cv_recall_t46": 0.7137,
+    "cv_precision_t46": 0.5975,
+    "cv_brier_score": 0.2127,
+    "cv_ece": 0.0396,
+    "cv_alert_rate_pct": 54.51,
+    "cv_false_alarms": 4007
+  },
+  {
+    "experiment_id": "EXP-02-REGULARIZATION-C01",
+    "description": "Stronger L2 Regularization (C=0.10 vs C=1.0) with balanced weights",
+    "feature_count": 25,
+    "cv_roc_auc": 0.7231,
+    "cv_pr_auc": 0.6939,
+    "cv_recall_t46": 0.7177,
+    "cv_precision_t46": 0.5987,
+    "cv_brier_score": 0.2117,
+    "cv_ece": 0.0377,
+    "cv_alert_rate_pct": 54.71,
+    "cv_false_alarms": 4009
+  },
+  {
+    "experiment_id": "EXP-03-PLATT-CALIBRATION",
+    "description": "Platt Sigmoid post-hoc calibration layer targeting ECE reduction",
+    "feature_count": 25,
+    "cv_roc_auc": 0.722,
+    "cv_pr_auc": 0.6935,
+    "cv_recall_t46": 0.6935,
+    "cv_precision_t46": 0.6068,
+    "cv_brier_score": 0.2131,
+    "cv_ece": 0.0396,
+    "cv_alert_rate_pct": 52.16,
+    "cv_false_alarms": 3746,
+    "calibrated_optimal_threshold": 0.43000000000000005
+  },
+  {
+    "experiment_id": "EXP-04-XGBOOST-CONSTRAINED",
+    "description": "Regularized XGBoost: max_depth=3 (vs 4), colsample=0.70 to curtail overconfidence",
+    "feature_count": 25,
+    "cv_roc_auc": 0.7408,
+    "cv_pr_auc": 0.7224,
+    "cv_recall_t46": 0.7081,
+    "cv_precision_t46": 0.6196,
+    "cv_brier_score": 0.205,
+    "cv_ece": 0.0424,
+    "cv_alert_rate_pct": 52.16,
+    "cv_false_alarms": 3624
+  }
+]

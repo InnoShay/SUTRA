@@ -61,6 +61,11 @@ def compute_comprehensive_metrics(
         pr_auc = float("nan")
 
     brier = float(brier_score_loss(y_true, y_prob))
+    acc = float((tp + tn) / max(1, total_samples))
+    spec = float(tn / max(1, actual_negatives)) if actual_negatives > 0 else 0.0
+    fpr = float(fp / max(1, actual_negatives)) if actual_negatives > 0 else 0.0
+    bal_acc = float(0.5 * (rec + spec))
+
     predicted_positives = tp + fp
     alert_rate = predicted_positives / max(1, total_samples)
 
@@ -70,8 +75,12 @@ def compute_comprehensive_metrics(
         "actual_positives": actual_positives,
         "actual_negatives": actual_negatives,
         "prevalence": round(prevalence, 4),
+        "accuracy": round(acc, 4),
+        "balanced_accuracy": round(bal_acc, 4),
         "precision": round(prec, 4),
         "recall": round(rec, 4),
+        "specificity": round(spec, 4),
+        "false_positive_rate": round(fpr, 4),
         "f1_score": round(f1, 4),
         "roc_auc": round(roc_auc, 4),
         "pr_auc": round(pr_auc, 4),

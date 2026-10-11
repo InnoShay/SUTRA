@@ -1,0 +1,815 @@
+{
+  "timestamp": "2026-10-11T19:35:03.420211+00:00",
+  "experiment_id": "EXP-C-DEPTH3-XGBOOST",
+  "candidate_status": "RESEARCH_CANDIDATE_NOT_PROMOTED",
+  "hyperparameters": {
+    "model_type": "XGBClassifier",
+    "n_estimators": 150,
+    "max_depth": 3,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.7,
+    "eval_metric": "logloss",
+    "scale_pos_weight": 1.2,
+    "random_state": 42
+  },
+  "validation_5fold_cv": {
+    "logistic_regression_baseline": {
+      "pooled_oof": {
+        "threshold": 0.46,
+        "total_samples": 18263,
+        "actual_positives": 8335,
+        "actual_negatives": 9928,
+        "prevalence": 0.4564,
+        "accuracy": 0.6509,
+        "balanced_accuracy": 0.6561,
+        "precision": 0.5983,
+        "recall": 0.7159,
+        "specificity": 0.5964,
+        "false_positive_rate": 0.4036,
+        "f1_score": 0.6518,
+        "roc_auc": 0.723,
+        "pr_auc": 0.6939,
+        "brier_score": 0.2117,
+        "confusion_matrix": {
+          "tn": 5921,
+          "fp": 4007,
+          "fn": 2368,
+          "tp": 5967
+        },
+        "operational_workload": {
+          "total_alerts_fired": 9974,
+          "alert_rate_pct": 54.61,
+          "false_alarms_advisor_burden": 4007,
+          "missed_at_risk_students": 2368,
+          "successful_proactive_catches": 5967
+        }
+      },
+      "mean_fold_roc_auc": 0.7231,
+      "std_fold_roc_auc": 0.0068,
+      "mean_fold_pr_auc": 0.6942,
+      "std_fold_pr_auc": 0.0087,
+      "calibration": {
+        "brier_score": 0.2117,
+        "expected_calibration_error_ece": 0.0384,
+        "maximum_calibration_error_mce": 0.0622,
+        "reliability_bins": [
+          {
+            "bin_range": "[0.0, 0.1)",
+            "samples_count": 142,
+            "mean_predicted_prob": 0.0764,
+            "observed_positive_rate": 0.1056,
+            "calibration_gap": 0.0293
+          },
+          {
+            "bin_range": "[0.1, 0.2)",
+            "samples_count": 1035,
+            "mean_predicted_prob": 0.1582,
+            "observed_positive_rate": 0.1652,
+            "calibration_gap": 0.007
+          },
+          {
+            "bin_range": "[0.2, 0.3)",
+            "samples_count": 2139,
+            "mean_predicted_prob": 0.2542,
+            "observed_positive_rate": 0.2309,
+            "calibration_gap": 0.0233
+          },
+          {
+            "bin_range": "[0.3, 0.4)",
+            "samples_count": 2977,
+            "mean_predicted_prob": 0.3505,
+            "observed_positive_rate": 0.3168,
+            "calibration_gap": 0.0338
+          },
+          {
+            "bin_range": "[0.4, 0.5)",
+            "samples_count": 3334,
+            "mean_predicted_prob": 0.4503,
+            "observed_positive_rate": 0.3881,
+            "calibration_gap": 0.0622
+          },
+          {
+            "bin_range": "[0.5, 0.6)",
+            "samples_count": 3168,
+            "mean_predicted_prob": 0.5482,
+            "observed_positive_rate": 0.4959,
+            "calibration_gap": 0.0523
+          },
+          {
+            "bin_range": "[0.6, 0.7)",
+            "samples_count": 2410,
+            "mean_predicted_prob": 0.6468,
+            "observed_positive_rate": 0.6033,
+            "calibration_gap": 0.0434
+          },
+          {
+            "bin_range": "[0.7, 0.8)",
+            "samples_count": 1672,
+            "mean_predicted_prob": 0.7465,
+            "observed_positive_rate": 0.7261,
+            "calibration_gap": 0.0204
+          },
+          {
+            "bin_range": "[0.8, 0.9)",
+            "samples_count": 1052,
+            "mean_predicted_prob": 0.846,
+            "observed_positive_rate": 0.8232,
+            "calibration_gap": 0.0229
+          },
+          {
+            "bin_range": "[0.9, 1.0)",
+            "samples_count": 334,
+            "mean_predicted_prob": 0.9283,
+            "observed_positive_rate": 0.9371,
+            "calibration_gap": 0.0089
+          }
+        ]
+      },
+      "fold_breakdown": [
+        {
+          "threshold": 0.46,
+          "total_samples": 3653,
+          "actual_positives": 1677,
+          "actual_negatives": 1976,
+          "prevalence": 0.4591,
+          "accuracy": 0.6499,
+          "balanced_accuracy": 0.6543,
+          "precision": 0.6007,
+          "recall": 0.7078,
+          "specificity": 0.6007,
+          "false_positive_rate": 0.3993,
+          "f1_score": 0.6499,
+          "roc_auc": 0.719,
+          "pr_auc": 0.6823,
+          "brier_score": 0.2133,
+          "confusion_matrix": {
+            "tn": 1187,
+            "fp": 789,
+            "fn": 490,
+            "tp": 1187
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1976,
+            "alert_rate_pct": 54.09,
+            "false_alarms_advisor_burden": 789,
+            "missed_at_risk_students": 490,
+            "successful_proactive_catches": 1187
+          }
+        },
+        {
+          "threshold": 0.46,
+          "total_samples": 3653,
+          "actual_positives": 1648,
+          "actual_negatives": 2005,
+          "prevalence": 0.4511,
+          "accuracy": 0.6627,
+          "balanced_accuracy": 0.6688,
+          "precision": 0.6043,
+          "recall": 0.7312,
+          "specificity": 0.6065,
+          "false_positive_rate": 0.3935,
+          "f1_score": 0.6617,
+          "roc_auc": 0.7344,
+          "pr_auc": 0.7088,
+          "brier_score": 0.2081,
+          "confusion_matrix": {
+            "tn": 1216,
+            "fp": 789,
+            "fn": 443,
+            "tp": 1205
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1994,
+            "alert_rate_pct": 54.59,
+            "false_alarms_advisor_burden": 789,
+            "missed_at_risk_students": 443,
+            "successful_proactive_catches": 1205
+          }
+        },
+        {
+          "threshold": 0.46,
+          "total_samples": 3653,
+          "actual_positives": 1645,
+          "actual_negatives": 2008,
+          "prevalence": 0.4503,
+          "accuracy": 0.6554,
+          "balanced_accuracy": 0.6612,
+          "precision": 0.5974,
+          "recall": 0.7198,
+          "specificity": 0.6026,
+          "false_positive_rate": 0.3974,
+          "f1_score": 0.6529,
+          "roc_auc": 0.7258,
+          "pr_auc": 0.6921,
+          "brier_score": 0.2105,
+          "confusion_matrix": {
+            "tn": 1210,
+            "fp": 798,
+            "fn": 461,
+            "tp": 1184
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1982,
+            "alert_rate_pct": 54.26,
+            "false_alarms_advisor_burden": 798,
+            "missed_at_risk_students": 461,
+            "successful_proactive_catches": 1184
+          }
+        },
+        {
+          "threshold": 0.46,
+          "total_samples": 3652,
+          "actual_positives": 1705,
+          "actual_negatives": 1947,
+          "prevalence": 0.4669,
+          "accuracy": 0.6424,
+          "balanced_accuracy": 0.6461,
+          "precision": 0.6,
+          "recall": 0.7021,
+          "specificity": 0.5901,
+          "false_positive_rate": 0.4099,
+          "f1_score": 0.647,
+          "roc_auc": 0.7143,
+          "pr_auc": 0.697,
+          "brier_score": 0.2144,
+          "confusion_matrix": {
+            "tn": 1149,
+            "fp": 798,
+            "fn": 508,
+            "tp": 1197
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1995,
+            "alert_rate_pct": 54.63,
+            "false_alarms_advisor_burden": 798,
+            "missed_at_risk_students": 508,
+            "successful_proactive_catches": 1197
+          }
+        },
+        {
+          "threshold": 0.46,
+          "total_samples": 3652,
+          "actual_positives": 1660,
+          "actual_negatives": 1992,
+          "prevalence": 0.4545,
+          "accuracy": 0.6443,
+          "balanced_accuracy": 0.6506,
+          "precision": 0.589,
+          "recall": 0.7193,
+          "specificity": 0.5818,
+          "false_positive_rate": 0.4182,
+          "f1_score": 0.6477,
+          "roc_auc": 0.7221,
+          "pr_auc": 0.691,
+          "brier_score": 0.2122,
+          "confusion_matrix": {
+            "tn": 1159,
+            "fp": 833,
+            "fn": 466,
+            "tp": 1194
+          },
+          "operational_workload": {
+            "total_alerts_fired": 2027,
+            "alert_rate_pct": 55.5,
+            "false_alarms_advisor_burden": 833,
+            "missed_at_risk_students": 466,
+            "successful_proactive_catches": 1194
+          }
+        }
+      ]
+    },
+    "constrained_depth3_xgboost": {
+      "pooled_oof": {
+        "threshold": 0.46,
+        "total_samples": 18263,
+        "actual_positives": 8335,
+        "actual_negatives": 9928,
+        "prevalence": 0.4564,
+        "accuracy": 0.6683,
+        "balanced_accuracy": 0.6715,
+        "precision": 0.6196,
+        "recall": 0.7081,
+        "specificity": 0.635,
+        "false_positive_rate": 0.365,
+        "f1_score": 0.6609,
+        "roc_auc": 0.7408,
+        "pr_auc": 0.7224,
+        "brier_score": 0.205,
+        "confusion_matrix": {
+          "tn": 6304,
+          "fp": 3624,
+          "fn": 2433,
+          "tp": 5902
+        },
+        "operational_workload": {
+          "total_alerts_fired": 9526,
+          "alert_rate_pct": 52.16,
+          "false_alarms_advisor_burden": 3624,
+          "missed_at_risk_students": 2433,
+          "successful_proactive_catches": 5902
+        }
+      },
+      "mean_fold_roc_auc": 0.741,
+      "std_fold_roc_auc": 0.0085,
+      "mean_fold_pr_auc": 0.723,
+      "std_fold_pr_auc": 0.01,
+      "calibration": {
+        "brier_score": 0.205,
+        "expected_calibration_error_ece": 0.0424,
+        "maximum_calibration_error_mce": 0.0559,
+        "reliability_bins": [
+          {
+            "bin_range": "[0.1, 0.2)",
+            "samples_count": 557,
+            "mean_predicted_prob": 0.1737,
+            "observed_positive_rate": 0.1293,
+            "calibration_gap": 0.0444
+          },
+          {
+            "bin_range": "[0.2, 0.3)",
+            "samples_count": 2458,
+            "mean_predicted_prob": 0.2561,
+            "observed_positive_rate": 0.2046,
+            "calibration_gap": 0.0515
+          },
+          {
+            "bin_range": "[0.3, 0.4)",
+            "samples_count": 3566,
+            "mean_predicted_prob": 0.3507,
+            "observed_positive_rate": 0.2947,
+            "calibration_gap": 0.0559
+          },
+          {
+            "bin_range": "[0.4, 0.5)",
+            "samples_count": 3521,
+            "mean_predicted_prob": 0.4495,
+            "observed_positive_rate": 0.3962,
+            "calibration_gap": 0.0533
+          },
+          {
+            "bin_range": "[0.5, 0.6)",
+            "samples_count": 2984,
+            "mean_predicted_prob": 0.5481,
+            "observed_positive_rate": 0.5104,
+            "calibration_gap": 0.0377
+          },
+          {
+            "bin_range": "[0.6, 0.7)",
+            "samples_count": 2364,
+            "mean_predicted_prob": 0.6457,
+            "observed_positive_rate": 0.6172,
+            "calibration_gap": 0.0286
+          },
+          {
+            "bin_range": "[0.7, 0.8)",
+            "samples_count": 1328,
+            "mean_predicted_prob": 0.743,
+            "observed_positive_rate": 0.7364,
+            "calibration_gap": 0.0065
+          },
+          {
+            "bin_range": "[0.8, 0.9)",
+            "samples_count": 906,
+            "mean_predicted_prob": 0.8528,
+            "observed_positive_rate": 0.8907,
+            "calibration_gap": 0.0379
+          },
+          {
+            "bin_range": "[0.9, 1.0)",
+            "samples_count": 579,
+            "mean_predicted_prob": 0.9236,
+            "observed_positive_rate": 0.9447,
+            "calibration_gap": 0.0211
+          }
+        ]
+      },
+      "fold_breakdown": [
+        {
+          "threshold": 0.46,
+          "total_samples": 3653,
+          "actual_positives": 1677,
+          "actual_negatives": 1976,
+          "prevalence": 0.4591,
+          "accuracy": 0.6666,
+          "balanced_accuracy": 0.6679,
+          "precision": 0.6249,
+          "recall": 0.6846,
+          "specificity": 0.6513,
+          "false_positive_rate": 0.3487,
+          "f1_score": 0.6534,
+          "roc_auc": 0.7317,
+          "pr_auc": 0.7075,
+          "brier_score": 0.208,
+          "confusion_matrix": {
+            "tn": 1287,
+            "fp": 689,
+            "fn": 529,
+            "tp": 1148
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1837,
+            "alert_rate_pct": 50.29,
+            "false_alarms_advisor_burden": 689,
+            "missed_at_risk_students": 529,
+            "successful_proactive_catches": 1148
+          }
+        },
+        {
+          "threshold": 0.46,
+          "total_samples": 3653,
+          "actual_positives": 1648,
+          "actual_negatives": 2005,
+          "prevalence": 0.4511,
+          "accuracy": 0.6756,
+          "balanced_accuracy": 0.6805,
+          "precision": 0.619,
+          "recall": 0.7306,
+          "specificity": 0.6304,
+          "false_positive_rate": 0.3696,
+          "f1_score": 0.6702,
+          "roc_auc": 0.7551,
+          "pr_auc": 0.7379,
+          "brier_score": 0.2004,
+          "confusion_matrix": {
+            "tn": 1264,
+            "fp": 741,
+            "fn": 444,
+            "tp": 1204
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1945,
+            "alert_rate_pct": 53.24,
+            "false_alarms_advisor_burden": 741,
+            "missed_at_risk_students": 444,
+            "successful_proactive_catches": 1204
+          }
+        },
+        {
+          "threshold": 0.46,
+          "total_samples": 3653,
+          "actual_positives": 1645,
+          "actual_negatives": 2008,
+          "prevalence": 0.4503,
+          "accuracy": 0.6715,
+          "balanced_accuracy": 0.6753,
+          "precision": 0.617,
+          "recall": 0.7131,
+          "specificity": 0.6375,
+          "false_positive_rate": 0.3625,
+          "f1_score": 0.6616,
+          "roc_auc": 0.7458,
+          "pr_auc": 0.7254,
+          "brier_score": 0.2036,
+          "confusion_matrix": {
+            "tn": 1280,
+            "fp": 728,
+            "fn": 472,
+            "tp": 1173
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1901,
+            "alert_rate_pct": 52.04,
+            "false_alarms_advisor_burden": 728,
+            "missed_at_risk_students": 472,
+            "successful_proactive_catches": 1173
+          }
+        },
+        {
+          "threshold": 0.46,
+          "total_samples": 3652,
+          "actual_positives": 1705,
+          "actual_negatives": 1947,
+          "prevalence": 0.4669,
+          "accuracy": 0.6605,
+          "balanced_accuracy": 0.6632,
+          "precision": 0.62,
+          "recall": 0.7044,
+          "specificity": 0.622,
+          "false_positive_rate": 0.378,
+          "f1_score": 0.6595,
+          "roc_auc": 0.7342,
+          "pr_auc": 0.726,
+          "brier_score": 0.2071,
+          "confusion_matrix": {
+            "tn": 1211,
+            "fp": 736,
+            "fn": 504,
+            "tp": 1201
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1937,
+            "alert_rate_pct": 53.04,
+            "false_alarms_advisor_burden": 736,
+            "missed_at_risk_students": 504,
+            "successful_proactive_catches": 1201
+          }
+        },
+        {
+          "threshold": 0.46,
+          "total_samples": 3652,
+          "actual_positives": 1660,
+          "actual_negatives": 1992,
+          "prevalence": 0.4545,
+          "accuracy": 0.6676,
+          "balanced_accuracy": 0.671,
+          "precision": 0.617,
+          "recall": 0.7084,
+          "specificity": 0.6335,
+          "false_positive_rate": 0.3665,
+          "f1_score": 0.6596,
+          "roc_auc": 0.7383,
+          "pr_auc": 0.7181,
+          "brier_score": 0.206,
+          "confusion_matrix": {
+            "tn": 1262,
+            "fp": 730,
+            "fn": 484,
+            "tp": 1176
+          },
+          "operational_workload": {
+            "total_alerts_fired": 1906,
+            "alert_rate_pct": 52.19,
+            "false_alarms_advisor_burden": 730,
+            "missed_at_risk_students": 484,
+            "successful_proactive_catches": 1176
+          }
+        }
+      ]
+    },
+    "original_depth4_xgboost": {
+      "pooled_oof": {
+        "threshold": 0.46,
+        "total_samples": 18263,
+        "actual_positives": 8335,
+        "actual_negatives": 9928,
+        "prevalence": 0.4564,
+        "accuracy": 0.6756,
+        "balanced_accuracy": 0.6783,
+        "precision": 0.6282,
+        "recall": 0.7087,
+        "specificity": 0.6479,
+        "false_positive_rate": 0.3521,
+        "f1_score": 0.666,
+        "roc_auc": 0.7448,
+        "pr_auc": 0.7273,
+        "brier_score": 0.2033,
+        "confusion_matrix": {
+          "tn": 6432,
+          "fp": 3496,
+          "fn": 2428,
+          "tp": 5907
+        },
+        "operational_workload": {
+          "total_alerts_fired": 9403,
+          "alert_rate_pct": 51.49,
+          "false_alarms_advisor_burden": 3496,
+          "missed_at_risk_students": 2428,
+          "successful_proactive_catches": 5907
+        }
+      },
+      "calibration": {
+        "brier_score": 0.2033,
+        "expected_calibration_error_ece": 0.0386,
+        "maximum_calibration_error_mce": 0.0496,
+        "reliability_bins": [
+          {
+            "bin_range": "[0.0, 0.1)",
+            "samples_count": 28,
+            "mean_predicted_prob": 0.0895,
+            "observed_positive_rate": 0.1071,
+            "calibration_gap": 0.0176
+          },
+          {
+            "bin_range": "[0.1, 0.2)",
+            "samples_count": 794,
+            "mean_predicted_prob": 0.1673,
+            "observed_positive_rate": 0.1436,
+            "calibration_gap": 0.0237
+          },
+          {
+            "bin_range": "[0.2, 0.3)",
+            "samples_count": 2546,
+            "mean_predicted_prob": 0.2553,
+            "observed_positive_rate": 0.2058,
+            "calibration_gap": 0.0494
+          },
+          {
+            "bin_range": "[0.3, 0.4)",
+            "samples_count": 3513,
+            "mean_predicted_prob": 0.3508,
+            "observed_positive_rate": 0.3012,
+            "calibration_gap": 0.0496
+          },
+          {
+            "bin_range": "[0.4, 0.5)",
+            "samples_count": 3246,
+            "mean_predicted_prob": 0.449,
+            "observed_positive_rate": 0.4014,
+            "calibration_gap": 0.0476
+          },
+          {
+            "bin_range": "[0.5, 0.6)",
+            "samples_count": 2837,
+            "mean_predicted_prob": 0.549,
+            "observed_positive_rate": 0.5132,
+            "calibration_gap": 0.0357
+          },
+          {
+            "bin_range": "[0.6, 0.7)",
+            "samples_count": 2284,
+            "mean_predicted_prob": 0.6467,
+            "observed_positive_rate": 0.6103,
+            "calibration_gap": 0.0363
+          },
+          {
+            "bin_range": "[0.7, 0.8)",
+            "samples_count": 1360,
+            "mean_predicted_prob": 0.7456,
+            "observed_positive_rate": 0.7287,
+            "calibration_gap": 0.0169
+          },
+          {
+            "bin_range": "[0.8, 0.9)",
+            "samples_count": 875,
+            "mean_predicted_prob": 0.8504,
+            "observed_positive_rate": 0.8594,
+            "calibration_gap": 0.009
+          },
+          {
+            "bin_range": "[0.9, 1.0)",
+            "samples_count": 780,
+            "mean_predicted_prob": 0.9289,
+            "observed_positive_rate": 0.9487,
+            "calibration_gap": 0.0198
+          }
+        ]
+      }
+    }
+  },
+  "secondary_2014j_holdout": {
+    "logistic_regression": {},
+    "constrained_depth3_xgboost": {
+      "threshold_0_46": {
+        "threshold": 0.46,
+        "total_samples": 9203,
+        "actual_positives": 3746,
+        "actual_negatives": 5457,
+        "prevalence": 0.407,
+        "accuracy": 0.6451,
+        "balanced_accuracy": 0.658,
+        "precision": 0.5483,
+        "recall": 0.7272,
+        "specificity": 0.5888,
+        "false_positive_rate": 0.4112,
+        "f1_score": 0.6252,
+        "roc_auc": 0.7279,
+        "pr_auc": 0.6707,
+        "brier_score": 0.2102,
+        "confusion_matrix": {
+          "tn": 3213,
+          "fp": 2244,
+          "fn": 1022,
+          "tp": 2724
+        },
+        "operational_workload": {
+          "total_alerts_fired": 4968,
+          "alert_rate_pct": 53.98,
+          "false_alarms_advisor_burden": 2244,
+          "missed_at_risk_students": 1022,
+          "successful_proactive_catches": 2724
+        }
+      },
+      "threshold_0_50": {
+        "threshold": 0.5,
+        "total_samples": 9203,
+        "actual_positives": 3746,
+        "actual_negatives": 5457,
+        "prevalence": 0.407,
+        "accuracy": 0.664,
+        "balanced_accuracy": 0.6625,
+        "precision": 0.5769,
+        "recall": 0.6546,
+        "specificity": 0.6705,
+        "false_positive_rate": 0.3295,
+        "f1_score": 0.6133,
+        "roc_auc": 0.7279,
+        "pr_auc": 0.6707,
+        "brier_score": 0.2102,
+        "confusion_matrix": {
+          "tn": 3659,
+          "fp": 1798,
+          "fn": 1294,
+          "tp": 2452
+        },
+        "operational_workload": {
+          "total_alerts_fired": 4250,
+          "alert_rate_pct": 46.18,
+          "false_alarms_advisor_burden": 1798,
+          "missed_at_risk_students": 1294,
+          "successful_proactive_catches": 2452
+        }
+      },
+      "disjoint_holdout_0_46": {
+        "threshold": 0.46,
+        "total_samples": 7921,
+        "actual_positives": 3031,
+        "actual_negatives": 4890,
+        "prevalence": 0.3827,
+        "accuracy": 0.6458,
+        "balanced_accuracy": 0.6593,
+        "precision": 0.5273,
+        "recall": 0.7169,
+        "specificity": 0.6016,
+        "false_positive_rate": 0.3984,
+        "f1_score": 0.6077,
+        "roc_auc": 0.7268,
+        "pr_auc": 0.6497,
+        "brier_score": 0.2093,
+        "confusion_matrix": {
+          "tn": 2942,
+          "fp": 1948,
+          "fn": 858,
+          "tp": 2173
+        },
+        "operational_workload": {
+          "total_alerts_fired": 4121,
+          "alert_rate_pct": 52.03,
+          "false_alarms_advisor_burden": 1948,
+          "missed_at_risk_students": 858,
+          "successful_proactive_catches": 2173
+        }
+      },
+      "calibration": {
+        "brier_score": 0.2102,
+        "expected_calibration_error_ece": 0.0889,
+        "maximum_calibration_error_mce": 0.1054,
+        "reliability_bins": [
+          {
+            "bin_range": "[0.1, 0.2)",
+            "samples_count": 276,
+            "mean_predicted_prob": 0.1749,
+            "observed_positive_rate": 0.0978,
+            "calibration_gap": 0.077
+          },
+          {
+            "bin_range": "[0.2, 0.3)",
+            "samples_count": 1129,
+            "mean_predicted_prob": 0.2562,
+            "observed_positive_rate": 0.1771,
+            "calibration_gap": 0.0791
+          },
+          {
+            "bin_range": "[0.3, 0.4)",
+            "samples_count": 1647,
+            "mean_predicted_prob": 0.3515,
+            "observed_positive_rate": 0.2508,
+            "calibration_gap": 0.1007
+          },
+          {
+            "bin_range": "[0.4, 0.5)",
+            "samples_count": 1901,
+            "mean_predicted_prob": 0.4494,
+            "observed_positive_rate": 0.344,
+            "calibration_gap": 0.1054
+          },
+          {
+            "bin_range": "[0.5, 0.6)",
+            "samples_count": 1701,
+            "mean_predicted_prob": 0.5485,
+            "observed_positive_rate": 0.4486,
+            "calibration_gap": 0.1
+          },
+          {
+            "bin_range": "[0.6, 0.7)",
+            "samples_count": 1369,
+            "mean_predicted_prob": 0.6481,
+            "observed_positive_rate": 0.5551,
+            "calibration_gap": 0.0929
+          },
+          {
+            "bin_range": "[0.7, 0.8)",
+            "samples_count": 661,
+            "mean_predicted_prob": 0.7421,
+            "observed_positive_rate": 0.6944,
+            "calibration_gap": 0.0477
+          },
+          {
+            "bin_range": "[0.8, 0.9)",
+            "samples_count": 324,
+            "mean_predicted_prob": 0.8549,
+            "observed_positive_rate": 0.8735,
+            "calibration_gap": 0.0186
+          },
+          {
+            "bin_range": "[0.9, 1.0)",
+            "samples_count": 195,
+            "mean_predicted_prob": 0.9252,
+            "observed_positive_rate": 0.959,
+            "calibration_gap": 0.0338
+          }
+        ]
+      }
+    }
+  }
+}

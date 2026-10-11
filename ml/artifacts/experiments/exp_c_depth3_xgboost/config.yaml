@@ -1,0 +1,23 @@
+experiment_id: EXP-C-DEPTH3-XGBOOST
+model_type: XGBClassifier
+hyperparameters:
+  model_type: XGBClassifier
+  n_estimators: 150
+  max_depth: 3
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.7
+  eval_metric: logloss
+  scale_pos_weight: 1.2
+  random_state: 42
+training_cohort:
+- 2013B
+- 2013J
+- 2014B
+test_cohort: 2014J
+feature_counts:
+  numerical: 19
+  categorical: 6
+  total: 25
+threshold: 0.46
+status: RESEARCH_CANDIDATE_UNPROMOTED
