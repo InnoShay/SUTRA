@@ -37,6 +37,7 @@ class Case(Base):
     __tablename__ = "cases"
     __table_args__ = (
         UniqueConstraint("institution_id", "id", name="uq_cases_inst_id"),
+        UniqueConstraint("institution_id", "originating_signal_id", name="uq_cases_inst_originating_signal"),
         Index("idx_cases_queue", "institution_id", "state", "due_at"),
         Index("idx_cases_owner", "institution_id", "primary_owner_user_id", "state"),
     )

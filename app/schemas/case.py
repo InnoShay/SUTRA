@@ -77,12 +77,14 @@ class CaseTransitionRequest(BaseModel):
     to_state: str = Field(..., description="Target state in canonical state machine")
     reason_code: Optional[str] = Field(None, description="Standard reason code justifying state transition")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Contextual event metadata")
+    expected_version: Optional[int] = Field(None, description="Optimistic concurrency control: expected current case version")
 
 
 class CaseAssignmentRequest(BaseModel):
     primary_owner_user_id: uuid.UUID = Field(..., description="Accountable owner user UUID")
     due_at: Optional[datetime] = Field(None, description="Enforceable due date for the support case")
     reason_code: Optional[str] = Field(None, description="Optional assignment/reassignment reason code")
+    expected_version: Optional[int] = Field(None, description="Optimistic concurrency control: expected current case version")
 
 
 class AcceptAssignmentRequest(BaseModel):

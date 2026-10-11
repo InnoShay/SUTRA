@@ -14,13 +14,20 @@ SENSITIVE_FIELD_NAMES = {
     "api_key",
     "supabase_anon_key",
     "supabase_jwt_secret",
+    "supabase_service_role_key",
+    "service_role_key",
     "fee_amount",
     "bank_account",
     "account_number",
+    "financial_details",
+    "counselling",
     "counselling_note",
+    "restricted_details",
     "session_notes",
     "parent_phone",
     "phone_number",
+    "feature_vector",
+    "raw_features",
 }
 
 REDACTION_MASK = "[REDACTED]"

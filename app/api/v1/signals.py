@@ -19,9 +19,22 @@ from app.schemas.signal import (
     SignalReviewResponse,
 )
 from app.services.case_service import CaseService
+from app.services.idempotency import IdempotencyService, compute_request_hash
 from app.services.policy_engine import PolicyEngineService
 
 router = APIRouter(tags=["Signals"])
+
+
+def check_leadership_access(membership: CampusMembershipContext):
+    """Restricts leadership role to cohort aggregates only (disallowing individual queues)."""
+    if "leadership" in membership.roles and not any(
+        r in ("hod", "mentor", "faculty", "institution_admin", "counsellor", "finance", "placement")
+        for r in membership.roles
+    ):
+        raise PermissionDeniedError(
+            "Leadership role is restricted to cohort aggregates and cannot access individual signal queues",
+            code="LEADERSHIP_QUEUE_ACCESS_DENIED",
+        )
 
 
 @router.post("/students/{student_id}/signals/evaluate", response_model=SignalDTO)
@@ -48,6 +61,8 @@ async def list_signals_queue(
     db: AsyncSession = Depends(get_db),
 ):
     """Lists signals in the review queue for the active campus."""
+    check_leadership_access(membership)
+
     query = (
         select(Signal, Student.external_ref, Student.display_name, EvidencePacket.digest)
         .join(Student, Student.id == Signal.student_id)
@@ -98,6 +113,8 @@ async def get_signal_detail(
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieves full signal details, explanation, and evidence packet digest."""
+    check_leadership_access(membership)
+
     query = (
         select(Signal, Student.external_ref, Student.display_name, EvidencePacket.digest)
         .join(Student, Student.id == Signal.student_id)
@@ -144,6 +161,12 @@ async def review_signal(
     db: AsyncSession = Depends(get_db),
 ):
     """Submits human review decision on a signal (approve, modify, dismiss, request_more_data)."""
+    req_hash = compute_request_hash(body.model_dump(mode="json"))
+    if idempotency_key:
+        cached = await IdempotencyService.check_key(db, membership.campus_id, idempotency_key, req_hash)
+        if cached:
+            return SignalReviewResponse(**cached.response_json)
+
     signal = await db.get(Signal, signal_id)
     if not signal or signal.institution_id != membership.campus_id:
         raise ResourceNotFoundError(f"Signal {signal_id} not found in active campus")
@@ -171,10 +194,23 @@ async def review_signal(
     else:
         await db.commit()
 
-    return SignalReviewResponse(
+    resp = SignalReviewResponse(
         signal_id=signal.id,
         decision=body.decision,
         case_id=case_id,
         status="success",
         message=f"Signal review decision '{body.decision}' recorded successfully",
     )
+    if idempotency_key:
+        await IdempotencyService.record_response(
+            db=db,
+            campus_id=membership.campus_id,
+            idempotency_key=idempotency_key,
+            request_path=f"/signals/{signal_id}/review",
+            request_hash=req_hash,
+            response_status_code=200,
+            response_json=resp.model_dump(mode="json"),
+        )
+        await db.commit()
+
+    return resp

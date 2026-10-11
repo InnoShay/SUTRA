@@ -23,6 +23,18 @@ from app.schemas.student import (
 router = APIRouter(prefix="/students", tags=["Students"])
 
 
+def check_leadership_access(membership: CampusMembershipContext):
+    """Restricts leadership role to cohort aggregates only (disallowing individual queues)."""
+    if "leadership" in membership.roles and not any(
+        r in ("hod", "mentor", "faculty", "institution_admin", "counsellor", "finance", "placement")
+        for r in membership.roles
+    ):
+        raise PermissionDeniedError(
+            "Leadership role is restricted to cohort aggregates and cannot access individual student profiles",
+            code="LEADERSHIP_QUEUE_ACCESS_DENIED",
+        )
+
+
 @router.get("", response_model=List[StudentSummary])
 async def list_students(
     cohort: Optional[str] = Query(None, description="Optional cohort code filter"),
@@ -30,6 +42,7 @@ async def list_students(
     db: AsyncSession = Depends(get_db),
 ):
     """Lists pseudonymous students belonging to the active campus."""
+    check_leadership_access(membership)
     query = select(Student).where(Student.institution_id == membership.campus_id)
     if cohort:
         query = query.where(Student.cohort_code == cohort)
@@ -54,6 +67,7 @@ async def get_student(
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieves basic profile header for a specific student."""
+    check_leadership_access(membership)
     student = await db.get(Student, student_id)
     if not student or student.institution_id != membership.campus_id:
         raise ResourceNotFoundError(f"Student {student_id} not found in active campus")
@@ -74,6 +88,7 @@ async def get_student_support_view(
     db: AsyncSession = Depends(get_db),
 ):
     """Returns role-filtered 360° support view with data freshness metrics (strictly omitting fee records)."""
+    check_leadership_access(membership)
     student = await db.get(Student, student_id)
     if not student or student.institution_id != membership.campus_id:
         raise ResourceNotFoundError(f"Student {student_id} not found in active campus")
@@ -155,6 +170,7 @@ async def list_student_observations(
     db: AsyncSession = Depends(get_db),
 ):
     """Lists chronological general observations across the 5 standard educational domains."""
+    check_leadership_access(membership)
     student = await db.get(Student, student_id)
     if not student or student.institution_id != membership.campus_id:
         raise ResourceNotFoundError(f"Student {student_id} not found in active campus")
@@ -189,11 +205,11 @@ async def get_student_finance_view(
     membership: CampusMembershipContext = Depends(get_campus_membership),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieves restricted fee-support observations. Strictly gated to finance and leadership roles (ADR-003)."""
-    # Domain capability check: only finance or leadership roles may access
-    if not any(r in ("finance", "leadership") for r in membership.roles):
+    """Retrieves restricted fee-support observations. Strictly gated to finance and admin roles (ADR-003)."""
+    # Domain capability check: only finance or institution_admin roles may access
+    if not any(r in ("finance", "institution_admin") for r in membership.roles):
         raise PermissionDeniedError(
-            "Access to financial aid observations requires 'finance' or 'leadership' role",
+            "Access to financial aid observations requires 'finance' or 'institution_admin' role",
             code="FINANCE_DOMAIN_RESTRICTED",
         )
 

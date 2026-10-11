@@ -137,8 +137,16 @@ class CaseService:
         )
         db.add(outbox)
 
-        await db.commit()
-        return case
+        try:
+            await db.commit()
+            return case
+        except Exception:
+            await db.rollback()
+            res = await db.execute(query)
+            existing = res.scalar_one_or_none()
+            if existing:
+                return existing
+            raise
 
     @classmethod
     async def apply_transition(
@@ -153,10 +161,17 @@ class CaseService:
         metadata: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
         request_id: Optional[str] = None,
+        expected_version: Optional[int] = None,
     ) -> Case:
         case = await db.get(Case, case_id)
         if not case or case.institution_id != campus_id:
             raise ResourceNotFoundError(f"Case {case_id} not found in campus {campus_id}")
+
+        if expected_version is not None and case.version != expected_version:
+            raise StateConflictError(
+                f"Concurrent modification detected: case version is {case.version}, expected {expected_version}",
+                code="CONCURRENT_CASE_MODIFICATION",
+            )
 
         current_state = case.state
         allowed_targets = ALLOWED_TRANSITIONS.get(current_state, [])
@@ -231,10 +246,17 @@ class CaseService:
         due_at: Optional[datetime] = None,
         reason_code: Optional[str] = None,
         idempotency_key: Optional[str] = None,
+        expected_version: Optional[int] = None,
     ) -> Case:
         case = await db.get(Case, case_id)
         if not case or case.institution_id != campus_id:
             raise ResourceNotFoundError(f"Case {case_id} not found in campus {campus_id}")
+
+        if expected_version is not None and case.version != expected_version:
+            raise StateConflictError(
+                f"Concurrent modification detected: case version is {case.version}, expected {expected_version}",
+                code="CONCURRENT_CASE_MODIFICATION",
+            )
 
         now = datetime.now(timezone.utc)
         from_state = case.state
@@ -455,6 +477,11 @@ class CaseService:
         case = await db.get(Case, case_id)
         if not case or case.institution_id != campus_id:
             raise ResourceNotFoundError(f"Case {case_id} not found in campus {campus_id}")
+
+        outcome_query = select(CaseOutcome).where(CaseOutcome.case_id == case.id)
+        existing_outcome = (await db.execute(outcome_query)).scalar_one_or_none()
+        if existing_outcome:
+            return existing_outcome
 
         now = datetime.now(timezone.utc)
         outcome = CaseOutcome(

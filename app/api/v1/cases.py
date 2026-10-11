@@ -25,8 +25,21 @@ from app.schemas.case import (
     OutcomeRequest,
 )
 from app.services.case_service import CaseService
+from app.services.idempotency import IdempotencyService, compute_request_hash
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
+
+
+def check_leadership_access(membership: CampusMembershipContext):
+    """Restricts leadership role to cohort aggregates only (disallowing individual queues)."""
+    if "leadership" in membership.roles and not any(
+        r in ("hod", "mentor", "faculty", "institution_admin", "counsellor", "finance", "placement")
+        for r in membership.roles
+    ):
+        raise PermissionDeniedError(
+            "Leadership role is restricted to cohort aggregates and cannot access individual student case records",
+            code="LEADERSHIP_QUEUE_ACCESS_DENIED",
+        )
 
 
 @router.get("", response_model=List[CaseDetailDTO])
@@ -37,6 +50,8 @@ async def list_cases(
     db: AsyncSession = Depends(get_db),
 ):
     """Lists cases in the active campus with state and owner filters."""
+    check_leadership_access(membership)
+
     query = select(Case.id).where(Case.institution_id == membership.campus_id)
     if state:
         query = query.where(Case.state == state)
@@ -60,6 +75,7 @@ async def get_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieves full case coordination record, tasks, follow-ups, and outcome."""
+    check_leadership_access(membership)
     return await CaseService.get_case_detail(db, membership.campus_id, case_id)
 
 
@@ -72,6 +88,12 @@ async def transition_case_state(
     db: AsyncSession = Depends(get_db),
 ):
     """Applies valid state machine transition to a case."""
+    req_hash = compute_request_hash(body.model_dump(mode="json"))
+    if idempotency_key:
+        cached = await IdempotencyService.check_key(db, membership.campus_id, idempotency_key, req_hash)
+        if cached:
+            return CaseDetailDTO(**cached.response_json)
+
     await CaseService.apply_transition(
         db=db,
         campus_id=membership.campus_id,
@@ -82,8 +104,21 @@ async def transition_case_state(
         reason_code=body.reason_code,
         metadata=body.metadata,
         idempotency_key=idempotency_key,
+        expected_version=body.expected_version,
     )
-    return await CaseService.get_case_detail(db, membership.campus_id, case_id)
+    result = await CaseService.get_case_detail(db, membership.campus_id, case_id)
+    if idempotency_key:
+        await IdempotencyService.record_response(
+            db=db,
+            campus_id=membership.campus_id,
+            idempotency_key=idempotency_key,
+            request_path=f"/cases/{case_id}/transition",
+            request_hash=req_hash,
+            response_status_code=200,
+            response_json=result.model_dump(mode="json"),
+        )
+        await db.commit()
+    return result
 
 
 @router.post("/{case_id}/assignment", response_model=CaseDetailDTO)
@@ -95,6 +130,12 @@ async def assign_case_owner(
     db: AsyncSession = Depends(get_db),
 ):
     """Assigns or reassigns primary accountable owner and deadline."""
+    req_hash = compute_request_hash(body.model_dump(mode="json"))
+    if idempotency_key:
+        cached = await IdempotencyService.check_key(db, membership.campus_id, idempotency_key, req_hash)
+        if cached:
+            return CaseDetailDTO(**cached.response_json)
+
     await CaseService.assign_owner(
         db=db,
         campus_id=membership.campus_id,
@@ -104,8 +145,21 @@ async def assign_case_owner(
         due_at=body.due_at,
         reason_code=body.reason_code,
         idempotency_key=idempotency_key,
+        expected_version=body.expected_version,
     )
-    return await CaseService.get_case_detail(db, membership.campus_id, case_id)
+    result = await CaseService.get_case_detail(db, membership.campus_id, case_id)
+    if idempotency_key:
+        await IdempotencyService.record_response(
+            db=db,
+            campus_id=membership.campus_id,
+            idempotency_key=idempotency_key,
+            request_path=f"/cases/{case_id}/assignment",
+            request_hash=req_hash,
+            response_status_code=200,
+            response_json=result.model_dump(mode="json"),
+        )
+        await db.commit()
+    return result
 
 
 @router.post("/{case_id}/accept-assignment", response_model=CaseDetailDTO)
@@ -117,6 +171,12 @@ async def accept_case_assignment(
     db: AsyncSession = Depends(get_db),
 ):
     """Explicitly accepts assigned case responsibility (assigned primary owner only)."""
+    req_hash = compute_request_hash(body.model_dump(mode="json"))
+    if idempotency_key:
+        cached = await IdempotencyService.check_key(db, membership.campus_id, idempotency_key, req_hash)
+        if cached:
+            return CaseDetailDTO(**cached.response_json)
+
     await CaseService.apply_transition(
         db=db,
         campus_id=membership.campus_id,
@@ -128,7 +188,19 @@ async def accept_case_assignment(
         metadata={"acceptance_note": body.acceptance_note},
         idempotency_key=idempotency_key,
     )
-    return await CaseService.get_case_detail(db, membership.campus_id, case_id)
+    result = await CaseService.get_case_detail(db, membership.campus_id, case_id)
+    if idempotency_key:
+        await IdempotencyService.record_response(
+            db=db,
+            campus_id=membership.campus_id,
+            idempotency_key=idempotency_key,
+            request_path=f"/cases/{case_id}/accept-assignment",
+            request_hash=req_hash,
+            response_status_code=200,
+            response_json=result.model_dump(mode="json"),
+        )
+        await db.commit()
+    return result
 
 
 @router.post("/{case_id}/tasks", response_model=CaseTaskDTO, status_code=status.HTTP_201_CREATED)
@@ -140,6 +212,12 @@ async def create_case_task(
     db: AsyncSession = Depends(get_db),
 ):
     """Delegates a specialized support subtask to a domain specialist."""
+    req_hash = compute_request_hash(body.model_dump(mode="json"))
+    if idempotency_key:
+        cached = await IdempotencyService.check_key(db, membership.campus_id, idempotency_key, req_hash)
+        if cached:
+            return CaseTaskDTO(**cached.response_json)
+
     task = await CaseService.create_task(
         db=db,
         campus_id=membership.campus_id,
@@ -152,7 +230,7 @@ async def create_case_task(
         restricted_details=body.restricted_details,
         idempotency_key=idempotency_key,
     )
-    return CaseTaskDTO(
+    result = CaseTaskDTO(
         id=task.id,
         domain=task.domain,
         generic_label=task.generic_label,
@@ -163,6 +241,18 @@ async def create_case_task(
         completed_at=task.completed_at,
         deadline_version=task.deadline_version,
     )
+    if idempotency_key:
+        await IdempotencyService.record_response(
+            db=db,
+            campus_id=membership.campus_id,
+            idempotency_key=idempotency_key,
+            request_path=f"/cases/{case_id}/tasks",
+            request_hash=req_hash,
+            response_status_code=201,
+            response_json=result.model_dump(mode="json"),
+        )
+        await db.commit()
+    return result
 
 
 @router.get("/{case_id}/tasks/{task_id}/restricted", response_model=Dict[str, Any])
@@ -212,6 +302,12 @@ async def record_case_follow_up(
     db: AsyncSession = Depends(get_db),
 ):
     """Records an outreach attempt, student response, or support delivery evidence."""
+    req_hash = compute_request_hash(body.model_dump(mode="json"))
+    if idempotency_key:
+        cached = await IdempotencyService.check_key(db, membership.campus_id, idempotency_key, req_hash)
+        if cached:
+            return FollowUpDTO(**cached.response_json)
+
     fu = await CaseService.record_follow_up(
         db=db,
         campus_id=membership.campus_id,
@@ -225,7 +321,7 @@ async def record_case_follow_up(
         proof_ref=body.proof_ref,
         idempotency_key=idempotency_key,
     )
-    return FollowUpDTO(
+    result = FollowUpDTO(
         id=fu.id,
         follow_up_type=fu.follow_up_type,
         contact_status=fu.contact_status,
@@ -236,16 +332,35 @@ async def record_case_follow_up(
         proof_ref=fu.proof_ref,
         created_at=fu.created_at,
     )
+    if idempotency_key:
+        await IdempotencyService.record_response(
+            db=db,
+            campus_id=membership.campus_id,
+            idempotency_key=idempotency_key,
+            request_path=f"/cases/{case_id}/follow-ups",
+            request_hash=req_hash,
+            response_status_code=201,
+            response_json=result.model_dump(mode="json"),
+        )
+        await db.commit()
+    return result
 
 
 @router.post("/{case_id}/outcome", response_model=CaseOutcomeDTO, status_code=status.HTTP_201_CREATED)
 async def record_case_outcome(
     case_id: uuid.UUID = Path(...),
     body: OutcomeRequest = ...,
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
     membership: CampusMembershipContext = Depends(get_campus_membership),
     db: AsyncSession = Depends(get_db),
 ):
     """Records post-support observed student outcome (helped, not_helped, mixed, unknown)."""
+    req_hash = compute_request_hash(body.model_dump(mode="json"))
+    if idempotency_key:
+        cached = await IdempotencyService.check_key(db, membership.campus_id, idempotency_key, req_hash)
+        if cached:
+            return CaseOutcomeDTO(**cached.response_json)
+
     outcome = await CaseService.record_outcome(
         db=db,
         campus_id=membership.campus_id,
@@ -256,7 +371,7 @@ async def record_case_outcome(
         evidence_kind=body.evidence_kind,
         follow_up_window_end=body.follow_up_window_end,
     )
-    return CaseOutcomeDTO(
+    result = CaseOutcomeDTO(
         id=outcome.id,
         outcome_status=outcome.outcome_status,
         rationale=outcome.rationale,
@@ -266,6 +381,18 @@ async def record_case_outcome(
         recorded_by=outcome.recorded_by,
         recorded_at=outcome.recorded_at,
     )
+    if idempotency_key:
+        await IdempotencyService.record_response(
+            db=db,
+            campus_id=membership.campus_id,
+            idempotency_key=idempotency_key,
+            request_path=f"/cases/{case_id}/outcome",
+            request_hash=req_hash,
+            response_status_code=201,
+            response_json=result.model_dump(mode="json"),
+        )
+        await db.commit()
+    return result
 
 
 @router.get("/{case_id}/history", response_model=List[CaseEventDTO])
@@ -275,6 +402,8 @@ async def get_case_history(
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieves immutable audit timeline of case state transitions and actions."""
+    check_leadership_access(membership)
+
     case = await db.get(Case, case_id)
     if not case or case.institution_id != membership.campus_id:
         raise ResourceNotFoundError(f"Case {case_id} not found in active campus")
