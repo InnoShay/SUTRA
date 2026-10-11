@@ -264,7 +264,23 @@ def generate_evaluation_markdown(
     return "\n".join(lines)
 
 
+import argparse
+from sutra_ml.observability.tracker import TrainingProgressTracker
+
+
 def main():
+    parser = argparse.ArgumentParser(description="SUTRA ML — Training Pipeline")
+    parser.add_argument("--observable", action="store_true", help="Execute with Phase Eight live observability, resource profiling, and isolated experiment output")
+    parser.add_argument("--experiment-dir", type=str, default=None, help="Custom experiment directory for model artifacts")
+    args = parser.parse_args()
+
+    if args.observable:
+        from sutra_ml.observability.tracker import TrainingProgressTracker
+        from pipelines.run_observable_train import run_observable_training
+        exp_dir = Path(args.experiment_dir) if args.experiment_dir else None
+        run_observable_training(output_dir=exp_dir)
+        return
+
     pipeline_start = time.time()
     print("=" * 70)
     print("SUTRA ML — Local Training Pipeline: Baseline & Candidate Fitting")

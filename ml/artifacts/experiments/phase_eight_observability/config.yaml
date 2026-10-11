@@ -1,0 +1,21 @@
+baseline_logistic_regression:
+  C: 1.0
+  class_weight: balanced
+  max_iter: 1000
+  model_type: LogisticRegression
+  penalty: l2
+  random_state: 42
+  solver: lbfgs
+candidate_constrained_xgboost:
+  colsample_bytree: 0.7
+  learning_rate: 0.05
+  max_depth: 3
+  n_estimators: 150
+  n_jobs: -1
+  random_state: 42
+  reg_alpha: 0.1
+  reg_lambda: 1.0
+  scale_pos_weight: 1.2
+  subsample: 0.8
+dataset_sha256: e6f6e4f9c3cacc48a59b3ed1f5b814fcae1d8e350964c0340eed6aa61e4ee3b9
+operating_threshold: 0.46

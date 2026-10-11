@@ -71,3 +71,60 @@ def build_xgboost_pipeline(
         ("preprocessor", preprocessor),
         ("classifier", classifier),
     ])
+
+
+def build_module_relative_lr_pipeline(
+    numerical_features: list[str],
+    categorical_features: list[str],
+    engagement_features: list[str],
+    params: dict[str, Any],
+    module_col: str = "code_module",
+) -> Pipeline:
+    """
+    Build Logistic Regression pipeline augmented with module-relative engagement features.
+    """
+    from sutra_ml.features.module_relative import ModuleRelativeTransformer
+
+    clean_params = {k: v for k, v in params.items() if k != "model_type"}
+    transformer = ModuleRelativeTransformer(
+        module_col=module_col,
+        engagement_features=engagement_features,
+    )
+    augmented_numerical = list(numerical_features) + [f"{f}{transformer.suffix}" for f in engagement_features]
+    preprocessor = build_preprocessor(augmented_numerical, categorical_features)
+    classifier = LogisticRegression(**clean_params)
+
+    return Pipeline([
+        ("module_relative", transformer),
+        ("preprocessor", preprocessor),
+        ("classifier", classifier),
+    ])
+
+
+def build_module_relative_xgboost_pipeline(
+    numerical_features: list[str],
+    categorical_features: list[str],
+    engagement_features: list[str],
+    params: dict[str, Any],
+    module_col: str = "code_module",
+) -> Pipeline:
+    """
+    Build XGBoost pipeline augmented with module-relative engagement features.
+    """
+    from sutra_ml.features.module_relative import ModuleRelativeTransformer
+
+    clean_params = {k: v for k, v in params.items() if k != "model_type"}
+    transformer = ModuleRelativeTransformer(
+        module_col=module_col,
+        engagement_features=engagement_features,
+    )
+    augmented_numerical = list(numerical_features) + [f"{f}{transformer.suffix}" for f in engagement_features]
+    preprocessor = build_preprocessor(augmented_numerical, categorical_features)
+    classifier = XGBClassifier(**clean_params)
+
+    return Pipeline([
+        ("module_relative", transformer),
+        ("preprocessor", preprocessor),
+        ("classifier", classifier),
+    ])
+

@@ -1,0 +1,28 @@
+experiment: phase_nine_module_relative_features
+logistic_regression:
+  C: 1.0
+  class_weight: balanced
+  max_iter: 1000
+  model_type: LogisticRegression
+  penalty: l2
+  random_state: 42
+  solver: lbfgs
+operating_threshold: 0.46
+transformer_settings:
+  clip_bound:
+  - -5.0
+  - 5.0
+  min_module_samples: 10
+  module_col: code_module
+  std_eps: 1.0e-06
+xgboost:
+  colsample_bytree: 0.7
+  learning_rate: 0.05
+  max_depth: 3
+  n_estimators: 150
+  n_jobs: -1
+  random_state: 42
+  reg_alpha: 0.1
+  reg_lambda: 1.0
+  scale_pos_weight: 1.2
+  subsample: 0.8

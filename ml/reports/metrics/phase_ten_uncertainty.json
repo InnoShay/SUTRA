@@ -1,0 +1,445 @@
+{
+  "audit_phase": "PHASE_TEN_PROMOTION_READINESS_AUDIT",
+  "dataset_hash": "e6f6e4f9c3cacc48a59b3ed1f5b814fcae1d8e350964c0340eed6aa61e4ee3b9",
+  "total_records": 18263,
+  "unique_students": 17188,
+  "bootstrap_iterations": 1000,
+  "execution_duration_sec": 10.33,
+  "operating_threshold": 0.46,
+  "primary_point_metrics": {
+    "baseline_lr": {
+      "threshold": 0.46,
+      "total_samples": 18263,
+      "actual_positives": 8335,
+      "actual_negatives": 9928,
+      "prevalence": 0.4564,
+      "accuracy": 0.6509,
+      "balanced_accuracy": 0.6561,
+      "precision": 0.5983,
+      "recall": 0.7159,
+      "specificity": 0.5964,
+      "false_positive_rate": 0.4036,
+      "f1_score": 0.6518,
+      "roc_auc": 0.723,
+      "pr_auc": 0.6939,
+      "brier_score": 0.2117,
+      "confusion_matrix": {
+        "tn": 5921,
+        "fp": 4007,
+        "fn": 2368,
+        "tp": 5967
+      },
+      "operational_workload": {
+        "total_alerts_fired": 9974,
+        "alert_rate_pct": 54.61,
+        "false_alarms_advisor_burden": 4007,
+        "missed_at_risk_students": 2368,
+        "successful_proactive_catches": 5967
+      }
+    },
+    "experimental_module_rel_lr": {
+      "threshold": 0.46,
+      "total_samples": 18263,
+      "actual_positives": 8335,
+      "actual_negatives": 9928,
+      "prevalence": 0.4564,
+      "accuracy": 0.6738,
+      "balanced_accuracy": 0.6773,
+      "precision": 0.6239,
+      "recall": 0.7179,
+      "specificity": 0.6367,
+      "false_positive_rate": 0.3633,
+      "f1_score": 0.6676,
+      "roc_auc": 0.7484,
+      "pr_auc": 0.7317,
+      "brier_score": 0.2021,
+      "confusion_matrix": {
+        "tn": 6321,
+        "fp": 3607,
+        "fn": 2351,
+        "tp": 5984
+      },
+      "operational_workload": {
+        "total_alerts_fired": 9591,
+        "alert_rate_pct": 52.52,
+        "false_alarms_advisor_burden": 3607,
+        "missed_at_risk_students": 2351,
+        "successful_proactive_catches": 5984
+      }
+    }
+  },
+  "paired_uncertainty_bootstrap": {
+    "roc_auc": {
+      "mean_paired_difference": 0.0253,
+      "std_error": 0.0019,
+      "ci_95_lower": 0.0215,
+      "ci_95_upper": 0.0292,
+      "prob_non_positive_gain": 0.0
+    },
+    "pr_auc": {
+      "mean_paired_difference": 0.0379,
+      "std_error": 0.0026,
+      "ci_95_lower": 0.0328,
+      "ci_95_upper": 0.0432,
+      "prob_non_positive_gain": 0.0
+    },
+    "brier": {
+      "mean_paired_difference": -0.0096,
+      "std_error": 0.0007,
+      "ci_95_lower": -0.0109,
+      "ci_95_upper": -0.0082,
+      "prob_non_positive_gain": 0.0
+    },
+    "precision": {
+      "mean_paired_difference": 0.0258,
+      "std_error": 0.0026,
+      "ci_95_lower": 0.0206,
+      "ci_95_upper": 0.0309,
+      "prob_non_positive_gain": 0.0
+    },
+    "recall": {
+      "mean_paired_difference": 0.002,
+      "std_error": 0.0036,
+      "ci_95_lower": -0.005,
+      "ci_95_upper": 0.0087,
+      "prob_non_positive_gain": 0.285
+    },
+    "f1": {
+      "mean_paired_difference": 0.0159,
+      "std_error": 0.0026,
+      "ci_95_lower": 0.0106,
+      "ci_95_upper": 0.0206,
+      "prob_non_positive_gain": 0.0
+    },
+    "specificity": {
+      "mean_paired_difference": 0.0405,
+      "std_error": 0.0038,
+      "ci_95_lower": 0.0328,
+      "ci_95_upper": 0.0475,
+      "prob_non_positive_gain": 0.0
+    },
+    "fp": {
+      "mean_paired_difference": -401.6582,
+      "std_error": 37.7863,
+      "ci_95_lower": -469.7115,
+      "ci_95_upper": -325.8403,
+      "prob_non_positive_gain": 0.0
+    },
+    "fn": {
+      "mean_paired_difference": -16.9446,
+      "std_error": 29.9818,
+      "ci_95_lower": -72.8409,
+      "ci_95_upper": 40.9742,
+      "prob_non_positive_gain": 0.285
+    },
+    "alert_rate": {
+      "mean_paired_difference": -0.0211,
+      "std_error": 0.0027,
+      "ci_95_lower": -0.026,
+      "ci_95_upper": -0.0157,
+      "prob_non_positive_gain": 0.0
+    }
+  },
+  "calibration_sensitivity": {
+    "5_bins": {
+      "n_bins": 5,
+      "baseline_ece": 0.038,
+      "exp_ece": 0.0384,
+      "delta_ece": 0.0004,
+      "baseline_brier": 0.2117,
+      "exp_brier": 0.2021
+    },
+    "10_bins": {
+      "n_bins": 10,
+      "baseline_ece": 0.0384,
+      "exp_ece": 0.0385,
+      "delta_ece": 0.0001,
+      "baseline_brier": 0.2117,
+      "exp_brier": 0.2021
+    },
+    "15_bins": {
+      "n_bins": 15,
+      "baseline_ece": 0.038,
+      "exp_ece": 0.04,
+      "delta_ece": 0.002,
+      "baseline_brier": 0.2117,
+      "exp_brier": 0.2021
+    },
+    "20_bins": {
+      "n_bins": 20,
+      "baseline_ece": 0.0384,
+      "exp_ece": 0.0405,
+      "delta_ece": 0.0021,
+      "baseline_brier": 0.2117,
+      "exp_brier": 0.2021
+    }
+  },
+  "module_level_audit": {
+    "AAA": {
+      "total_students": 369,
+      "actual_positives": 91,
+      "actual_negatives": 278,
+      "prevalence_pct": 24.66,
+      "roc_auc": {
+        "baseline": 0.6631,
+        "experimental": 0.6762,
+        "delta": 0.0131
+      },
+      "recall_pct": {
+        "baseline": 41.76,
+        "experimental": 49.45,
+        "delta_pct": 7.69
+      },
+      "precision_pct": {
+        "baseline": 40.0,
+        "experimental": 39.13,
+        "delta_pct": -0.87
+      },
+      "false_positives": {
+        "baseline": 57,
+        "experimental": 70,
+        "delta": 13,
+        "percent_change": 22.81
+      },
+      "false_negatives": {
+        "baseline": 53,
+        "experimental": 46,
+        "delta": -7
+      },
+      "alert_rate_pct": {
+        "baseline": 25.75,
+        "experimental": 31.17,
+        "delta_pct": 5.42
+      }
+    },
+    "BBB": {
+      "total_students": 4633,
+      "actual_positives": 2031,
+      "actual_negatives": 2602,
+      "prevalence_pct": 43.84,
+      "roc_auc": {
+        "baseline": 0.7391,
+        "experimental": 0.7439,
+        "delta": 0.0048
+      },
+      "recall_pct": {
+        "baseline": 77.4,
+        "experimental": 67.75,
+        "delta_pct": -9.65
+      },
+      "precision_pct": {
+        "baseline": 57.39,
+        "experimental": 62.52,
+        "delta_pct": 5.13
+      },
+      "false_positives": {
+        "baseline": 1167,
+        "experimental": 825,
+        "delta": -342,
+        "percent_change": -29.31
+      },
+      "false_negatives": {
+        "baseline": 459,
+        "experimental": 655,
+        "delta": 196
+      },
+      "alert_rate_pct": {
+        "baseline": 59.12,
+        "experimental": 47.51,
+        "delta_pct": -11.61
+      }
+    },
+    "CCC": {
+      "total_students": 1489,
+      "actual_positives": 826,
+      "actual_negatives": 663,
+      "prevalence_pct": 55.47,
+      "roc_auc": {
+        "baseline": 0.7362,
+        "experimental": 0.7562,
+        "delta": 0.02
+      },
+      "recall_pct": {
+        "baseline": 69.13,
+        "experimental": 70.1,
+        "delta_pct": 0.97
+      },
+      "precision_pct": {
+        "baseline": 71.37,
+        "experimental": 72.01,
+        "delta_pct": 0.64
+      },
+      "false_positives": {
+        "baseline": 229,
+        "experimental": 225,
+        "delta": -4,
+        "percent_change": -1.75
+      },
+      "false_negatives": {
+        "baseline": 255,
+        "experimental": 247,
+        "delta": -8
+      },
+      "alert_rate_pct": {
+        "baseline": 53.73,
+        "experimental": 54.0,
+        "delta_pct": 0.27
+      }
+    },
+    "DDD": {
+      "total_students": 3800,
+      "actual_positives": 1982,
+      "actual_negatives": 1818,
+      "prevalence_pct": 52.16,
+      "roc_auc": {
+        "baseline": 0.7128,
+        "experimental": 0.7448,
+        "delta": 0.032
+      },
+      "recall_pct": {
+        "baseline": 66.55,
+        "experimental": 76.84,
+        "delta_pct": 10.29
+      },
+      "precision_pct": {
+        "baseline": 66.18,
+        "experimental": 65.93,
+        "delta_pct": -0.25
+      },
+      "false_positives": {
+        "baseline": 674,
+        "experimental": 787,
+        "delta": 113,
+        "percent_change": 16.77
+      },
+      "false_negatives": {
+        "baseline": 663,
+        "experimental": 459,
+        "delta": -204
+      },
+      "alert_rate_pct": {
+        "baseline": 52.45,
+        "experimental": 60.79,
+        "delta_pct": 8.34
+      }
+    },
+    "EEE": {
+      "total_students": 1532,
+      "actual_positives": 566,
+      "actual_negatives": 966,
+      "prevalence_pct": 36.95,
+      "roc_auc": {
+        "baseline": 0.7637,
+        "experimental": 0.7804,
+        "delta": 0.0167
+      },
+      "recall_pct": {
+        "baseline": 72.26,
+        "experimental": 80.21,
+        "delta_pct": 7.95
+      },
+      "precision_pct": {
+        "baseline": 54.39,
+        "experimental": 52.55,
+        "delta_pct": -1.84
+      },
+      "false_positives": {
+        "baseline": 343,
+        "experimental": 410,
+        "delta": 67,
+        "percent_change": 19.53
+      },
+      "false_negatives": {
+        "baseline": 157,
+        "experimental": 112,
+        "delta": -45
+      },
+      "alert_rate_pct": {
+        "baseline": 49.09,
+        "experimental": 56.4,
+        "delta_pct": 7.31
+      }
+    },
+    "FFF": {
+      "total_students": 4720,
+      "actual_positives": 2189,
+      "actual_negatives": 2531,
+      "prevalence_pct": 46.38,
+      "roc_auc": {
+        "baseline": 0.7533,
+        "experimental": 0.7665,
+        "delta": 0.0132
+      },
+      "recall_pct": {
+        "baseline": 67.61,
+        "experimental": 73.28,
+        "delta_pct": 5.67
+      },
+      "precision_pct": {
+        "baseline": 65.26,
+        "experimental": 64.37,
+        "delta_pct": -0.89
+      },
+      "false_positives": {
+        "baseline": 788,
+        "experimental": 888,
+        "delta": 100,
+        "percent_change": 12.69
+      },
+      "false_negatives": {
+        "baseline": 709,
+        "experimental": 585,
+        "delta": -124
+      },
+      "alert_rate_pct": {
+        "baseline": 48.05,
+        "experimental": 52.8,
+        "delta_pct": 4.75
+      }
+    },
+    "GGG": {
+      "total_students": 1720,
+      "actual_positives": 650,
+      "actual_negatives": 1070,
+      "prevalence_pct": 37.79,
+      "roc_auc": {
+        "baseline": 0.6778,
+        "experimental": 0.6711,
+        "delta": -0.0067
+      },
+      "recall_pct": {
+        "baseline": 88.92,
+        "experimental": 62.0,
+        "delta_pct": -26.92
+      },
+      "precision_pct": {
+        "baseline": 43.56,
+        "experimental": 50.06,
+        "delta_pct": 6.5
+      },
+      "false_positives": {
+        "baseline": 749,
+        "experimental": 402,
+        "delta": -347,
+        "percent_change": -46.33
+      },
+      "false_negatives": {
+        "baseline": 72,
+        "experimental": 247,
+        "delta": 175
+      },
+      "alert_rate_pct": {
+        "baseline": 77.15,
+        "experimental": 46.8,
+        "delta_pct": -30.35
+      }
+    }
+  },
+  "summary_reconciliation": {
+    "sum_fp_delta": -400,
+    "sum_fn_delta": -17,
+    "pooled_fp_delta": -400,
+    "pooled_fn_delta": -17,
+    "reconciliation_passed": true
+  }
+}
