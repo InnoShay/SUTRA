@@ -1,0 +1,123 @@
+{
+  "dataset_metadata": {
+    "dataset_label": "OULAD Day-30 Processed Dataset",
+    "data_file": "/Users/neemaysmac/Desktop/Sutra/ml/data/processed/day30_features.csv",
+    "partition": "Presentation 2014J",
+    "raw_rows_examined": 27466,
+    "partition_rows": 9203,
+    "evaluated_rows": 9203,
+    "rejected_missing_rows": 0,
+    "target_column": "target",
+    "class_prevalence": 0.407,
+    "actual_at_risk_count": 3746,
+    "actual_on_track_count": 5457
+  },
+  "model_metadata": {
+    "model_name": "Regularized Logistic Regression Baseline",
+    "model_version": "v1.0.0",
+    "operational_threshold": 0.46
+  },
+  "threshold_independent_metrics": {
+    "roc_auc": 0.7216,
+    "pr_auc": 0.6502,
+    "brier_score": 0.2103,
+    "expected_calibration_error_ece": 0.0681,
+    "maximum_calibration_error_mce": 0.0967
+  },
+  "threshold_dependent_metrics": {
+    "threshold": 0.46,
+    "accuracy": 0.6498,
+    "balanced_accuracy": 0.6573,
+    "precision": 0.5556,
+    "recall": 0.6978,
+    "specificity": 0.6168,
+    "false_positive_rate": 0.3832,
+    "f1_score": 0.6186,
+    "confusion_matrix": {
+      "tn": 3366,
+      "fp": 2091,
+      "fn": 1132,
+      "tp": 2614
+    },
+    "operational_workload": {
+      "total_alerts_fired": 4705,
+      "alert_rate_pct": 51.12,
+      "false_alarms_advisor_burden": 2091,
+      "missed_at_risk_students": 1132,
+      "successful_proactive_catches": 2614
+    }
+  },
+  "reliability_table": [
+    {
+      "bin_range": "[0.0, 0.1)",
+      "samples_count": 116,
+      "mean_predicted_prob": 0.0718,
+      "observed_positive_rate": 0.1466,
+      "calibration_gap": 0.0747
+    },
+    {
+      "bin_range": "[0.1, 0.2)",
+      "samples_count": 563,
+      "mean_predicted_prob": 0.1567,
+      "observed_positive_rate": 0.1368,
+      "calibration_gap": 0.0199
+    },
+    {
+      "bin_range": "[0.2, 0.3)",
+      "samples_count": 1153,
+      "mean_predicted_prob": 0.2551,
+      "observed_positive_rate": 0.1977,
+      "calibration_gap": 0.0574
+    },
+    {
+      "bin_range": "[0.3, 0.4)",
+      "samples_count": 1587,
+      "mean_predicted_prob": 0.3509,
+      "observed_positive_rate": 0.2716,
+      "calibration_gap": 0.0793
+    },
+    {
+      "bin_range": "[0.4, 0.5)",
+      "samples_count": 1770,
+      "mean_predicted_prob": 0.4493,
+      "observed_positive_rate": 0.3525,
+      "calibration_gap": 0.0967
+    },
+    {
+      "bin_range": "[0.5, 0.6)",
+      "samples_count": 1607,
+      "mean_predicted_prob": 0.5489,
+      "observed_positive_rate": 0.4748,
+      "calibration_gap": 0.0741
+    },
+    {
+      "bin_range": "[0.6, 0.7)",
+      "samples_count": 1205,
+      "mean_predicted_prob": 0.6462,
+      "observed_positive_rate": 0.5793,
+      "calibration_gap": 0.067
+    },
+    {
+      "bin_range": "[0.7, 0.8)",
+      "samples_count": 732,
+      "mean_predicted_prob": 0.7449,
+      "observed_positive_rate": 0.694,
+      "calibration_gap": 0.051
+    },
+    {
+      "bin_range": "[0.8, 0.9)",
+      "samples_count": 368,
+      "mean_predicted_prob": 0.8453,
+      "observed_positive_rate": 0.8288,
+      "calibration_gap": 0.0165
+    },
+    {
+      "bin_range": "[0.9, 1.0)",
+      "samples_count": 102,
+      "mean_predicted_prob": 0.9261,
+      "observed_positive_rate": 0.9314,
+      "calibration_gap": 0.0053
+    }
+  ],
+  "provenance_warning": "HISTORICAL PARTITION NOTICE: Presentation 2014J represents previously inspected development evidence. It must NEVER be reported as an untouched prospective test set. Real-world generalization must be assessed on authentic, prospectively collected cohorts."
+}

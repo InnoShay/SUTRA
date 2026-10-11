@@ -125,26 +125,62 @@ python3 ml/pipelines/run_prep.py
 
 ---
 
-## 6. Running Automated Tests
+## 6. Running Model Training & Evaluation (Phase Three)
+
+To train the regularized Logistic Regression baseline and XGBoost candidate, evaluate cross-validation, and score the held-out temporal presentation:
+```bash
+python3 ml/pipelines/run_train.py
+```
+
+### Outputs Generated:
+- **Model Artifacts:** `ml/artifacts/models/v1.0.0/`
+  - `baseline_logistic_regression.joblib` (Fitted Pipeline)
+  - `candidate_xgboost.joblib` (Fitted Pipeline)
+  - `model_metadata.json` (Serialized schema, parameters, metrics)
+- **Quantitative Metrics JSON:** `ml/reports/metrics/model_comparison.json`
+- **Evaluation Report:** `ml/reports/model_evaluation_report.md`
+
+---
+
+## 7. Running Explainability, Calibration & Evidence Cards (Phase Four)
+
+To generate local and global explanations, calculate empirical probability calibration (ECE/MCE/Brier), assess subgroup disparities, and produce sample SUTRA Evidence Cards:
+```bash
+python3 ml/pipelines/run_explain.py
+```
+
+### Outputs Generated:
+- **Calibration Metrics JSON:** `ml/reports/metrics/calibration_metrics.json`
+- **Phase Four Report:** `ml/reports/phase_four_explainability_report.md`
+- **Pydantic Evidence Card Contract:** `ml/src/sutra_ml/schemas/evidence_card.py`
+- **Explainability Engine:** `ml/src/sutra_ml/explainability/` (`local_explanations.py`, `global_explanations.py`)
+
+---
+
+## 8. Running Automated Tests
 
 Run the full offline test suite:
 ```bash
 PYTHONPATH=ml/src python3 -m pytest ml/tests
 ```
 
-All 26 automated tests validate:
-- **Data Quality:** Table presence, column presence, primary key uniqueness, null detection, foreign key integrity.
-- **Unit Logic:** Fast line counting, streaming chunk iterators, missingness calculations, cohort partitioning, target mapping, unengaged student imputation.
-- **Leakage Prevention:** Hard temporal boundary ($t \le 30$ included, $t > 30$ dropped), zero post-cutoff VLE clicks in features, zero post-cutoff assessment submissions in features, exclusion of unverified assessment scores, zero row multiplication, and complete exclusion of target labels / unregistration dates from predictors.
-- **Integration:** End-to-end execution of both the data audit pipeline and the data preparation pipeline on test fixtures.
+All 39 automated tests validate:
+- **Data Quality (9 tests):** Table presence, column presence, primary key uniqueness, null detection, foreign key integrity.
+- **Unit Logic (11 tests):** Fast line counting, streaming chunk iterators, missingness calculations, cohort partitioning, target mapping, unengaged student imputation.
+- **Leakage Prevention (4 tests):** Hard temporal boundary ($t \le 30$ included, $t > 30$ dropped), zero post-cutoff VLE clicks in features, zero post-cutoff assessment submissions in features, exclusion of unverified assessment scores, zero row multiplication, and complete exclusion of target labels / unregistration dates from predictors.
+- **Training & Evaluation (6 tests):** Temporal split integrity, zero cross-fold student leakage under `GroupKFold`, Scikit-learn preprocessing pipelines, XGBoost fit/predict, metric calculations, and threshold optimization.
+- **Explainability & Calibration (7 tests):** Feature prefix cleaning and name mapping, linear log-odds decomposition additivity ($w_0 + \sum \phi_j == \text{margin}$), tree SHAP additivity ($\text{bias} + \sum \phi_j == \text{margin}$), robust missing value handling, calibration assessment metrics (Brier, ECE, MCE, reliability bins), SUTRA Evidence Card Pydantic schema validation and tier thresholds, global feature ranking consistency.
+- **Integration (2 tests):** End-to-end execution of data audit and data preparation pipelines on test fixtures.
 
 ---
 
-## 7. Scope Boundaries & Current Phase
+## 9. Scope Boundaries & Current Phase
 
 We adhere strictly to phase-by-phase authorization:
 - **Phase Zero:** ML Architecture & Research Plan (**Approved**).
 - **Phase One:** Workspace Initialization & OULAD Data Audit (**Completed & Approved**).
-- **Phase Two:** Day-30 Temporal Snapshots, Feature Engineering & Label Validation (**Completed**).
-- **Phase Three (Next):** Model Training (Regularized Logistic Regression Baseline vs. Tuned XGBoost Candidate).
-- **Prohibitions during Phase Two:** No models trained, no performance metrics calculated, no hyperparameter tuning, no remote commits pushed.
+- **Phase Two:** Day-30 Temporal Snapshots, Feature Engineering & Label Validation (**Completed & Approved**).
+- **Phase Three:** Model Training & Evaluation (**Completed & Reviewed**).
+- **Phase Four:** Model Explainability, Calibration & Evidence Cards (**Completed**).
+- **Phase Five (Pending Authorization):** FastAPI Backend, Case Management API & Support Orchestration.
+- **Prohibitions during Phase Four:** No FastAPI backend, no frontend, no automatic intervention triggers, no unapproved remote pushes. All code stays cleanly isolated and auditable.

@@ -1,0 +1,791 @@
+{
+  "phase": "PHASE_EIGHT_OBSERVABILITY",
+  "timestamp_start": "2026-10-12 01:17:30",
+  "timestamp_end": "2026-10-12 01:17:31",
+  "system": {
+    "os": "Darwin",
+    "os_release": "25.6.0",
+    "machine": "arm64",
+    "python_version": "3.13.6",
+    "platform_processor": "arm"
+  },
+  "dataset": {
+    "path": "/Users/neemaysmac/Desktop/Sutra/ml/data/processed/day30_features.csv",
+    "sha256": "e6f6e4f9c3cacc48a59b3ed1f5b814fcae1d8e350964c0340eed6aa61e4ee3b9",
+    "total_rows": 27466,
+    "unique_students": 24787,
+    "train_rows": 18263,
+    "test_rows": 9203
+  },
+  "total_timings": {
+    "wall_clock_sec": 1.3956,
+    "process_cpu_sec": 4.4087,
+    "peak_rss_mb": 247.0
+  },
+  "cross_validation": {
+    "logistic_regression": {
+      "experiment_name": "LogisticRegression_Baseline",
+      "total_folds": 5,
+      "total_duration_sec": 1.3694,
+      "completed_folds_count": 5,
+      "events": [
+        {
+          "experiment_name": "LogisticRegression_Baseline",
+          "phase": "cross_validation",
+          "fold_idx": 1,
+          "total_folds": 5,
+          "train_rows": 14610,
+          "val_rows": 3653,
+          "train_unique_students": 13750,
+          "val_unique_students": 3438,
+          "start_time_iso": "2026-10-12T01:17:30.405642",
+          "end_time_iso": "2026-10-12T01:17:30.433039",
+          "wall_duration_sec": 0.0303,
+          "preprocessor_duration_sec": 0.0089,
+          "estimator_duration_sec": 0.0127,
+          "estimator_type": "LogisticRegression",
+          "convergence_info": {
+            "iterations": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3653,
+            "actual_positives": 1677,
+            "actual_negatives": 1976,
+            "prevalence": 0.4591,
+            "accuracy": 0.6625,
+            "balanced_accuracy": 0.6611,
+            "precision": 0.6292,
+            "recall": 0.6446,
+            "specificity": 0.6776,
+            "false_positive_rate": 0.3224,
+            "f1_score": 0.6368,
+            "roc_auc": 0.719,
+            "pr_auc": 0.6823,
+            "brier_score": 0.2133,
+            "confusion_matrix": {
+              "tn": 1339,
+              "fp": 637,
+              "fn": 596,
+              "tp": 1081
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1718,
+              "alert_rate_pct": 47.03,
+              "false_alarms_advisor_burden": 637,
+              "missed_at_risk_students": 596,
+              "successful_proactive_catches": 1081
+            }
+          },
+          "resource_summary": {
+            "section_name": "LR_fold_1",
+            "wall_clock_sec": 0.0128,
+            "process_cpu_sec": 0.0128,
+            "cpu_time_ratio": 1.0,
+            "start_peak_rss_mb": 207.94,
+            "end_peak_rss_mb": 208.55,
+            "sampling": {
+              "samples_count": 2,
+              "mean_process_cpu_percent": 105.1,
+              "peak_process_cpu_percent": 110.2,
+              "mean_rss_mb": 208.24,
+              "peak_rss_mb": 208.52,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        },
+        {
+          "experiment_name": "LogisticRegression_Baseline",
+          "phase": "cross_validation",
+          "fold_idx": 2,
+          "total_folds": 5,
+          "train_rows": 14610,
+          "val_rows": 3653,
+          "train_unique_students": 13750,
+          "val_unique_students": 3438,
+          "start_time_iso": "2026-10-12T01:17:30.436496",
+          "end_time_iso": "2026-10-12T01:17:30.460447",
+          "wall_duration_sec": 0.0274,
+          "preprocessor_duration_sec": 0.0074,
+          "estimator_duration_sec": 0.011,
+          "estimator_type": "LogisticRegression",
+          "convergence_info": {
+            "iterations": 39,
+            "solver": "lbfgs",
+            "tol": 0.0001
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3653,
+            "actual_positives": 1648,
+            "actual_negatives": 2005,
+            "prevalence": 0.4511,
+            "accuracy": 0.6756,
+            "balanced_accuracy": 0.6748,
+            "precision": 0.6334,
+            "recall": 0.6669,
+            "specificity": 0.6828,
+            "false_positive_rate": 0.3172,
+            "f1_score": 0.6497,
+            "roc_auc": 0.7344,
+            "pr_auc": 0.7088,
+            "brier_score": 0.2081,
+            "confusion_matrix": {
+              "tn": 1369,
+              "fp": 636,
+              "fn": 549,
+              "tp": 1099
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1735,
+              "alert_rate_pct": 47.5,
+              "false_alarms_advisor_burden": 636,
+              "missed_at_risk_students": 549,
+              "successful_proactive_catches": 1099
+            }
+          },
+          "resource_summary": {
+            "section_name": "LR_fold_2",
+            "wall_clock_sec": 0.0111,
+            "process_cpu_sec": 0.0111,
+            "cpu_time_ratio": 1.0,
+            "start_peak_rss_mb": 209.8,
+            "end_peak_rss_mb": 209.83,
+            "sampling": {
+              "samples_count": 2,
+              "mean_process_cpu_percent": 105.85,
+              "peak_process_cpu_percent": 111.5,
+              "mean_rss_mb": 209.81,
+              "peak_rss_mb": 209.83,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        },
+        {
+          "experiment_name": "LogisticRegression_Baseline",
+          "phase": "cross_validation",
+          "fold_idx": 3,
+          "total_folds": 5,
+          "train_rows": 14610,
+          "val_rows": 3653,
+          "train_unique_students": 13750,
+          "val_unique_students": 3438,
+          "start_time_iso": "2026-10-12T01:17:30.463637",
+          "end_time_iso": "2026-10-12T01:17:30.487983",
+          "wall_duration_sec": 0.0275,
+          "preprocessor_duration_sec": 0.0074,
+          "estimator_duration_sec": 0.0115,
+          "estimator_type": "LogisticRegression",
+          "convergence_info": {
+            "iterations": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3653,
+            "actual_positives": 1645,
+            "actual_negatives": 2008,
+            "prevalence": 0.4503,
+            "accuracy": 0.6679,
+            "balanced_accuracy": 0.6661,
+            "precision": 0.6272,
+            "recall": 0.6474,
+            "specificity": 0.6848,
+            "false_positive_rate": 0.3152,
+            "f1_score": 0.6372,
+            "roc_auc": 0.7258,
+            "pr_auc": 0.6921,
+            "brier_score": 0.2105,
+            "confusion_matrix": {
+              "tn": 1375,
+              "fp": 633,
+              "fn": 580,
+              "tp": 1065
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1698,
+              "alert_rate_pct": 46.48,
+              "false_alarms_advisor_burden": 633,
+              "missed_at_risk_students": 580,
+              "successful_proactive_catches": 1065
+            }
+          },
+          "resource_summary": {
+            "section_name": "LR_fold_3",
+            "wall_clock_sec": 0.0116,
+            "process_cpu_sec": 0.0117,
+            "cpu_time_ratio": 1.0,
+            "start_peak_rss_mb": 209.83,
+            "end_peak_rss_mb": 209.86,
+            "sampling": {
+              "samples_count": 2,
+              "mean_process_cpu_percent": 105.75,
+              "peak_process_cpu_percent": 111.5,
+              "mean_rss_mb": 209.84,
+              "peak_rss_mb": 209.86,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        },
+        {
+          "experiment_name": "LogisticRegression_Baseline",
+          "phase": "cross_validation",
+          "fold_idx": 4,
+          "total_folds": 5,
+          "train_rows": 14611,
+          "val_rows": 3652,
+          "train_unique_students": 13751,
+          "val_unique_students": 3437,
+          "start_time_iso": "2026-10-12T01:17:30.491426",
+          "end_time_iso": "2026-10-12T01:17:30.515126",
+          "wall_duration_sec": 0.0271,
+          "preprocessor_duration_sec": 0.0079,
+          "estimator_duration_sec": 0.0098,
+          "estimator_type": "LogisticRegression",
+          "convergence_info": {
+            "iterations": 33,
+            "solver": "lbfgs",
+            "tol": 0.0001
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3652,
+            "actual_positives": 1705,
+            "actual_negatives": 1947,
+            "prevalence": 0.4669,
+            "accuracy": 0.6566,
+            "balanced_accuracy": 0.6554,
+            "precision": 0.6312,
+            "recall": 0.6364,
+            "specificity": 0.6744,
+            "false_positive_rate": 0.3256,
+            "f1_score": 0.6338,
+            "roc_auc": 0.7143,
+            "pr_auc": 0.697,
+            "brier_score": 0.2144,
+            "confusion_matrix": {
+              "tn": 1313,
+              "fp": 634,
+              "fn": 620,
+              "tp": 1085
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1719,
+              "alert_rate_pct": 47.07,
+              "false_alarms_advisor_burden": 634,
+              "missed_at_risk_students": 620,
+              "successful_proactive_catches": 1085
+            }
+          },
+          "resource_summary": {
+            "section_name": "LR_fold_4",
+            "wall_clock_sec": 0.0099,
+            "process_cpu_sec": 0.0099,
+            "cpu_time_ratio": 1.0,
+            "start_peak_rss_mb": 211.92,
+            "end_peak_rss_mb": 211.95,
+            "sampling": {
+              "samples_count": 2,
+              "mean_process_cpu_percent": 106.8,
+              "peak_process_cpu_percent": 113.5,
+              "mean_rss_mb": 211.94,
+              "peak_rss_mb": 211.95,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        },
+        {
+          "experiment_name": "LogisticRegression_Baseline",
+          "phase": "cross_validation",
+          "fold_idx": 5,
+          "total_folds": 5,
+          "train_rows": 14611,
+          "val_rows": 3652,
+          "train_unique_students": 13751,
+          "val_unique_students": 3437,
+          "start_time_iso": "2026-10-12T01:17:30.518545",
+          "end_time_iso": "2026-10-12T01:17:30.541686",
+          "wall_duration_sec": 0.0265,
+          "preprocessor_duration_sec": 0.0075,
+          "estimator_duration_sec": 0.0103,
+          "estimator_type": "LogisticRegression",
+          "convergence_info": {
+            "iterations": 35,
+            "solver": "lbfgs",
+            "tol": 0.0001
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3652,
+            "actual_positives": 1660,
+            "actual_negatives": 1992,
+            "prevalence": 0.4545,
+            "accuracy": 0.6577,
+            "balanced_accuracy": 0.6575,
+            "precision": 0.6161,
+            "recall": 0.6554,
+            "specificity": 0.6596,
+            "false_positive_rate": 0.3404,
+            "f1_score": 0.6351,
+            "roc_auc": 0.7221,
+            "pr_auc": 0.691,
+            "brier_score": 0.2122,
+            "confusion_matrix": {
+              "tn": 1314,
+              "fp": 678,
+              "fn": 572,
+              "tp": 1088
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1766,
+              "alert_rate_pct": 48.36,
+              "false_alarms_advisor_burden": 678,
+              "missed_at_risk_students": 572,
+              "successful_proactive_catches": 1088
+            }
+          },
+          "resource_summary": {
+            "section_name": "LR_fold_5",
+            "wall_clock_sec": 0.0104,
+            "process_cpu_sec": 0.0104,
+            "cpu_time_ratio": 1.0,
+            "start_peak_rss_mb": 219.0,
+            "end_peak_rss_mb": 219.03,
+            "sampling": {
+              "samples_count": 2,
+              "mean_process_cpu_percent": 105.45,
+              "peak_process_cpu_percent": 110.9,
+              "mean_rss_mb": 219.02,
+              "peak_rss_mb": 219.03,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        }
+      ]
+    },
+    "xgboost": {
+      "experiment_name": "XGBoost_Candidate",
+      "total_folds": 5,
+      "total_duration_sec": 1.3695,
+      "completed_folds_count": 5,
+      "events": [
+        {
+          "experiment_name": "XGBoost_Candidate",
+          "phase": "cross_validation",
+          "fold_idx": 1,
+          "total_folds": 5,
+          "train_rows": 14610,
+          "val_rows": 3653,
+          "train_unique_students": 13750,
+          "val_unique_students": 3438,
+          "start_time_iso": "2026-10-12T01:17:30.573894",
+          "end_time_iso": "2026-10-12T01:17:30.760469",
+          "wall_duration_sec": 0.1896,
+          "preprocessor_duration_sec": 0.0075,
+          "estimator_duration_sec": 0.1721,
+          "estimator_type": "XGBClassifier",
+          "convergence_info": {
+            "trees_fitted": 150,
+            "max_depth": 3,
+            "learning_rate": 0.05
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3653,
+            "actual_positives": 1677,
+            "actual_negatives": 1976,
+            "prevalence": 0.4591,
+            "accuracy": 0.6748,
+            "balanced_accuracy": 0.6711,
+            "precision": 0.6518,
+            "recall": 0.6261,
+            "specificity": 0.7161,
+            "false_positive_rate": 0.2839,
+            "f1_score": 0.6387,
+            "roc_auc": 0.7314,
+            "pr_auc": 0.7074,
+            "brier_score": 0.2081,
+            "confusion_matrix": {
+              "tn": 1415,
+              "fp": 561,
+              "fn": 627,
+              "tp": 1050
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1611,
+              "alert_rate_pct": 44.1,
+              "false_alarms_advisor_burden": 561,
+              "missed_at_risk_students": 627,
+              "successful_proactive_catches": 1050
+            }
+          },
+          "resource_summary": {
+            "section_name": "XGB_fold_1",
+            "wall_clock_sec": 0.1722,
+            "process_cpu_sec": 0.6739,
+            "cpu_time_ratio": 3.91,
+            "start_peak_rss_mb": 225.55,
+            "end_peak_rss_mb": 231.3,
+            "sampling": {
+              "samples_count": 5,
+              "mean_process_cpu_percent": 335.44,
+              "peak_process_cpu_percent": 398.3,
+              "mean_rss_mb": 229.29,
+              "peak_rss_mb": 231.27,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        },
+        {
+          "experiment_name": "XGBoost_Candidate",
+          "phase": "cross_validation",
+          "fold_idx": 2,
+          "total_folds": 5,
+          "train_rows": 14610,
+          "val_rows": 3653,
+          "train_unique_students": 13750,
+          "val_unique_students": 3438,
+          "start_time_iso": "2026-10-12T01:17:30.763709",
+          "end_time_iso": "2026-10-12T01:17:30.947270",
+          "wall_duration_sec": 0.1868,
+          "preprocessor_duration_sec": 0.0075,
+          "estimator_duration_sec": 0.1694,
+          "estimator_type": "XGBClassifier",
+          "convergence_info": {
+            "trees_fitted": 150,
+            "max_depth": 3,
+            "learning_rate": 0.05
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3653,
+            "actual_positives": 1648,
+            "actual_negatives": 2005,
+            "prevalence": 0.4511,
+            "accuracy": 0.6929,
+            "balanced_accuracy": 0.6901,
+            "precision": 0.6588,
+            "recall": 0.662,
+            "specificity": 0.7182,
+            "false_positive_rate": 0.2818,
+            "f1_score": 0.6604,
+            "roc_auc": 0.7549,
+            "pr_auc": 0.7379,
+            "brier_score": 0.2006,
+            "confusion_matrix": {
+              "tn": 1440,
+              "fp": 565,
+              "fn": 557,
+              "tp": 1091
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1656,
+              "alert_rate_pct": 45.33,
+              "false_alarms_advisor_burden": 565,
+              "missed_at_risk_students": 557,
+              "successful_proactive_catches": 1091
+            }
+          },
+          "resource_summary": {
+            "section_name": "XGB_fold_2",
+            "wall_clock_sec": 0.1695,
+            "process_cpu_sec": 0.6676,
+            "cpu_time_ratio": 3.94,
+            "start_peak_rss_mb": 237.81,
+            "end_peak_rss_mb": 239.23,
+            "sampling": {
+              "samples_count": 5,
+              "mean_process_cpu_percent": 331.76,
+              "peak_process_cpu_percent": 407.9,
+              "mean_rss_mb": 238.82,
+              "peak_rss_mb": 239.2,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        },
+        {
+          "experiment_name": "XGBoost_Candidate",
+          "phase": "cross_validation",
+          "fold_idx": 3,
+          "total_folds": 5,
+          "train_rows": 14610,
+          "val_rows": 3653,
+          "train_unique_students": 13750,
+          "val_unique_students": 3438,
+          "start_time_iso": "2026-10-12T01:17:30.950461",
+          "end_time_iso": "2026-10-12T01:17:31.132780",
+          "wall_duration_sec": 0.1855,
+          "preprocessor_duration_sec": 0.0071,
+          "estimator_duration_sec": 0.1687,
+          "estimator_type": "XGBClassifier",
+          "convergence_info": {
+            "trees_fitted": 150,
+            "max_depth": 3,
+            "learning_rate": 0.05
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3653,
+            "actual_positives": 1645,
+            "actual_negatives": 2008,
+            "prevalence": 0.4503,
+            "accuracy": 0.6855,
+            "balanced_accuracy": 0.6809,
+            "precision": 0.6558,
+            "recall": 0.6347,
+            "specificity": 0.7271,
+            "false_positive_rate": 0.2729,
+            "f1_score": 0.645,
+            "roc_auc": 0.7459,
+            "pr_auc": 0.7261,
+            "brier_score": 0.2035,
+            "confusion_matrix": {
+              "tn": 1460,
+              "fp": 548,
+              "fn": 601,
+              "tp": 1044
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1592,
+              "alert_rate_pct": 43.58,
+              "false_alarms_advisor_burden": 548,
+              "missed_at_risk_students": 601,
+              "successful_proactive_catches": 1044
+            }
+          },
+          "resource_summary": {
+            "section_name": "XGB_fold_3",
+            "wall_clock_sec": 0.1688,
+            "process_cpu_sec": 0.657,
+            "cpu_time_ratio": 3.89,
+            "start_peak_rss_mb": 239.42,
+            "end_peak_rss_mb": 239.78,
+            "sampling": {
+              "samples_count": 5,
+              "mean_process_cpu_percent": 322.12,
+              "peak_process_cpu_percent": 404.2,
+              "mean_rss_mb": 239.59,
+              "peak_rss_mb": 239.75,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        },
+        {
+          "experiment_name": "XGBoost_Candidate",
+          "phase": "cross_validation",
+          "fold_idx": 4,
+          "total_folds": 5,
+          "train_rows": 14611,
+          "val_rows": 3652,
+          "train_unique_students": 13751,
+          "val_unique_students": 3437,
+          "start_time_iso": "2026-10-12T01:17:31.136063",
+          "end_time_iso": "2026-10-12T01:17:31.320384",
+          "wall_duration_sec": 0.1876,
+          "preprocessor_duration_sec": 0.0069,
+          "estimator_duration_sec": 0.1706,
+          "estimator_type": "XGBClassifier",
+          "convergence_info": {
+            "trees_fitted": 150,
+            "max_depth": 3,
+            "learning_rate": 0.05
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3652,
+            "actual_positives": 1705,
+            "actual_negatives": 1947,
+            "prevalence": 0.4669,
+            "accuracy": 0.6755,
+            "balanced_accuracy": 0.673,
+            "precision": 0.6582,
+            "recall": 0.6346,
+            "specificity": 0.7114,
+            "false_positive_rate": 0.2886,
+            "f1_score": 0.6462,
+            "roc_auc": 0.7341,
+            "pr_auc": 0.7258,
+            "brier_score": 0.2072,
+            "confusion_matrix": {
+              "tn": 1385,
+              "fp": 562,
+              "fn": 623,
+              "tp": 1082
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1644,
+              "alert_rate_pct": 45.02,
+              "false_alarms_advisor_burden": 562,
+              "missed_at_risk_students": 623,
+              "successful_proactive_catches": 1082
+            }
+          },
+          "resource_summary": {
+            "section_name": "XGB_fold_4",
+            "wall_clock_sec": 0.1707,
+            "process_cpu_sec": 0.6668,
+            "cpu_time_ratio": 3.91,
+            "start_peak_rss_mb": 239.78,
+            "end_peak_rss_mb": 240.16,
+            "sampling": {
+              "samples_count": 5,
+              "mean_process_cpu_percent": 327.66,
+              "peak_process_cpu_percent": 407.0,
+              "mean_rss_mb": 240.06,
+              "peak_rss_mb": 240.12,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        },
+        {
+          "experiment_name": "XGBoost_Candidate",
+          "phase": "cross_validation",
+          "fold_idx": 5,
+          "total_folds": 5,
+          "train_rows": 14611,
+          "val_rows": 3652,
+          "train_unique_students": 13751,
+          "val_unique_students": 3437,
+          "start_time_iso": "2026-10-12T01:17:31.323701",
+          "end_time_iso": "2026-10-12T01:17:31.505126",
+          "wall_duration_sec": 0.1847,
+          "preprocessor_duration_sec": 0.0072,
+          "estimator_duration_sec": 0.1674,
+          "estimator_type": "XGBClassifier",
+          "convergence_info": {
+            "trees_fitted": 150,
+            "max_depth": 3,
+            "learning_rate": 0.05
+          },
+          "fold_metrics": {
+            "threshold": 0.5,
+            "total_samples": 3652,
+            "actual_positives": 1660,
+            "actual_negatives": 1992,
+            "prevalence": 0.4545,
+            "accuracy": 0.6706,
+            "balanced_accuracy": 0.6672,
+            "precision": 0.6399,
+            "recall": 0.6295,
+            "specificity": 0.7048,
+            "false_positive_rate": 0.2952,
+            "f1_score": 0.6347,
+            "roc_auc": 0.7379,
+            "pr_auc": 0.7175,
+            "brier_score": 0.2062,
+            "confusion_matrix": {
+              "tn": 1404,
+              "fp": 588,
+              "fn": 615,
+              "tp": 1045
+            },
+            "operational_workload": {
+              "total_alerts_fired": 1633,
+              "alert_rate_pct": 44.72,
+              "false_alarms_advisor_burden": 588,
+              "missed_at_risk_students": 615,
+              "successful_proactive_catches": 1045
+            }
+          },
+          "resource_summary": {
+            "section_name": "XGB_fold_5",
+            "wall_clock_sec": 0.1675,
+            "process_cpu_sec": 0.6586,
+            "cpu_time_ratio": 3.93,
+            "start_peak_rss_mb": 240.16,
+            "end_peak_rss_mb": 240.69,
+            "sampling": {
+              "samples_count": 5,
+              "mean_process_cpu_percent": 315.94,
+              "peak_process_cpu_percent": 407.7,
+              "mean_rss_mb": 240.54,
+              "peak_rss_mb": 240.66,
+              "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+              "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+            }
+          },
+          "status": "COMPLETED"
+        }
+      ]
+    }
+  },
+  "final_fits": {
+    "logistic_regression": {
+      "section_name": "Final_Fit_Logistic_Regression",
+      "wall_clock_sec": 0.0228,
+      "process_cpu_sec": 0.0228,
+      "cpu_time_ratio": 1.0,
+      "start_peak_rss_mb": 240.69,
+      "end_peak_rss_mb": 244.78,
+      "sampling": {
+        "samples_count": 2,
+        "mean_process_cpu_percent": 105.35,
+        "peak_process_cpu_percent": 110.6,
+        "mean_rss_mb": 242.72,
+        "peak_rss_mb": 244.75,
+        "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+        "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+      }
+    },
+    "xgboost": {
+      "section_name": "Final_Fit_XGBoost",
+      "wall_clock_sec": 0.1789,
+      "process_cpu_sec": 0.6886,
+      "cpu_time_ratio": 3.85,
+      "start_peak_rss_mb": 244.78,
+      "end_peak_rss_mb": 246.91,
+      "sampling": {
+        "samples_count": 5,
+        "mean_process_cpu_percent": 330.54,
+        "peak_process_cpu_percent": 395.9,
+        "mean_rss_mb": 246.47,
+        "peak_rss_mb": 246.89,
+        "note_cpu_convention": "macOS multi-core: 100% equals 1 fully saturated CPU core; >100% indicates multi-threaded execution across multiple performance/efficiency cores.",
+        "note_gpu": "Apple Silicon GPU activity is unmeasured / not utilized by CPU BLAS/OpenMP routines."
+      }
+    }
+  },
+  "artifacts_verified": {
+    "experiment_dir": "/Users/neemaysmac/Desktop/Sutra/ml/artifacts/experiments/phase_eight_observability",
+    "logistic_regression": {
+      "path": "/Users/neemaysmac/Desktop/Sutra/ml/artifacts/experiments/phase_eight_observability/baseline_logistic_regression.joblib",
+      "sha256": "78a082276fc1770012b7bc7e711cb02de50dfcbfa7affaae6806f47fb8d0f41f",
+      "size_bytes": 7105,
+      "reloaded_equiv_diff": 0.0,
+      "bounded_prob": true
+    },
+    "xgboost": {
+      "path": "/Users/neemaysmac/Desktop/Sutra/ml/artifacts/experiments/phase_eight_observability/candidate_constrained_xgboost.joblib",
+      "sha256": "a231ba61e903057557ff2ccf309fcc217cc62bcc0551184b56fdcda0540393af",
+      "size_bytes": 192295,
+      "reloaded_equiv_diff": 0.0,
+      "bounded_prob": true
+    },
+    "v1_baseline_unmodified": {
+      "path": "/Users/neemaysmac/Desktop/Sutra/ml/artifacts/models/v1.0.0/baseline_logistic_regression.joblib",
+      "sha256": "78a082276fc1770012b7bc7e711cb02de50dfcbfa7affaae6806f47fb8d0f41f",
+      "status": "UNTOUCHED"
+    }
+  }
+}

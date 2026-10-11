@@ -1,0 +1,253 @@
+{
+  "experiment_name": "sutra_phase3_day30_benchmark",
+  "selected_model": "Regularized Logistic Regression Baseline",
+  "selected_threshold": 0.45999999999999996,
+  "features": {
+    "numerical": [
+      "num_of_prev_attempts",
+      "studied_credits",
+      "days_registered_before_start",
+      "has_missing_registration_date",
+      "vle_total_clicks_d30",
+      "vle_active_days_d30",
+      "vle_clicks_precourse",
+      "vle_clicks_poststart_d30",
+      "vle_clicks_last_7d",
+      "vle_days_since_last_click",
+      "vle_clicks_forumng_d30",
+      "vle_clicks_oucontent_d30",
+      "vle_clicks_quiz_d30",
+      "vle_clicks_homepage_d30",
+      "vle_clicks_other_d30",
+      "has_vle_activity_d30",
+      "assessments_submitted_d30",
+      "assessment_banked_d30",
+      "has_early_assessment_submission_d30"
+    ],
+    "categorical": [
+      "gender",
+      "region",
+      "highest_education",
+      "imd_band",
+      "age_band",
+      "disability"
+    ]
+  },
+  "metrics": {
+    "cv_baseline": {
+      "threshold": 0.5,
+      "total_samples": 18263,
+      "actual_positives": 8335,
+      "actual_negatives": 9928,
+      "prevalence": 0.4564,
+      "precision": 0.6274,
+      "recall": 0.65,
+      "f1_score": 0.6385,
+      "roc_auc": 0.723,
+      "pr_auc": 0.6939,
+      "brier_score": 0.2117,
+      "confusion_matrix": {
+        "tn": 6710,
+        "fp": 3218,
+        "fn": 2917,
+        "tp": 5418
+      },
+      "operational_workload": {
+        "total_alerts_fired": 8636,
+        "alert_rate_pct": 47.29,
+        "false_alarms_advisor_burden": 3218,
+        "missed_at_risk_students": 2917,
+        "successful_proactive_catches": 5418
+      },
+      "mean_fold_roc_auc": 0.7231,
+      "mean_fold_pr_auc": 0.6942,
+      "std_fold_roc_auc": 0.0068
+    },
+    "cv_xgboost": {
+      "threshold": 0.5,
+      "total_samples": 18263,
+      "actual_positives": 8335,
+      "actual_negatives": 9928,
+      "prevalence": 0.4564,
+      "precision": 0.6555,
+      "recall": 0.6398,
+      "f1_score": 0.6476,
+      "roc_auc": 0.7448,
+      "pr_auc": 0.7273,
+      "brier_score": 0.2033,
+      "confusion_matrix": {
+        "tn": 7125,
+        "fp": 2803,
+        "fn": 3002,
+        "tp": 5333
+      },
+      "operational_workload": {
+        "total_alerts_fired": 8136,
+        "alert_rate_pct": 44.55,
+        "false_alarms_advisor_burden": 2803,
+        "missed_at_risk_students": 3002,
+        "successful_proactive_catches": 5333
+      },
+      "mean_fold_roc_auc": 0.745,
+      "mean_fold_pr_auc": 0.7278,
+      "std_fold_roc_auc": 0.0091
+    },
+    "test_baseline": {
+      "threshold": 0.5,
+      "total_samples": 9203,
+      "actual_positives": 3746,
+      "actual_negatives": 5457,
+      "prevalence": 0.407,
+      "precision": 0.5902,
+      "recall": 0.6324,
+      "f1_score": 0.6106,
+      "roc_auc": 0.7216,
+      "pr_auc": 0.6502,
+      "brier_score": 0.2103,
+      "confusion_matrix": {
+        "tn": 3812,
+        "fp": 1645,
+        "fn": 1377,
+        "tp": 2369
+      },
+      "operational_workload": {
+        "total_alerts_fired": 4014,
+        "alert_rate_pct": 43.62,
+        "false_alarms_advisor_burden": 1645,
+        "missed_at_risk_students": 1377,
+        "successful_proactive_catches": 2369
+      }
+    },
+    "test_xgboost": {
+      "threshold": 0.5,
+      "total_samples": 9203,
+      "actual_positives": 3746,
+      "actual_negatives": 5457,
+      "prevalence": 0.407,
+      "precision": 0.5781,
+      "recall": 0.6719,
+      "f1_score": 0.6215,
+      "roc_auc": 0.7321,
+      "pr_auc": 0.6761,
+      "brier_score": 0.2095,
+      "confusion_matrix": {
+        "tn": 3620,
+        "fp": 1837,
+        "fn": 1229,
+        "tp": 2517
+      },
+      "operational_workload": {
+        "total_alerts_fired": 4354,
+        "alert_rate_pct": 47.31,
+        "false_alarms_advisor_burden": 1837,
+        "missed_at_risk_students": 1229,
+        "successful_proactive_catches": 2517
+      }
+    },
+    "test_optimal_threshold_baseline": {
+      "threshold": 0.46,
+      "total_samples": 9203,
+      "actual_positives": 3746,
+      "actual_negatives": 5457,
+      "prevalence": 0.407,
+      "precision": 0.5556,
+      "recall": 0.6978,
+      "f1_score": 0.6186,
+      "roc_auc": 0.7216,
+      "pr_auc": 0.6502,
+      "brier_score": 0.2103,
+      "confusion_matrix": {
+        "tn": 3366,
+        "fp": 2091,
+        "fn": 1132,
+        "tp": 2614
+      },
+      "operational_workload": {
+        "total_alerts_fired": 4705,
+        "alert_rate_pct": 51.12,
+        "false_alarms_advisor_burden": 2091,
+        "missed_at_risk_students": 1132,
+        "successful_proactive_catches": 2614
+      }
+    },
+    "test_optimal_threshold_xgboost": {
+      "threshold": 0.46,
+      "total_samples": 9203,
+      "actual_positives": 3746,
+      "actual_negatives": 5457,
+      "prevalence": 0.407,
+      "precision": 0.5455,
+      "recall": 0.7387,
+      "f1_score": 0.6276,
+      "roc_auc": 0.7321,
+      "pr_auc": 0.6761,
+      "brier_score": 0.2095,
+      "confusion_matrix": {
+        "tn": 3152,
+        "fp": 2305,
+        "fn": 979,
+        "tp": 2767
+      },
+      "operational_workload": {
+        "total_alerts_fired": 5072,
+        "alert_rate_pct": 55.11,
+        "false_alarms_advisor_burden": 2305,
+        "missed_at_risk_students": 979,
+        "successful_proactive_catches": 2767
+      }
+    },
+    "test_disjoint_baseline": {
+      "threshold": 0.5,
+      "total_samples": 7921,
+      "actual_positives": 3031,
+      "actual_negatives": 4890,
+      "prevalence": 0.3827,
+      "precision": 0.5706,
+      "recall": 0.6239,
+      "f1_score": 0.5961,
+      "roc_auc": 0.719,
+      "pr_auc": 0.6241,
+      "brier_score": 0.2095,
+      "confusion_matrix": {
+        "tn": 3467,
+        "fp": 1423,
+        "fn": 1140,
+        "tp": 1891
+      },
+      "operational_workload": {
+        "total_alerts_fired": 3314,
+        "alert_rate_pct": 41.84,
+        "false_alarms_advisor_burden": 1423,
+        "missed_at_risk_students": 1140,
+        "successful_proactive_catches": 1891
+      }
+    },
+    "test_disjoint_xgboost": {
+      "threshold": 0.5,
+      "total_samples": 7921,
+      "actual_positives": 3031,
+      "actual_negatives": 4890,
+      "prevalence": 0.3827,
+      "precision": 0.5591,
+      "recall": 0.6572,
+      "f1_score": 0.6042,
+      "roc_auc": 0.7308,
+      "pr_auc": 0.6556,
+      "brier_score": 0.2086,
+      "confusion_matrix": {
+        "tn": 3319,
+        "fp": 1571,
+        "fn": 1039,
+        "tp": 1992
+      },
+      "operational_workload": {
+        "total_alerts_fired": 3563,
+        "alert_rate_pct": 44.98,
+        "false_alarms_advisor_burden": 1571,
+        "missed_at_risk_students": 1039,
+        "successful_proactive_catches": 1992
+      }
+    }
+  },
+  "timestamp": "2026-10-12 00:08:59"
+}

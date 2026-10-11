@@ -1,0 +1,160 @@
+{
+  "dataset": "OULAD_2014J_Holdout",
+  "sample_size": 9203,
+  "logistic_regression": {
+    "brier_score": 0.2103,
+    "expected_calibration_error_ece": 0.0681,
+    "maximum_calibration_error_mce": 0.0967,
+    "reliability_bins": [
+      {
+        "bin_range": "[0.0, 0.1)",
+        "samples_count": 116,
+        "mean_predicted_prob": 0.0718,
+        "observed_positive_rate": 0.1466,
+        "calibration_gap": 0.0747
+      },
+      {
+        "bin_range": "[0.1, 0.2)",
+        "samples_count": 563,
+        "mean_predicted_prob": 0.1567,
+        "observed_positive_rate": 0.1368,
+        "calibration_gap": 0.0199
+      },
+      {
+        "bin_range": "[0.2, 0.3)",
+        "samples_count": 1153,
+        "mean_predicted_prob": 0.2551,
+        "observed_positive_rate": 0.1977,
+        "calibration_gap": 0.0574
+      },
+      {
+        "bin_range": "[0.3, 0.4)",
+        "samples_count": 1587,
+        "mean_predicted_prob": 0.3509,
+        "observed_positive_rate": 0.2716,
+        "calibration_gap": 0.0793
+      },
+      {
+        "bin_range": "[0.4, 0.5)",
+        "samples_count": 1770,
+        "mean_predicted_prob": 0.4493,
+        "observed_positive_rate": 0.3525,
+        "calibration_gap": 0.0967
+      },
+      {
+        "bin_range": "[0.5, 0.6)",
+        "samples_count": 1607,
+        "mean_predicted_prob": 0.5489,
+        "observed_positive_rate": 0.4748,
+        "calibration_gap": 0.0741
+      },
+      {
+        "bin_range": "[0.6, 0.7)",
+        "samples_count": 1205,
+        "mean_predicted_prob": 0.6462,
+        "observed_positive_rate": 0.5793,
+        "calibration_gap": 0.067
+      },
+      {
+        "bin_range": "[0.7, 0.8)",
+        "samples_count": 732,
+        "mean_predicted_prob": 0.7449,
+        "observed_positive_rate": 0.694,
+        "calibration_gap": 0.051
+      },
+      {
+        "bin_range": "[0.8, 0.9)",
+        "samples_count": 368,
+        "mean_predicted_prob": 0.8453,
+        "observed_positive_rate": 0.8288,
+        "calibration_gap": 0.0165
+      },
+      {
+        "bin_range": "[0.9, 1.0)",
+        "samples_count": 102,
+        "mean_predicted_prob": 0.9261,
+        "observed_positive_rate": 0.9314,
+        "calibration_gap": 0.0053
+      }
+    ]
+  },
+  "xgboost": {
+    "brier_score": 0.2095,
+    "expected_calibration_error_ece": 0.0925,
+    "maximum_calibration_error_mce": 0.1223,
+    "reliability_bins": [
+      {
+        "bin_range": "[0.0, 0.1)",
+        "samples_count": 2,
+        "mean_predicted_prob": 0.0866,
+        "observed_positive_rate": 0.0,
+        "calibration_gap": 0.0866
+      },
+      {
+        "bin_range": "[0.1, 0.2)",
+        "samples_count": 362,
+        "mean_predicted_prob": 0.1677,
+        "observed_positive_rate": 0.105,
+        "calibration_gap": 0.0627
+      },
+      {
+        "bin_range": "[0.2, 0.3)",
+        "samples_count": 1126,
+        "mean_predicted_prob": 0.2552,
+        "observed_positive_rate": 0.1794,
+        "calibration_gap": 0.0758
+      },
+      {
+        "bin_range": "[0.3, 0.4)",
+        "samples_count": 1592,
+        "mean_predicted_prob": 0.3499,
+        "observed_positive_rate": 0.2569,
+        "calibration_gap": 0.093
+      },
+      {
+        "bin_range": "[0.4, 0.5)",
+        "samples_count": 1767,
+        "mean_predicted_prob": 0.4505,
+        "observed_positive_rate": 0.3282,
+        "calibration_gap": 0.1223
+      },
+      {
+        "bin_range": "[0.5, 0.6)",
+        "samples_count": 1651,
+        "mean_predicted_prob": 0.5486,
+        "observed_positive_rate": 0.4349,
+        "calibration_gap": 0.1137
+      },
+      {
+        "bin_range": "[0.6, 0.7)",
+        "samples_count": 1300,
+        "mean_predicted_prob": 0.6471,
+        "observed_positive_rate": 0.5562,
+        "calibration_gap": 0.091
+      },
+      {
+        "bin_range": "[0.7, 0.8)",
+        "samples_count": 789,
+        "mean_predicted_prob": 0.7404,
+        "observed_positive_rate": 0.6629,
+        "calibration_gap": 0.0775
+      },
+      {
+        "bin_range": "[0.8, 0.9)",
+        "samples_count": 347,
+        "mean_predicted_prob": 0.8489,
+        "observed_positive_rate": 0.8473,
+        "calibration_gap": 0.0016
+      },
+      {
+        "bin_range": "[0.9, 1.0)",
+        "samples_count": 267,
+        "mean_predicted_prob": 0.9277,
+        "observed_positive_rate": 0.97,
+        "calibration_gap": 0.0423
+      }
+    ]
+  },
+  "validation_threshold": 0.45999999999999996,
+  "test_recall_observed": 0.6978
+}
