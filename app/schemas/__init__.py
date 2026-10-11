@@ -40,6 +40,16 @@ from app.schemas.case import (
     CaseReopenRequest,
 )
 from app.schemas.intervention import InterventionItem
+from app.schemas.features import (
+    GenderEnum,
+    RegionEnum,
+    HighestEducationEnum,
+    ImdBandEnum,
+    AgeBandEnum,
+    DisabilityEnum,
+    NUMERICAL_FEATURE_KEYS,
+    StudentFeatureInput,
+)
 from app.schemas.ml import (
     MLAttribution,
     MLEvidenceCard,
@@ -52,6 +62,14 @@ from app.schemas.ml import (
 )
 
 __all__ = [
+    "GenderEnum",
+    "RegionEnum",
+    "HighestEducationEnum",
+    "ImdBandEnum",
+    "AgeBandEnum",
+    "DisabilityEnum",
+    "NUMERICAL_FEATURE_KEYS",
+    "StudentFeatureInput",
     "HealthResponse",
     "ReadinessResponse",
     "ReadinessChecks",

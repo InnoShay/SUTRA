@@ -1,7 +1,23 @@
 import os
+from pathlib import Path
 from typing import List, Optional
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def find_project_root() -> Path:
+    """Find the root directory containing ml/ and app/."""
+    current = Path(__file__).resolve().parent
+    for _ in range(5):
+        if (current / "ml").exists() and (current / "app").exists():
+            return current
+        current = current.parent
+    return Path.cwd()
+
+
+PROJECT_ROOT = find_project_root()
+DEFAULT_MODEL_PATH = PROJECT_ROOT / "ml" / "artifacts" / "models" / "v1.0.0" / "baseline_logistic_regression.joblib"
+DEFAULT_METADATA_PATH = PROJECT_ROOT / "ml" / "artifacts" / "models" / "v1.0.0" / "model_metadata.json"
 
 
 class Settings(BaseSettings):

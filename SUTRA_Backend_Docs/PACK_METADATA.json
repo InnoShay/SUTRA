@@ -1,0 +1,145 @@
+{
+  "title": "SUTRA Backend Documentation Pack (Reconciled Canonical)",
+  "version": "2.0.0",
+  "synthetic_data_only": true,
+  "architecture": "Python FastAPI Modular Monolith + Next.js Frontend + Supabase Postgres/Auth",
+  "ml_status": "Phase Two Completed (Features/Leakage Tests); Phase Three (Model Training & Inference Integration) in Progress",
+  "items": [
+    {
+      "path": ".env.example",
+      "bytes": 3642,
+      "sha256": "ade5ea9b5f5c23aa176ca88ae5addf17cafa9196a6ac1a4ff6b0cd5444d2176f"
+    },
+    {
+      "path": "MASTER_BACKEND_IMPLEMENTATION_PACK.md",
+      "bytes": 110763,
+      "sha256": "e3986a76d553e250971c3ac28399972a99b66ead8e774fc94896bc84e6eab4cc"
+    },
+    {
+      "path": "PACK_METADATA.json",
+      "bytes": 5024,
+      "sha256": "f5137da1ab9e8da042995e83486cc8479b3b87fef982b32de6dbfdf97342bd6d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7645,
+      "sha256": "d3c153f11ca4669b2a8ea6ddd21fcf99d1f4a3a4c2ff62079f9400de61e3aa5a"
+    },
+    {
+      "path": "decisions/ADR-001-modular-monolith.md",
+      "bytes": 2043,
+      "sha256": "c92f522502c9ac2a9ef26c36403cc0da1d1605f06656e44c05b73150b7eaecdb"
+    },
+    {
+      "path": "decisions/ADR-002-rules-first.md",
+      "bytes": 2530,
+      "sha256": "d1cf90d18934ff564065263551f4b2bbec636a15c886182775c7beac8aefc7bc"
+    },
+    {
+      "path": "decisions/ADR-003-sensitive-domain-separation.md",
+      "bytes": 1620,
+      "sha256": "52cb1e353743f8c5cce6babdbac62e1adfaefea9741a4e52c9f3fef2547d1460"
+    },
+    {
+      "path": "decisions/ADR-004-fastapi-backend-architecture.md",
+      "bytes": 1757,
+      "sha256": "85a200c09a68856c4d1d7bc450a3d81b66a7ac6348bab3339ddb1ab51b0f1c00"
+    },
+    {
+      "path": "decisions/ADR-005-ml-serving-boundary-and-governance.md",
+      "bytes": 2830,
+      "sha256": "51f354fa7afe39febb42ae3c0c6c023d9b5de6266e6274b678d021881a843f6b"
+    },
+    {
+      "path": "decisions/ADR-006-ai-orchestration-safeguards.md",
+      "bytes": 2399,
+      "sha256": "0ebc6a8324e048552ca006bd7dbcd2bb41e477edfd905c7956b0f439108f8c7e"
+    },
+    {
+      "path": "docs/00_PHASE_PLAN.md",
+      "bytes": 7091,
+      "sha256": "8f2efb7c371e3f2159f09f5752b0a3ecc6de7a8c5b349026a1cde924746cd4c0"
+    },
+    {
+      "path": "docs/01_SCOPE_AND_REQUIREMENTS.md",
+      "bytes": 8396,
+      "sha256": "3e1770e14e00af96bde636265a5f2d988794abea230535707d54bdceecf78b43"
+    },
+    {
+      "path": "docs/02_ARCHITECTURE.md",
+      "bytes": 9879,
+      "sha256": "e911059db608b065e8ec9e0476f91efd743dff9b7c26dbb3c5adc5b9dc21b494"
+    },
+    {
+      "path": "docs/03_DATA_MODEL.md",
+      "bytes": 7013,
+      "sha256": "1fb90f62be8b0daf2976d624c67014eb256114071b9df8ed2d966d07fca0d5f5"
+    },
+    {
+      "path": "docs/04_AUTHORIZATION_PRIVACY.md",
+      "bytes": 7273,
+      "sha256": "8c0798a9bb3d1406462f654e98f7d57de07d0bfb7347498814ccac668bbf0b23"
+    },
+    {
+      "path": "docs/05_INGESTION_TEMPORAL_INTEGRITY.md",
+      "bytes": 5033,
+      "sha256": "b1a5b369a34e9bcecd6ee4318adf93916a31ed7c7c082bc55f9f1ce3a7cc3627"
+    },
+    {
+      "path": "docs/06_POLICY_AND_EVIDENCE.md",
+      "bytes": 5494,
+      "sha256": "e97914d234edcadc33981e041286f96fcf30b20b0eedbfaddf19cf8f6a0561e7"
+    },
+    {
+      "path": "docs/07_CASE_LIFECYCLE_AND_WORKER.md",
+      "bytes": 6333,
+      "sha256": "260a3826ea8e0a9b36561378fd738a280d4a22c50e70620c1809c6dd9c25d41f"
+    },
+    {
+      "path": "docs/08_API_CONTRACT.md",
+      "bytes": 10334,
+      "sha256": "6c9784f64a7fbfe41a59a4f0f12d4010fee69f3ee78c3d06ec715dfcb4d5fc7e"
+    },
+    {
+      "path": "docs/09_OUTCOMES_AUDIT_ANALYTICS.md",
+      "bytes": 4826,
+      "sha256": "823e5ab92baf7403c772c4acba53e01f2d2032a3793baea0c0592afb8333a321"
+    },
+    {
+      "path": "docs/10_TEST_AND_ACCEPTANCE_PLAN.md",
+      "bytes": 5391,
+      "sha256": "c04a2f9dc61fa5572b3da9eacb37d0077f54829c12df2660b853e19ea6c597b8"
+    },
+    {
+      "path": "docs/11_DEPLOYMENT_RUNBOOK.md",
+      "bytes": 6353,
+      "sha256": "1cac817a4b08956f77825e1c3ec96d59ca6f4aaa5ea7d4fe53fcc805a6c4be76"
+    },
+    {
+      "path": "docs/12_DECISIONS_AND_OPEN_QUESTIONS.md",
+      "bytes": 5183,
+      "sha256": "77787cfd770b0bbe666efd89028aaa689134ccb84d1d04e2427a14087970e549"
+    },
+    {
+      "path": "docs/13_BACKEND_BACKLOG.md",
+      "bytes": 7952,
+      "sha256": "d57ba8d46667d7a331b8076292b1524d8ceb10e4e1eeaaff7d23131ce3854dff"
+    },
+    {
+      "path": "fixtures/demo_seed.json",
+      "bytes": 5061,
+      "sha256": "83a86aecc4f28c7366e2defdb9723d6d345f17ac2aebe3838e25056732a54c2b"
+    },
+    {
+      "path": "migrations/001_core_schema.sql",
+      "bytes": 18179,
+      "sha256": "19c8806efe4416ec4b31c66ab788f682ee7a00bf62efc861cbdb7139dc91ccd2"
+    },
+    {
+      "path": "openapi/openapi.yaml",
+      "bytes": 43430,
+      "sha256": "fa7c1c43bfd2533dfe9768f90b9230c9558d5067c91d6742c1eccb4a0f6ea3e4"
+    }
+  ],
+  "security_note": "Server-side JWT verification enforced in FastAPI. Service-role secrets must never be exposed to clients. RLS policies and role grants required."
+}

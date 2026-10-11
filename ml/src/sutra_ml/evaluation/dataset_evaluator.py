@@ -10,7 +10,7 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 
-from backend.app.core.config import DEFAULT_METADATA_PATH, DEFAULT_MODEL_PATH
+from app.core.config import DEFAULT_METADATA_PATH, DEFAULT_MODEL_PATH
 from sutra_ml.evaluation.calibration import compute_calibration_assessment
 from sutra_ml.evaluation.metrics import compute_comprehensive_metrics
 from sutra_ml.inference.predictor import SutraRiskPredictor

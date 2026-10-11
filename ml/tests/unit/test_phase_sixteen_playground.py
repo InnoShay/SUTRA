@@ -28,8 +28,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from backend.app.core.config import DEFAULT_MODEL_PATH
-from backend.app.schemas.features import StudentFeatureInput
+from app.core.config import DEFAULT_MODEL_PATH
+from app.schemas.features import StudentFeatureInput
 from sutra_ml.data.synthetic import SyntheticDataGenerator
 from sutra_ml.evaluation.dataset_evaluator import evaluate_dataset
 from sutra_ml.evaluation.shadow_mode import ShadowModeEvaluator

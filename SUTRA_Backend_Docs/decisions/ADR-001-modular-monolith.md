@@ -1,0 +1,14 @@
+# ADR-001 · Modular monolith backend with decoupled frontend
+- **Status:** Accepted (Reconciled Canonical Target).
+- **Context:** PS6 requires an end-to-end intervention lifecycle connecting data ingestion, deterministic rules, ML early-warning signals, human case management, deadlines, and operational analytics. Introducing distributed microservices at this stage adds unnecessary network failure modes, RPC serialization overhead, distributed transaction complexity, and synchronization latency without a measured scaling requirement.
+- **Decision:** Implement the core backend as a **Python / FastAPI modular monolith**. Internal modules (`identity`, `ingestion`, `policy`, `cases`, `worker`, `analytics`, and `ml`) share a single process, typed Pydantic v2 schemas, and a transactional PostgreSQL database managed via Supabase. The ML package (`sutra_ml`) is integrated directly as an internal typed module (`app.ml`) rather than a standalone microservice. The user-facing application is implemented as a decoupled Next.js (App Router) client interacting strictly via authenticated `/api/v1` REST routes.
+- **Consequences:** 
+  - Single runtime environment for business logic and ML inference execution.
+  - Zero inter-service network latency for risk scoring and evidence generation.
+  - Clear internal module boundaries preserved through typed interfaces and dependency injection.
+  - Simplified local testing, deployment, and transactional integrity guarantees.
+- **Rejected Alternatives:** 
+  - Full-stack Next.js Route Handler monolith (rejected: lacks native Python ML ecosystem, complicates typed feature inference).
+  - Multi-service microservice cluster (rejected: premature operational complexity for PS6).
+  - Standalone ML microservice (rejected by default: unnecessary operational overhead; justified only if model compute or dependencies demand hardware isolation).
+- **Review Trigger:** Concrete, measured production requirements demanding independent scaling, hardware accelerators (GPUs), or disparate failure domains.

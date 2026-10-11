@@ -1,0 +1,77 @@
+{
+  "fixture_version": "1.0",
+  "synthetic_only": true,
+  "notice": "All entities/events are fictional. Never replace this public fixture with real student data.",
+  "institution": {"key": "overclocked-demo", "name": "SUTRA Synthetic Campus"},
+  "users": [
+    {"key": "u_advisor", "role": "mentor", "purpose": "academic_support"},
+    {"key": "u_hod", "role": "hod", "purpose": "workflow_supervision"},
+    {"key": "u_finance", "role": "finance", "purpose": "fee_support"},
+    {"key": "u_leadership", "role": "leadership", "purpose": "aggregate_reporting"}
+  ],
+  "students": [
+    {"key": "SYN-1007", "display_name": "Asha (synthetic)", "cohort": "CS-Y2", "adult_student": true},
+    {"key": "SYN-1008", "display_name": "Dev (synthetic)", "cohort": "CS-Y2", "adult_student": true},
+    {"key": "SYN-1009", "display_name": "Ira (synthetic)", "cohort": "CS-Y2", "adult_student": true},
+    {"key": "SYN-1010", "display_name": "Noor (synthetic)", "cohort": "CS-Y2", "adult_student": true},
+    {"key": "SYN-1011", "display_name": "Milan (synthetic)", "cohort": "CS-Y2", "adult_student": true},
+    {"key": "SYN-1012", "display_name": "Tara (synthetic)", "cohort": "CS-Y2", "adult_student": true}
+  ],
+  "observations": [
+    {"student": "SYN-1007", "domain": "attendance", "metric_key": "attendance_rate", "value": 0.58, "event_at": "2026-10-02T00:00:00Z", "available_at": "2026-10-02T12:00:00Z", "source": "synthetic_fixture_v1"},
+    {"student": "SYN-1007", "domain": "academic", "metric_key": "missing_assignments_count", "value": 3, "event_at": "2026-10-05T00:00:00Z", "available_at": "2026-10-05T12:00:00Z", "source": "synthetic_fixture_v1"},
+    {"student": "SYN-1007", "domain": "academic", "metric_key": "latest_score", "value": 41, "event_at": "2026-10-03T00:00:00Z", "available_at": "2026-10-10T12:00:00Z", "source": "synthetic_fixture_v1", "test_case": "must_not_be_used_for_2026-10-07-cutoff"},
+    {"student": "SYN-1007", "domain": "participation", "metric_key": "weekly_activity_count", "value": 2, "event_at": "2026-10-05T00:00:00Z", "available_at": "2026-10-05T12:00:00Z", "source": "synthetic_fixture_v1", "quality": "stale_for_demo_rule"},
+    {"student": "SYN-1007", "domain": "skills", "metric_key": "skill_rubric_status", "value": "needs_review", "event_at": "2026-10-01T00:00:00Z", "available_at": "2026-10-02T12:00:00Z", "source": "synthetic_fixture_v1"},
+    {"student": "SYN-1007", "domain": "faculty_feedback", "metric_key": "support_check_requested", "value": true, "event_at": "2026-10-06T00:00:00Z", "available_at": "2026-10-06T12:00:00Z", "source": "synthetic_fixture_v1"}
+  ],
+  "restricted_finance_observations": [
+    {"student": "SYN-1007", "fee_support_status": "review_requested", "event_at": "2026-10-04T00:00:00Z", "available_at": "2026-10-04T12:00:00Z", "source": "synthetic_fixture_v1", "visibility": "finance_only"}
+  ],
+  "interventions_catalog": [
+    {"key": "mentor_check_in", "name": "Academic Mentor Check-In", "domain": "mentor", "recipient_roles": ["mentor", "faculty"], "requires_human_approval": true},
+    {"key": "academic_tutoring_offer", "name": "Subject Tutoring Referral", "domain": "academic", "recipient_roles": ["faculty", "hod"], "requires_human_approval": true},
+    {"key": "fee_emergency_counselling", "name": "Emergency Financial Aid Consultation", "domain": "finance", "recipient_roles": ["finance"], "requires_human_approval": true},
+    {"key": "counselling_referral", "name": "Student Wellbeing Referral", "domain": "counselling", "recipient_roles": ["counsellor"], "requires_human_approval": true}
+  ],
+  "ml_day30_test_vector": {
+    "student": "SYN-1007",
+    "cutoff_days": 30,
+    "features": {
+      "num_of_prev_attempts": 0,
+      "studied_credits": 60,
+      "gender": "F",
+      "region": "East Anglian Region",
+      "highest_education": "A Level or Equivalent",
+      "imd_band": "20-30%",
+      "age_band": "0-35",
+      "disability": "N",
+      "days_registered_before_start": -32.0,
+      "has_missing_registration_date": 0,
+      "vle_total_clicks_d30": 142,
+      "vle_active_days_d30": 8,
+      "vle_clicks_precourse": 24,
+      "vle_clicks_poststart_d30": 118,
+      "vle_clicks_last_7d": 12,
+      "vle_days_since_last_click": 6.0,
+      "vle_clicks_forumng_d30": 18,
+      "vle_clicks_oucontent_d30": 82,
+      "vle_clicks_quiz_d30": 0,
+      "vle_clicks_homepage_d30": 28,
+      "vle_clicks_other_d30": 14,
+      "has_vle_activity_d30": 1,
+      "assessments_submitted_d30": 1,
+      "assessment_banked_d30": 0,
+      "has_early_assessment_submission_d30": 1
+    },
+    "expected_baseline_probability": 0.68,
+    "expected_threshold": 0.46,
+    "expected_classification": "At_Risk"
+  },
+  "demonstration_expectations": [
+    "A decision as of 2026-10-07 excludes latest_score because it was only available on 2026-10-10.",
+    "Stale participation is labelled stale/insufficient evidence, not zero activity.",
+    "Mentor DTO never includes fee-support details.",
+    "Outcome may remain unknown after service delivery if evidence of helpfulness is insufficient."
+  ]
+}

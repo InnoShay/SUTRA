@@ -1,0 +1,12 @@
+# ADR-003 · Separate sensitive domain payloads and endpoints
+- **Status:** Accepted (Reconciled Canonical Target).
+- **Context:** PS6 encompasses observations across academic, attendance, participation, skills, faculty feedback, and sensitive financial/counselling records. A holistic 360-degree view must never compromise student privacy or expose private counselling notes or financial distress details to unauthorized faculty or general campus staff.
+- **Decision:** Separate sensitive domain storage into dedicated database tables (`finance_observations`, `restricted_task_details`) with dedicated PostgreSQL RLS policies. Expose sensitive data strictly through dedicated, purpose-limited FastAPI routes requiring specific domain capabilities (`finance`, `counsellor`). General student profile and case DTOs defined in Pydantic v2 use explicit field allow-lists that strictly omit sensitive payloads, displaying only high-level status flags (e.g. `fee_support_status: "review_requested"`) when explicitly authorized.
+- **Consequences:** 
+  - Zero accidental leakage of sensitive records in general case queries, serialization, or log files.
+  - Granular server-side audit logs capturing every read or mutation of sensitive student data.
+  - Purpose-limited access controls enforced on every protected request.
+- **Rejected Alternatives:** 
+  - Monolithic student record table with wide columns for finance and counselling data.
+  - Relying solely on frontend UI hiding to restrict sensitive records.
+- **Review Trigger:** Institution data protection board approves formal multi-campus role-purpose access policies.

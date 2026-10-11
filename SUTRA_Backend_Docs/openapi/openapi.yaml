@@ -1,0 +1,1230 @@
+openapi: 3.1.0
+info:
+  title: SUTRA Intervention Orchestration Engine API
+  version: 2.0.0
+  description: >-
+    Canonical OpenAPI 3.1.0 specification for SUTRA (Student Success and Intervention Orchestration Engine).
+    Implements the "No Alert Without Action" lifecycle connecting multi-source observations to explainable evidence,
+    human review, accountable case assignment, enforceable deadlines, verified follow-up proof, documented outcomes,
+    and cohort operational analytics. Includes co-located ML decision support, bounded AI assistance, and compatibility aliases.
+servers:
+  - url: /api/v1
+    description: Primary API v1 Base Path
+  - url: /
+    description: Root Host (for compatibility aliases)
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      security: []
+      summary: Liveness check
+      description: Returns process liveness status. Excludes sensitive config or credential dumps.
+      responses:
+        '200':
+          description: Process alive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /ready:
+    get:
+      security: []
+      summary: Readiness check
+      description: Probes database connectivity and ML inference module readiness.
+      responses:
+        '200':
+          description: Service ready to handle traffic
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ready' }
+        '503':
+          description: Service not ready
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/me:
+    get:
+      summary: Get current authenticated user profile
+      description: Returns verified Supabase user ID, active campus memberships, and resolved roles.
+      responses:
+        '200':
+          description: Authenticated user context
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserMe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /campuses/active:
+    get:
+      summary: Get active campus context and thresholds
+      description: Returns metadata and review thresholds for the caller's active campus.
+      responses:
+        '200':
+          description: Campus configuration
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /imports:
+    post:
+      summary: Create observation import batch
+      description: Ingests validated CSV/JSON observations across 6 educational domains with deduplication.
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImportRequest' }
+      responses:
+        '202':
+          description: Batch accepted for processing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportBatch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /imports/{importId}:
+    get:
+      summary: Get import batch status
+      description: Returns processing status, row counts, and validation errors for a batch.
+      parameters: [{ $ref: '#/components/parameters/ImportId' }]
+      responses:
+        '200':
+          description: Batch status and metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportBatch' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /students:
+    get:
+      summary: List pseudonymous students in active campus
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - name: cohort
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, inactive, completed, unknown] }
+      responses:
+        '200':
+          description: Paginated student roster
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudentPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /students/{studentId}:
+    get:
+      summary: Get student header profile
+      parameters: [{ $ref: '#/components/parameters/StudentId' }]
+      responses:
+        '200':
+          description: Student profile header
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudentSummary' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /students/{studentId}/support-view:
+    get:
+      summary: Role-filtered 360-degree student support view
+      parameters: [{ $ref: '#/components/parameters/StudentId' }]
+      responses:
+        '200':
+          description: Purpose-minimized authorized support view
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SupportView' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /students/{studentId}/observations:
+    get:
+      summary: List authorized chronological observations
+      parameters:
+        - { $ref: '#/components/parameters/StudentId' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - name: domain
+          in: query
+          schema: { type: string, enum: [attendance, academic, participation, skills, faculty_feedback] }
+        - name: asOf
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Chronological observation records
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ObservationPage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /students/{studentId}/finance:
+    get:
+      summary: Get restricted financial aid observations
+      description: Accessible only to authorized finance capability. Stripped from all general endpoints.
+      parameters: [{ $ref: '#/components/parameters/StudentId' }]
+      responses:
+        '200':
+          description: Restricted fee-support observation details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceObservation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /students/{studentId}/signals/evaluate:
+    post:
+      summary: Evaluate policy rules for a student as-of cutoff
+      parameters:
+        - { $ref: '#/components/parameters/StudentId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EvaluateSignalRequest' }
+      responses:
+        '201':
+          description: Signal evaluated and persisted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Signal' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /signals/evaluate:
+    post:
+      summary: Batch evaluate cohort against published policy
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchEvaluateSignalRequest' }
+      responses:
+        '200':
+          description: Batch evaluation summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignalPage' }
+
+  /signals:
+    get:
+      summary: List authorized signals in review queue
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - name: result
+          in: query
+          schema: { type: string, enum: [attention_suggested, no_rule_triggered, unknown] }
+      responses:
+        '200':
+          description: Paginated signal queue
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignalPage' }
+
+  /signals/{signalId}:
+    get:
+      summary: Get signal explanation, Evidence Card, and evidence summary
+      parameters: [{ $ref: '#/components/parameters/SignalId' }]
+      responses:
+        '200':
+          description: Signal detail with Evidence Card
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Signal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /signals/{signalId}/review:
+    post:
+      summary: Record authorized human review on signal
+      parameters:
+        - { $ref: '#/components/parameters/SignalId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewSignalRequest' }
+      responses:
+        '200':
+          description: Review recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Signal' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /interventions:
+    get:
+      summary: List interventions from controlled catalogue
+      responses:
+        '200':
+          description: Menu of approved support interventions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InterventionPage' }
+
+  /signals/{signalId}/cases:
+    post:
+      summary: Create persistent case from reviewed signal
+      parameters:
+        - { $ref: '#/components/parameters/SignalId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCaseRequest' }
+      responses:
+        '201':
+          description: Case created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Case' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /cases:
+    get:
+      summary: List authorized cases
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - name: state
+          in: query
+          schema: { $ref: '#/components/schemas/CaseState' }
+        - name: ownerId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Paginated case queue
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CasePage' }
+
+  /cases/{caseId}:
+    get:
+      summary: Get case coordination detail
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses:
+        '200':
+          description: Case coordination DTO
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Case' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /cases/{caseId}/transition:
+    post:
+      summary: Apply explicit state machine transition
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransitionRequest' }
+      responses:
+        '200':
+          description: Transition applied
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Case' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /cases/{caseId}/assignment:
+    post:
+      summary: Assign or reassign primary case owner
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignmentRequest' }
+      responses:
+        '200':
+          description: Assignment recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Case' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /cases/{caseId}/accept-assignment:
+    post:
+      summary: Assignee accepts or declines responsibility
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AcceptAssignmentRequest' }
+      responses:
+        '200':
+          description: Acceptance decision recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Case' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /cases/{caseId}/tasks:
+    post:
+      summary: Create domain subtask for case
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTaskRequest' }
+      responses:
+        '201':
+          description: Subtask created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaseTask' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /cases/{caseId}/tasks/{taskId}/restricted:
+    get:
+      summary: Retrieve restricted task details (counselling/finance)
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Confidential task payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RestrictedTaskDetail' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /cases/{caseId}/follow-ups:
+    post:
+      summary: Record contact attempt, student reach, or support delivery
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FollowUpRequest' }
+      responses:
+        '201':
+          description: Follow-up proof recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowUp' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /cases/{caseId}/outcome:
+    post:
+      summary: Record post-support outcome
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OutcomeRequest' }
+      responses:
+        '201':
+          description: Attributed outcome recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Outcome' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /cases/{caseId}/history:
+    get:
+      summary: Get redacted audit timeline of case events
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses:
+        '200':
+          description: Authorized event history
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EventPage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /cases/{caseId}/override:
+    post:
+      summary: Execute reasoned authorized override
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OverrideRequest' }
+      responses:
+        '200':
+          description: Override recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Case' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /cases/{caseId}/reopen:
+    post:
+      summary: Reopen closed case with mandatory reason
+      parameters:
+        - { $ref: '#/components/parameters/CaseId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReopenRequest' }
+      responses:
+        '200':
+          description: Case reopened
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Case' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /analytics/overview:
+    get:
+      summary: Executive overview of operational rates
+      parameters:
+        - name: asOf
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Operational summary metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsOverview' }
+
+  /analytics/cohorts:
+    get:
+      summary: Cohort breakdown with small-cell privacy suppression (<5)
+      parameters:
+        - name: cohort
+          in: query
+          schema: { type: string }
+        - name: asOf
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Protected cohort metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsCohorts' }
+
+  /analytics/operations:
+    get:
+      summary: Case processing latency, overdue burdens, and worker dispatch rates
+      parameters:
+        - name: asOf
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Operational performance metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsOperations' }
+
+  /ml/model-info:
+    get:
+      summary: Active ML model metadata and serving configuration
+      description: Returns baseline Logistic Regression v1.0.0 info, threshold (0.46), and 25 Day-30 feature list.
+      responses:
+        '200':
+          description: Active model metadata
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MLModelInfo' }
+
+  /ml/predict:
+    post:
+      summary: Single student Day-30 early-warning prediction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MLPredictRequest' }
+      responses:
+        '200':
+          description: Inference result with Evidence Card
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MLPredictResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ml/predict/batch:
+    post:
+      summary: Batch Day-30 early-warning predictions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MLPredictBatchRequest' }
+      responses:
+        '200':
+          description: Array of predictions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MLPredictResponse' }
+
+  /ai/summarize-evidence:
+    post:
+      summary: Optional AI evidence summarization
+      description: Bounded, read-only LLM brief generation from student observation timeline.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AISummarizeRequest' }
+      responses:
+        '200':
+          description: Generated text summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AISummarizeResponse' }
+
+  /ai/suggest-intervention:
+    post:
+      summary: Optional AI intervention suggestion restricted to catalogue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AISuggestInterventionRequest' }
+      responses:
+        '200':
+          description: Suggested catalogue interventions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AISuggestInterventionResponse' }
+
+  /ai/draft-followup:
+    post:
+      summary: Optional AI outreach message drafting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AIDraftFollowupRequest' }
+      responses:
+        '200':
+          description: Draft outreach note for educator review
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AIDraftFollowupResponse' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 128 }
+    ImportId:
+      name: importId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    StudentId:
+      name: studentId
+      in: path
+      required: true
+      schema: { type: string }
+    SignalId:
+      name: signalId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Missing, expired, or invalid Supabase Bearer JWT
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Not authorized for campus or role capability
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Resource not found or intentionally undisclosed
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: Lifecycle transition conflict or optimistic concurrency failure
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ValidationError:
+      description: Schema or business invariant validation failure
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+  schemas:
+    Health:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status: { type: string, const: ok }
+        timestamp: { type: string, format: date-time }
+
+    Ready:
+      type: object
+      required: [status, database, ml_inference]
+      properties:
+        status: { type: string, enum: [ready, not_ready] }
+        database: { type: string, enum: [connected, disconnected] }
+        ml_inference: { type: string, enum: [initialized, disabled, uncalibrated] }
+
+    UserMe:
+      type: object
+      required: [user_id, active_institution_id, active_role]
+      properties:
+        user_id: { type: string, format: uuid }
+        email: { type: string }
+        active_institution_id: { type: string, format: uuid }
+        active_role: { type: string, enum: [faculty, hod, mentor, counsellor, placement, finance, leadership, institution_admin] }
+        memberships: { type: array, items: { type: object } }
+
+    Campus:
+      type: object
+      required: [id, name, status]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [active, disabled] }
+        attendance_review_threshold: { type: number, default: 0.75 }
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id, timestamp]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+            timestamp: { type: string, format: date-time }
+            details: { type: object, additionalProperties: true }
+
+    ImportRequest:
+      type: object
+      required: [source_system, schema_version, file_digest, records]
+      properties:
+        source_system: { type: string }
+        schema_version: { type: string }
+        file_digest: { type: string }
+        records:
+          type: array
+          maxItems: 10000
+          items: { type: object, additionalProperties: true }
+
+    ImportBatch:
+      type: object
+      required: [id, status, rows_received, rows_accepted, rows_duplicate, rows_rejected]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [received, validating, completed, completed_with_errors, failed] }
+        rows_received: { type: integer }
+        rows_accepted: { type: integer }
+        rows_duplicate: { type: integer }
+        rows_rejected: { type: integer }
+        row_errors: { type: array, items: { type: object } }
+
+    StudentSummary:
+      type: object
+      required: [id, external_ref, display_name, enrollment_status]
+      properties:
+        id: { type: string, format: uuid }
+        external_ref: { type: string }
+        display_name: { type: string }
+        cohort_code: { type: string }
+        enrollment_status: { type: string, enum: [active, inactive, completed, unknown] }
+
+    StudentPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/StudentSummary' } }
+        next_cursor: { type: string }
+
+    SupportView:
+      type: object
+      required: [student_ref, domains, completeness]
+      properties:
+        student_ref: { type: string }
+        display_name: { type: string }
+        cohort_code: { type: string }
+        domains: { type: array, items: { $ref: '#/components/schemas/DomainSummary' } }
+        completeness: { type: object, additionalProperties: true }
+
+    DomainSummary:
+      type: object
+      required: [domain, quality_state]
+      properties:
+        domain: { type: string }
+        quality_state: { type: string, enum: [sufficient, insufficient_evidence, stale_source, conflicting_source, missing_denominator] }
+        observation_window: { type: string }
+        latest_available_at: { type: string, format: date-time }
+        summary: { type: object, additionalProperties: true }
+
+    Observation:
+      type: object
+      required: [id, domain, metric_key, value, unit, quality_state, event_at, available_at]
+      properties:
+        id: { type: string, format: uuid }
+        domain: { type: string }
+        metric_key: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        quality_state: { type: string }
+        event_at: { type: string, format: date-time }
+        available_at: { type: string, format: date-time }
+
+    ObservationPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Observation' } }
+        next_cursor: { type: string }
+
+    FinanceObservation:
+      type: object
+      required: [student_ref, fee_support_status, updated_at]
+      properties:
+        student_ref: { type: string }
+        fee_support_status: { type: string }
+        updated_at: { type: string, format: date-time }
+        details: { type: object, additionalProperties: true }
+
+    EvaluateSignalRequest:
+      type: object
+      required: [policy_key, as_of_at]
+      properties:
+        policy_key: { type: string }
+        as_of_at: { type: string, format: date-time }
+
+    BatchEvaluateSignalRequest:
+      type: object
+      required: [policy_key, cohort_code, as_of_at]
+      properties:
+        policy_key: { type: string }
+        cohort_code: { type: string }
+        as_of_at: { type: string, format: date-time }
+
+    Signal:
+      type: object
+      required: [id, student_ref, result, quality_state, policy_version, evaluated_at, explanation]
+      properties:
+        id: { type: string, format: uuid }
+        student_ref: { type: string }
+        result: { type: string, enum: [attention_suggested, no_rule_triggered, unknown] }
+        quality_state: { type: string, enum: [sufficient, insufficient_evidence, stale_source, conflicting_source, missing_denominator] }
+        policy_version: { type: string }
+        evaluated_at: { type: string, format: date-time }
+        explanation: { type: object, additionalProperties: true }
+        evidence_packet_ref: { type: string, format: uuid }
+        evidence_card: { $ref: '#/components/schemas/EvidenceCard' }
+        reviewed_decision: { type: string, enum: [approve, modify, dismiss, request_more_data] }
+
+    SignalPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Signal' } }
+        next_cursor: { type: string }
+
+    ReviewSignalRequest:
+      type: object
+      required: [decision, reason_code]
+      properties:
+        decision: { type: string, enum: [approve, modify, dismiss, request_more_data] }
+        selected_intervention_key: { type: string }
+        reason_code: { type: string }
+        rationale: { type: string, maxLength: 1000 }
+
+    InterventionItem:
+      type: object
+      required: [key, name, domain, recipient_roles]
+      properties:
+        key: { type: string }
+        name: { type: string }
+        domain: { type: string }
+        recipient_roles: { type: array, items: { type: string } }
+        description: { type: string }
+
+    InterventionPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/InterventionItem' } }
+
+    CreateCaseRequest:
+      type: object
+      required: [selected_intervention_key, primary_owner_user_id, due_at, purpose_key]
+      properties:
+        selected_intervention_key: { type: string }
+        primary_owner_user_id: { type: string, format: uuid }
+        due_at: { type: string, format: date-time }
+        purpose_key: { type: string }
+
+    CaseState:
+      type: string
+      enum: [suggested, under_review, action_planned, assigned, accepted, contact_attempted, support_in_progress, follow_up_due, outcome_reviewed, closed, dismissed, student_declined, service_unavailable, failed_contact, referred, reopened]
+
+    Case:
+      type: object
+      required: [id, student_ref, state, version, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        student_ref: { type: string }
+        originating_signal_id: { type: string, format: uuid }
+        selected_intervention_key: { type: string }
+        state: { $ref: '#/components/schemas/CaseState' }
+        primary_owner_user_id: { type: string, format: uuid }
+        due_at: { type: string, format: date-time }
+        accepted_at: { type: string, format: date-time }
+        is_escalated: { type: boolean }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        tasks: { type: array, items: { $ref: '#/components/schemas/CaseTask' } }
+
+    CasePage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Case' } }
+        next_cursor: { type: string }
+
+    TransitionRequest:
+      type: object
+      required: [to_state, expected_version]
+      properties:
+        to_state: { $ref: '#/components/schemas/CaseState' }
+        expected_version: { type: integer }
+        reason_code: { type: string }
+        note: { type: string, maxLength: 1000 }
+
+    AssignmentRequest:
+      type: object
+      required: [assignee_user_id, due_at]
+      properties:
+        assignee_user_id: { type: string, format: uuid }
+        due_at: { type: string, format: date-time }
+        reason_code: { type: string }
+
+    AcceptAssignmentRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [accept, decline] }
+        reason_code: { type: string }
+
+    CaseTask:
+      type: object
+      required: [id, case_id, domain, state]
+      properties:
+        id: { type: string, format: uuid }
+        case_id: { type: string, format: uuid }
+        domain: { type: string }
+        label: { type: string }
+        state: { type: string, enum: [pending, assigned, accepted, in_progress, completed, declined, cancelled, overdue] }
+        assignee_user_id: { type: string, format: uuid }
+        due_at: { type: string, format: date-time }
+
+    CreateTaskRequest:
+      type: object
+      required: [domain, label, assignee_user_id, due_at]
+      properties:
+        domain: { type: string }
+        label: { type: string }
+        assignee_user_id: { type: string, format: uuid }
+        due_at: { type: string, format: date-time }
+
+    RestrictedTaskDetail:
+      type: object
+      required: [task_id, payload_domain, secure_payload]
+      properties:
+        task_id: { type: string, format: uuid }
+        payload_domain: { type: string }
+        secure_payload: { type: object, additionalProperties: true }
+
+    FollowUpRequest:
+      type: object
+      required: [follow_up_type, proof_kind, occurred_at]
+      properties:
+        follow_up_type: { type: string, enum: [contact_attempt, student_response, support_delivered, follow_up_check, referral_update] }
+        contact_status: { type: string, enum: [attempted, student_reached, unreachable, declined, not_applicable] }
+        proof_kind: { type: string, enum: [staff_attestation, student_confirmation, appointment_record, service_provider_confirmation, other_demo_evidence, none] }
+        occurred_at: { type: string, format: date-time }
+        note: { type: string, maxLength: 1000 }
+        proof_ref: { type: string }
+
+    FollowUp:
+      type: object
+      required: [id, follow_up_type, proof_kind, occurred_at]
+      properties:
+        id: { type: string, format: uuid }
+        follow_up_type: { type: string }
+        contact_status: { type: string }
+        proof_kind: { type: string }
+        occurred_at: { type: string, format: date-time }
+        note: { type: string }
+
+    OutcomeRequest:
+      type: object
+      required: [outcome_status, rationale, evidence_kind]
+      properties:
+        outcome_status: { type: string, enum: [helped, not_helped, mixed, unknown] }
+        follow_up_window_start: { type: string, format: date-time }
+        follow_up_window_end: { type: string, format: date-time }
+        rationale: { type: string, minLength: 1, maxLength: 1500 }
+        evidence_kind: { type: string, enum: [staff_review, student_feedback, academic_record, service_record, insufficient_evidence] }
+
+    Outcome:
+      type: object
+      required: [id, outcome_status, rationale, recorded_at]
+      properties:
+        id: { type: string, format: uuid }
+        outcome_status: { type: string, enum: [helped, not_helped, mixed, unknown] }
+        rationale: { type: string }
+        evidence_kind: { type: string }
+        recorded_at: { type: string, format: date-time }
+
+    CaseEvent:
+      type: object
+      required: [id, event_type, actor_user_id, occurred_at]
+      properties:
+        id: { type: string, format: uuid }
+        event_type: { type: string }
+        actor_user_id: { type: string, format: uuid }
+        previous_state: { type: string }
+        new_state: { type: string }
+        reason_code: { type: string }
+        occurred_at: { type: string, format: date-time }
+
+    EventPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/CaseEvent' } }
+        next_cursor: { type: string }
+
+    OverrideRequest:
+      type: object
+      required: [reason_code, rationale, to_state]
+      properties:
+        reason_code: { type: string }
+        rationale: { type: string, minLength: 10, maxLength: 1000 }
+        to_state: { $ref: '#/components/schemas/CaseState' }
+
+    ReopenRequest:
+      type: object
+      required: [reopen_reason_code, next_action]
+      properties:
+        reopen_reason_code: { type: string }
+        next_action: { type: string }
+
+    AnalyticsOverview:
+      type: object
+      required: [as_of, approval_rate, acceptance_rate, reach_rate, outcome_known_rate]
+      properties:
+        as_of: { type: string, format: date-time }
+        approval_rate: { $ref: '#/components/schemas/MetricItem' }
+        acceptance_rate: { $ref: '#/components/schemas/MetricItem' }
+        first_contact_coverage: { $ref: '#/components/schemas/MetricItem' }
+        reach_rate: { $ref: '#/components/schemas/MetricItem' }
+        support_delivery_rate: { $ref: '#/components/schemas/MetricItem' }
+        outcome_known_rate: { $ref: '#/components/schemas/MetricItem' }
+        reported_help_rate: { $ref: '#/components/schemas/MetricItem' }
+
+    AnalyticsCohorts:
+      type: object
+      required: [as_of, cohorts]
+      properties:
+        as_of: { type: string, format: date-time }
+        cohorts:
+          type: array
+          items:
+            type: object
+            required: [cohort_code, total_students, active_cases, suppressed]
+            properties:
+              cohort_code: { type: string }
+              total_students: { type: integer }
+              active_cases: { type: integer }
+              suppressed: { type: boolean }
+              metrics: { type: object, additionalProperties: true }
+
+    AnalyticsOperations:
+      type: object
+      required: [as_of, overdue_tasks, unaccepted_cases, worker_metrics]
+      properties:
+        as_of: { type: string, format: date-time }
+        overdue_tasks: { type: integer }
+        unaccepted_cases: { type: integer }
+        median_hours_to_acceptance: { type: number }
+        worker_metrics: { type: object, additionalProperties: true }
+
+    MetricItem:
+      type: object
+      required: [value, numerator, denominator, definition_version]
+      properties:
+        value: { type: number }
+        numerator: { type: integer }
+        denominator: { type: integer }
+        definition_version: { type: string }
+
+    MLModelInfo:
+      type: object
+      required: [model_name, model_version, threshold, cutoff_days, features]
+      properties:
+        model_name: { type: string }
+        model_version: { type: string }
+        status: { type: string, enum: [serving, research_only, uncalibrated] }
+        threshold: { type: number }
+        cutoff_days: { type: integer }
+        features: { type: array, items: { type: string } }
+        candidate_model: { type: object, additionalProperties: true }
+
+    MLPredictRequest:
+      type: object
+      required: [external_student_ref, cutoff_days, features]
+      properties:
+        external_student_ref: { type: string }
+        cutoff_days: { type: integer, const: 30 }
+        features: { type: object, additionalProperties: true }
+
+    MLPredictBatchRequest:
+      type: object
+      required: [instances]
+      properties:
+        instances:
+          type: array
+          items: { $ref: '#/components/schemas/MLPredictRequest' }
+
+    MLPredictResponse:
+      type: object
+      required: [external_student_ref, risk_probability, threshold, classification, evidence_card]
+      properties:
+        external_student_ref: { type: string }
+        risk_probability: { type: number }
+        threshold: { type: number }
+        classification: { type: string, enum: [At_Risk, On_Track] }
+        evidence_card: { $ref: '#/components/schemas/EvidenceCard' }
+
+    EvidenceCard:
+      type: object
+      required: [card_type, model_name, model_version, risk_probability, threshold, classification, top_attributions]
+      properties:
+        card_type: { type: string, const: ml_early_warning_evidence }
+        model_name: { type: string }
+        model_version: { type: string }
+        risk_probability: { type: number }
+        threshold: { type: number }
+        classification: { type: string }
+        top_attributions: { type: array, items: { $ref: '#/components/schemas/MLAttribution' } }
+        limitations: { type: array, items: { type: string } }
+
+    MLAttribution:
+      type: object
+      required: [feature, value, attribution, direction]
+      properties:
+        feature: { type: string }
+        value: { type: number }
+        attribution: { type: number }
+        direction: { type: string, enum: [increases_risk, decreases_risk] }
+
+    AISummarizeRequest:
+      type: object
+      required: [student_ref, observation_window_days]
+      properties:
+        student_ref: { type: string }
+        observation_window_days: { type: integer, default: 30 }
+
+    AISummarizeResponse:
+      type: object
+      required: [summary_text, confidence, generated_at]
+      properties:
+        summary_text: { type: string }
+        confidence: { type: string }
+        generated_at: { type: string, format: date-time }
+
+    AISuggestInterventionRequest:
+      type: object
+      required: [student_ref, signal_id]
+      properties:
+        student_ref: { type: string }
+        signal_id: { type: string, format: uuid }
+
+    AISuggestInterventionResponse:
+      type: object
+      required: [suggested_keys, rationale]
+      properties:
+        suggested_keys: { type: array, items: { type: string } }
+        rationale: { type: string }
+
+    AIDraftFollowupRequest:
+      type: object
+      required: [case_id, tone]
+      properties:
+        case_id: { type: string, format: uuid }
+        tone: { type: string, enum: [supportive, formal, urgent], default: supportive }
+
+    AIDraftFollowupResponse:
+      type: object
+      required: [draft_message, recipient_role]
+      properties:
+        draft_message: { type: string }
+        recipient_role: { type: string }

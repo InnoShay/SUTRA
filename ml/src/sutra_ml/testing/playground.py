@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 from pydantic import ValidationError
 
-from backend.app.core.config import DEFAULT_METADATA_PATH, DEFAULT_MODEL_PATH
-from backend.app.schemas.features import StudentFeatureInput
+from app.core.config import DEFAULT_METADATA_PATH, DEFAULT_MODEL_PATH
+from app.schemas.features import StudentFeatureInput
 from sutra_ml.inference.predictor import PredictionResult, SutraRiskPredictor
 from sutra_ml.schemas.evidence_card import RiskTier
 

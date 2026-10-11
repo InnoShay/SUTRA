@@ -25,7 +25,7 @@ if str(SRC_DIR) not in sys.path:
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from backend.app.main import app
+from app.main import app
 
 
 def test_candidate_inference() -> None:

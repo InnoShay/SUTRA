@@ -8,7 +8,7 @@ as target outcomes or post-Day-30 leakage).
 
 from enum import Enum
 import math
-from typing import Optional
+from typing import Optional, Any, Dict
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -208,7 +208,7 @@ class StudentFeatureInput(BaseModel):
             raise ValueError("Numeric feature values must be finite (cannot be NaN or Inf)")
         return v
 
-    def to_feature_dict(self) -> dict[str, any]:
+    def to_feature_dict(self) -> Dict[str, Any]:
         """Extract raw feature dictionary for pipeline scoring."""
         d = self.model_dump()
         # Exclude metadata fields
