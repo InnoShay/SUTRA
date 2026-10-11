@@ -14,7 +14,7 @@ from sklearn.pipeline import Pipeline
 
 try:
     import xgboost as xgb
-except ImportError:
+except Exception:
     xgb = None
 
 
