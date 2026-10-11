@@ -1,0 +1,106 @@
+pipeline:
+  name: "sutra_day30_snapshot"
+  prediction_cutoff_days: 30
+  recent_activity_window_days: 7
+  unengaged_days_since_click_ceiling: 60.0
+
+target:
+  name: "at_risk"
+  positive_classes:
+    - "Fail"
+    - "Withdrawn"
+  negative_classes:
+    - "Pass"
+    - "Distinction"
+  positive_label_name: "At_Risk"
+  negative_label_name: "On_Track"
+
+cohort_eligibility:
+  rule: "date_unregistration IS NULL OR date_unregistration > cutoff_days"
+  description: "Students actively registered on or after Day 30. Pre-cutoff withdrawals are excluded."
+
+features:
+  demographics:
+    - name: "num_of_prev_attempts"
+      source_table: "studentInfo.csv"
+      type: "int"
+    - name: "studied_credits"
+      source_table: "studentInfo.csv"
+      type: "int"
+    - name: "gender"
+      source_table: "studentInfo.csv"
+      type: "category"
+    - name: "region"
+      source_table: "studentInfo.csv"
+      type: "category"
+    - name: "highest_education"
+      source_table: "studentInfo.csv"
+      type: "category"
+    - name: "imd_band"
+      source_table: "studentInfo.csv"
+      type: "category"
+    - name: "age_band"
+      source_table: "studentInfo.csv"
+      type: "category"
+    - name: "disability"
+      source_table: "studentInfo.csv"
+      type: "category"
+
+  registration:
+    - name: "days_registered_before_start"
+      source_table: "studentRegistration.csv"
+      source_column: "date_registration"
+      type: "float"
+    - name: "has_missing_registration_date"
+      type: "int"
+
+  vle_activity:
+    - name: "vle_total_clicks_d30"
+      type: "int"
+    - name: "vle_active_days_d30"
+      type: "int"
+    - name: "vle_clicks_precourse"
+      description: "Clicks where date < 0"
+      type: "int"
+    - name: "vle_clicks_poststart_d30"
+      description: "Clicks where 0 <= date <= 30"
+      type: "int"
+    - name: "vle_clicks_last_7d"
+      description: "Clicks where 23 < date <= 30"
+      type: "int"
+    - name: "vle_days_since_last_click"
+      description: "30 - max(date) for date <= 30, ceiling at 60.0"
+      type: "float"
+    - name: "vle_clicks_forumng_d30"
+      type: "int"
+    - name: "vle_clicks_oucontent_d30"
+      type: "int"
+    - name: "vle_clicks_quiz_d30"
+      type: "int"
+    - name: "vle_clicks_homepage_d30"
+      type: "int"
+    - name: "vle_clicks_other_d30"
+      type: "int"
+    - name: "has_vle_activity_d30"
+      type: "int"
+
+  assessments:
+    - name: "assessments_submitted_d30"
+      description: "Count of submissions where date_submitted <= 30"
+      type: "int"
+    - name: "assessment_banked_d30"
+      description: "Count of banked submissions where date_submitted <= 30"
+      type: "int"
+    - name: "has_early_assessment_submission_d30"
+      type: "int"
+
+unresolved_features:
+  - name: "early_assessment_score"
+    status: "EXCLUDED"
+    reason: "date_submitted is known, but date_graded is unrecorded in source data. Inclusion would violate conservative temporal availability."
+
+paths:
+  interim_cohort: "data/interim/day30_cohort_raw.csv"
+  processed_features_csv: "data/processed/day30_features.csv"
+  processed_features_parquet: "data/processed/day30_features.parquet"
+  preparation_report: "reports/data_audit/data_preparation_report.md"

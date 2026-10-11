@@ -1,0 +1,112 @@
+dataset:
+  name: "oulad"
+  full_name: "Open University Learning Analytics Dataset"
+  official_website: "https://analyse.kmi.open.ac.uk/open_dataset"
+  figshare_doi: "10.6084/m9.figshare.5081998.v1"
+  figshare_download_url: "https://ndownloader.figshare.com/files/8606371"
+  official_md5: "7412686fd77cf0e0ee1e8c3e9b354308"
+  expected_archive_size_bytes: 46750706
+
+paths:
+  raw_dir: "data/raw"
+  interim_dir: "data/interim"
+  processed_dir: "data/processed"
+  sample_dir: "data/sample"
+  audit_report: "reports/data_audit/oulad_audit_report.md"
+
+tables:
+  courses:
+    filename: "courses.csv"
+    required_columns:
+      - "code_module"
+      - "code_presentation"
+      - "module_presentation_length"
+    primary_key:
+      - "code_module"
+      - "code_presentation"
+
+  student_info:
+    filename: "studentInfo.csv"
+    required_columns:
+      - "code_module"
+      - "code_presentation"
+      - "id_student"
+      - "gender"
+      - "region"
+      - "highest_education"
+      - "imd_band"
+      - "age_band"
+      - "num_of_prev_attempts"
+      - "studied_credits"
+      - "disability"
+      - "final_result"
+    primary_key:
+      - "code_module"
+      - "code_presentation"
+      - "id_student"
+
+  student_registration:
+    filename: "studentRegistration.csv"
+    required_columns:
+      - "code_module"
+      - "code_presentation"
+      - "id_student"
+      - "date_registration"
+      - "date_unregistration"
+    foreign_keys:
+      - parent_table: "student_info"
+        keys: ["code_module", "code_presentation", "id_student"]
+
+  assessments:
+    filename: "assessments.csv"
+    required_columns:
+      - "code_module"
+      - "code_presentation"
+      - "id_assessment"
+      - "assessment_type"
+      - "date"
+      - "weight"
+    primary_key:
+      - "id_assessment"
+
+  student_assessment:
+    filename: "studentAssessment.csv"
+    required_columns:
+      - "id_assessment"
+      - "id_student"
+      - "date_submitted"
+      - "is_banked"
+      - "score"
+    foreign_keys:
+      - parent_table: "assessments"
+        keys: ["id_assessment"]
+
+  vle:
+    filename: "vle.csv"
+    required_columns:
+      - "id_site"
+      - "code_module"
+      - "code_presentation"
+      - "activity_type"
+      - "week_from"
+      - "week_to"
+    primary_key:
+      - "id_site"
+
+  student_vle:
+    filename: "studentVle.csv"
+    required_columns:
+      - "code_module"
+      - "code_presentation"
+      - "id_student"
+      - "id_site"
+      - "date"
+      - "sum_click"
+    chunk_size: 200000
+    foreign_keys:
+      - parent_table: "vle"
+        keys: ["id_site"]
+
+audit_settings:
+  chunk_size_large_tables: 200000
+  sample_rows_display: 5

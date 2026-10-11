@@ -1,0 +1,22 @@
+# Local ML Data files
+data/raw/*
+!data/raw/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/external/*
+!data/external/.gitkeep
+
+# Sample data fixtures are preserved
+!data/sample/**
+
+# Artifacts
+artifacts/models/*
+!artifacts/models/.gitkeep
+
+# Caches & temporary files
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/

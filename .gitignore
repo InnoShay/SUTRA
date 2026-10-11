@@ -1,0 +1,36 @@
+# Environments & Caches
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Data & Large Artifacts (Strictly Protected)
+ml/data/raw/
+ml/data/interim/
+ml/data/processed/
+ml/data/external/
+ml/artifacts/models/*
+!ml/artifacts/models/.gitkeep
+
+# Keep fixtures for tests
+!ml/data/sample/
+
+# OS and IDE files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build / Distribution
+build/
+dist/
+*.egg-info/
