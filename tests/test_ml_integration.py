@@ -17,7 +17,8 @@ from tests.utils import make_jwt
 
 @pytest.fixture
 def valid_features_fixture():
-    with open("SUTRA_Backend_Docs/fixtures/demo_seed.json") as f:
+    fixture_path = "docs/fixtures/demo_seed.json" if os.path.exists("docs/fixtures/demo_seed.json") else "SUTRA_Backend_Docs/fixtures/demo_seed.json"
+    with open(fixture_path) as f:
         data = json.load(f)["ml_day30_test_vector"]
     return {
         "external_student_ref": data["student"],
