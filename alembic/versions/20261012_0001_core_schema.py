@@ -234,6 +234,7 @@ def upgrade() -> None:
         sa.Column("primary_owner_user_id", sa.Uuid(), nullable=True),
         sa.Column("due_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("is_escalated", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("created_by", sa.Uuid(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),

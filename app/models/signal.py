@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, UniqueConstraint, Uuid, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
@@ -51,7 +51,7 @@ class Signal(Base):
         Uuid, nullable=False
     )
     student_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, nullable=False
+        Uuid, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
     )
     policy_version_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("policy_versions.id", ondelete="RESTRICT"), nullable=False
@@ -74,3 +74,7 @@ class Signal(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+    student: Mapped["Student"] = relationship("Student")
+    evidence_packet: Mapped["EvidencePacket"] = relationship("EvidencePacket")
+    policy_version: Mapped["PolicyVersion"] = relationship("PolicyVersion")

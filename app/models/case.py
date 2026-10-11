@@ -48,7 +48,7 @@ class Case(Base):
         Uuid, nullable=False
     )
     student_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, nullable=False
+        Uuid, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
     )
     originating_signal_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("signals.id", ondelete="RESTRICT"), nullable=False
@@ -58,6 +58,7 @@ class Case(Base):
     primary_owner_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
     due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_escalated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -67,6 +68,8 @@ class Case(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
+    student: Mapped["Student"] = relationship("Student")
+    signal: Mapped["Signal"] = relationship("Signal")
     tasks: Mapped[list["CaseTask"]] = relationship("CaseTask", back_populates="case", cascade="all, delete-orphan")
     events: Mapped[list["CaseEvent"]] = relationship("CaseEvent", back_populates="case", cascade="all, delete-orphan")
 

@@ -1,6 +1,45 @@
 from app.schemas.health import HealthResponse, ReadinessResponse, ReadinessChecks
 from app.schemas.errors import ErrorEnvelope, ErrorPayload, ErrorDetail
 from app.schemas.campus import AuthMeResponse, CampusResponse, CampusMembershipItem
+from app.schemas.ingestion import (
+    ObservationItem,
+    FinanceObservationItem,
+    ImportBatchRequest,
+    ImportBatchResponse,
+    ImportErrorItem,
+)
+from app.schemas.student import (
+    StudentSummary,
+    ObservationDTO,
+    FinanceObservationDTO,
+    FreshnessMetricsDTO,
+    SupportViewResponse,
+    FinanceViewResponse,
+)
+from app.schemas.signal import (
+    EvidenceCardDTO,
+    EvidenceCardItem,
+    SignalDTO,
+    SignalReviewRequest,
+    SignalReviewResponse,
+    EvaluateStudentRequest,
+)
+from app.schemas.case import (
+    CaseTaskDTO,
+    CaseEventDTO,
+    FollowUpDTO,
+    CaseOutcomeDTO,
+    CaseDetailDTO,
+    CaseTransitionRequest,
+    CaseAssignmentRequest,
+    AcceptAssignmentRequest,
+    CreateTaskRequest,
+    FollowUpRequest,
+    OutcomeRequest,
+    CaseOverrideRequest,
+    CaseReopenRequest,
+)
+from app.schemas.intervention import InterventionItem
 
 __all__ = [
     "HealthResponse",
@@ -12,4 +51,35 @@ __all__ = [
     "AuthMeResponse",
     "CampusResponse",
     "CampusMembershipItem",
+    "ObservationItem",
+    "FinanceObservationItem",
+    "ImportBatchRequest",
+    "ImportBatchResponse",
+    "ImportErrorItem",
+    "StudentSummary",
+    "ObservationDTO",
+    "FinanceObservationDTO",
+    "FreshnessMetricsDTO",
+    "SupportViewResponse",
+    "FinanceViewResponse",
+    "EvidenceCardDTO",
+    "EvidenceCardItem",
+    "SignalDTO",
+    "SignalReviewRequest",
+    "SignalReviewResponse",
+    "EvaluateStudentRequest",
+    "CaseTaskDTO",
+    "CaseEventDTO",
+    "FollowUpDTO",
+    "CaseOutcomeDTO",
+    "CaseDetailDTO",
+    "CaseTransitionRequest",
+    "CaseAssignmentRequest",
+    "AcceptAssignmentRequest",
+    "CreateTaskRequest",
+    "FollowUpRequest",
+    "OutcomeRequest",
+    "CaseOverrideRequest",
+    "CaseReopenRequest",
+    "InterventionItem",
 ]

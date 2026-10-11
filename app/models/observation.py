@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, JSON, String, UniqueConstraint, Uuid, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
@@ -57,7 +57,7 @@ class StudentObservation(Base):
         Uuid, nullable=False
     )
     student_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, nullable=False
+        Uuid, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
     )
     domain: Mapped[str] = mapped_column(String, nullable=False)
     metric_key: Mapped[str] = mapped_column(String, nullable=False)
@@ -82,6 +82,8 @@ class StudentObservation(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
+    student: Mapped["Student"] = relationship("Student")
+
 
 class FinanceObservation(Base):
     """Separated finance observation entity (strictly segregated per ADR-003)."""
@@ -102,7 +104,7 @@ class FinanceObservation(Base):
         Uuid, nullable=False
     )
     student_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, nullable=False
+        Uuid, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
     )
     fee_support_status: Mapped[str] = mapped_column(String, nullable=False)
     event_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -120,3 +122,5 @@ class FinanceObservation(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+    student: Mapped["Student"] = relationship("Student")
