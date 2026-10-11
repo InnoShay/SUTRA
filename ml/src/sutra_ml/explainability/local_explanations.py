@@ -11,7 +11,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
-import xgboost as xgb
+
+try:
+    import xgboost as xgb
+except ImportError:
+    xgb = None
+
 
 
 FEATURE_LABEL_MAP = {

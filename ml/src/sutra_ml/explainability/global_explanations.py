@@ -7,7 +7,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
-import xgboost as xgb
+try:
+    import xgboost as xgb
+except ImportError:
+    xgb = None
+
 
 from sutra_ml.explainability.local_explanations import FEATURE_LABEL_MAP, clean_feature_name_and_category
 
