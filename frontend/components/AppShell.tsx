@@ -33,6 +33,7 @@ import {
   FileText,
   HeartHandshake,
   MessageCircle,
+  Briefcase,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -133,6 +134,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       icon: LayoutGrid,
     },
     {
+      name: t("nav.internships", "Internships"),
+      shortName: t("nav.internships_short", "Internships"),
+      href: "/internships",
+      icon: Briefcase,
+    },
+    {
       name: t("nav.my_cases", "My Cases"),
       shortName: t("nav.my_cases_short", "Cases"),
       href: "/cases",
@@ -160,6 +167,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       icon: LayoutGrid,
     },
     {
+      name: t("nav.internships", "Internships"),
+      shortName: t("nav.internships_short", "Internships"),
+      href: "/internships",
+      icon: Briefcase,
+    },
+    {
       name: t("nav.my_cases", "My Cases"),
       shortName: t("nav.community_short", "Case Management"),
       href: "/cases",
@@ -185,6 +198,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       shortName: t("nav.dashboard_short", "Overview"),
       href: "/dashboard",
       icon: LayoutGrid,
+    },
+    {
+      name: t("nav.internships", "Internships"),
+      shortName: t("nav.internships_short", "Internships"),
+      href: "/internships",
+      icon: Briefcase,
     },
     {
       name: t("nav.my_cases", "Case Management"),
@@ -644,7 +663,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <div
           className={`grid ${
-            mainNavItems.length === 5 ? "grid-cols-5" : "grid-cols-4"
+            mainNavItems.length >= 6
+              ? "grid-cols-6"
+              : mainNavItems.length === 5
+              ? "grid-cols-5"
+              : "grid-cols-4"
           } items-center justify-around max-w-md mx-auto`}
         >
           {mainNavItems.map((item) => {
