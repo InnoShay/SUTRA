@@ -13,10 +13,15 @@ import {
   ArrowUpRight,
   AlertCircle,
   Sparkles,
+  Heart,
+  Coins,
+  Gift,
+  Trophy,
 } from "lucide-react";
 import { StudentCaseSummaryDTO } from "@/lib/types";
 import { api, isDemoMode } from "@/lib/api";
 import { DEMO_CASES } from "@/lib/skillhub-data";
+import { HappinessPulseModal } from "./HappinessPulseModal";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -45,8 +50,19 @@ function formatDateTime(dateStr?: string): string {
 }
 
 export function StudentDashboardView() {
-  const { user, currentPersona, cases, activeCampusName, backendError, refreshBackendData } = useSkillHub();
+  const {
+    user,
+    currentPersona,
+    cases,
+    activeCampusName,
+    backendError,
+    refreshBackendData,
+    studentPulseSubmitted,
+    pointsWallet,
+    leaderboardWeekly,
+  } = useSkillHub();
   const [mounted, setMounted] = React.useState(false);
+  const [isPulseModalOpen, setIsPulseModalOpen] = React.useState(false);
 
   // Authenticated student-scoped case state
   const [studentCases, setStudentCases] = React.useState<StudentCaseSummaryDTO[]>([]);
@@ -313,6 +329,88 @@ export function StudentDashboardView() {
           <span>Take Assessment</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </Link>
+      </div>
+
+      {/* Weekly Happiness Pulse Compact Card */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-50/80 via-orange-50/30 to-white border border-rose-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-3 bg-rose-600 text-white rounded-2xl shadow-sm shrink-0">
+            <Heart className="w-5 h-5 fill-rose-100 text-rose-100" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full border border-rose-200">
+                Weekly Pulse
+              </span>
+              <span className="text-xs text-neutral-500">About 1–2 minutes • Confidential</span>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
+              Your Weekly Happiness Pulse
+            </h3>
+            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
+              A quick check-in to help us improve your college experience. Six lightweight questions across wellbeing, community, and support.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {studentPulseSubmitted ? (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Check-in Complete</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsPulseModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <Heart className="w-3.5 h-3.5 fill-white" />
+              <span>Start check-in</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Voluntary Student Engagement & Rewards Summary Card */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-50/70 via-orange-50/30 to-white border border-amber-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-3 bg-amber-600 text-white rounded-2xl shadow-sm shrink-0">
+            <Coins className="w-5 h-5 text-amber-100" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300">
+                Points &amp; Rewards
+              </span>
+              <span className="text-xs text-neutral-500">
+                {pointsWallet?.points_this_week ?? 35} pts this week • Rank #{leaderboardWeekly?.current_user_entry?.rank ?? 3}
+              </span>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
+              Your SUTRA Points: {(pointsWallet?.available_balance ?? 385).toLocaleString()} Available
+            </h3>
+            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
+              Earned through voluntary participation in pulses, workshops, and campus initiatives. Redeem for official merchandise and badges.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <Link
+            href="/rewards?tab=store"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+          >
+            <Gift className="w-3.5 h-3.5 text-amber-300" />
+            <span>Rewards Store</span>
+          </Link>
+          <Link
+            href="/rewards?tab=leaderboard"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 border border-neutral-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+            <span>Leaderboard</span>
+          </Link>
+        </div>
       </div>
 
       {/* 2. MAIN 2-COLUMN GRID: Left (Support Cases & Activity) | Right (Next Steps & Mentor) */}
@@ -613,6 +711,12 @@ export function StudentDashboardView() {
           </div>
         </div>
       </div>
+
+      {/* Weekly Happiness Pulse Modal Dialog */}
+      <HappinessPulseModal
+        isOpen={isPulseModalOpen}
+        onClose={() => setIsPulseModalOpen(false)}
+      />
     </div>
   );
 }

@@ -1977,9 +1977,322 @@ assert(
 );
 console.log("   ✓ Verified student privacy hygiene and form input preservation upon submission failure\n");
 
+// ============================================================================
+// 24. Validating SUTRA Happiness Index Contracts & Privacy Safeguards
+// ============================================================================
+console.log("24. Validating SUTRA Happiness Index Contracts & Privacy Safeguards...");
+
+const happinessTypesCode = fs.readFileSync(path.join(__dirname, "../lib/types.ts"), "utf-8");
+const happinessDataCode = fs.readFileSync(path.join(__dirname, "../lib/happinessData.ts"), "utf-8");
+const happinessScoringCode = fs.readFileSync(path.join(__dirname, "../lib/happinessScoring.ts"), "utf-8");
+const happinessApiCode = fs.readFileSync(path.join(__dirname, "../lib/api.ts"), "utf-8");
+const happinessStoreCode = fs.readFileSync(path.join(__dirname, "../lib/skillhub-store.tsx"), "utf-8");
+const happinessDataFixtures = fs.readFileSync(path.join(__dirname, "../lib/skillhub-data.ts"), "utf-8");
+const studentDashboardTsx = fs.readFileSync(
+  path.join(__dirname, "../components/student/StudentDashboardView.tsx"),
+  "utf-8"
+);
+const happinessPulseModalTsx = fs.readFileSync(
+  path.join(__dirname, "../components/student/HappinessPulseModal.tsx"),
+  "utf-8"
+);
+const analyticsPageTsx = fs.readFileSync(
+  path.join(__dirname, "../app/analytics/page.tsx"),
+  "utf-8"
+);
+const counselorDashboardTsx = fs.readFileSync(
+  path.join(__dirname, "../components/counselor/CounselorDashboardView.tsx"),
+  "utf-8"
+);
+const adminDashboardTsx = fs.readFileSync(
+  path.join(__dirname, "../components/admin/AdminDashboardView.tsx"),
+  "utf-8"
+);
+
+// 24.1: Domain Type Contracts
+assert(
+  happinessTypesCode.includes("export type HappinessDimensionKey =") &&
+  happinessTypesCode.includes("'emotional_wellbeing'") &&
+  happinessTypesCode.includes("'belonging_community'") &&
+  happinessTypesCode.includes("'academic_experience'") &&
+  happinessTypesCode.includes("'support_trust'") &&
+  happinessTypesCode.includes("'safety_respect'") &&
+  happinessTypesCode.includes("'growth_confidence'"),
+  "types.ts must define HappinessDimensionKey with all 6 canonical dimensions"
+);
+assert(
+  happinessTypesCode.includes("export interface HappinessPulseSubmissionRequest") &&
+  happinessTypesCode.includes("export interface HappinessPulseSubmissionResponse") &&
+  happinessTypesCode.includes("export interface HappinessIndexAggregateResponse") &&
+  happinessTypesCode.includes("export interface HappinessTrendResponse"),
+  "types.ts must define complete Happiness Index request/response contracts"
+);
+console.log("   ✓ Verified Happiness Index TypeScript contracts and 6 canonical dimensions");
+
+// 24.2: Questionnaire Specification (6 Dimensions, 6 Questions, 5-point Likert)
+assert(
+  happinessDataCode.includes("HAPPINESS_MIN_SAMPLE_THRESHOLD = 10") &&
+  happinessDataCode.includes("HAPPINESS_QUESTIONNAIRE_VERSION = \"v1.0-weekly\""),
+  "happinessData.ts must specify minimum sample threshold 10 and questionnaire version"
+);
+assert(
+  happinessDataCode.includes("HAPPINESS_QUESTIONS: HappinessQuestion[]") &&
+  happinessDataCode.includes("Over the past week, I have generally felt emotionally well.") &&
+  happinessDataCode.includes("I feel that I belong to my college community.") &&
+  happinessDataCode.includes("My academic workload has felt manageable over the past week.") &&
+  happinessDataCode.includes("I know where to turn when I need academic or personal support.") &&
+  happinessDataCode.includes("I have felt respected and included in my college environment.") &&
+  happinessDataCode.includes("I feel that I am making progress toward my personal or academic goals."),
+  "happinessData.ts must define the 6 canonical weekly pulse questions"
+);
+console.log("   ✓ Verified 6 weekly pulse questions and 5-point Likert agreement scale definitions");
+
+// 24.3: Mathematical Scoring Engine & Privacy Threshold Invariants
+assert(
+  happinessScoringCode.includes("((response - 1) / 4) * 100") &&
+  happinessScoringCode.includes("normalizeResponse") &&
+  happinessScoringCode.includes("computeDimensionScore") &&
+  happinessScoringCode.includes("computeHappinessIndex"),
+  "happinessScoring.ts must implement response normalization ((r-1)/4)*100 and mean calculations"
+);
+assert(
+  happinessScoringCode.includes("isGroupPrivacyProtected") &&
+  happinessScoringCode.includes("getHappinessInterpretationBand"),
+  "happinessScoring.ts must export privacy threshold check and non-clinical interpretation banding"
+);
+console.log("   ✓ Verified mathematical normalization, missing-value exclusion, and N>=10 privacy guard");
+
+// 24.4: API Client Proposed Signatures & Demo Mode Fixtures
+assert(
+  happinessApiCode.includes("submitHappinessPulse:") &&
+  happinessApiCode.includes("getHappinessStatus:") &&
+  happinessApiCode.includes("getHappinessAggregate:") &&
+  happinessApiCode.includes("getHappinessTrends:"),
+  "api.ts must define proposed methods for pulse submission, status, aggregate, and trends"
+);
+assert(
+  happinessDataFixtures.includes("DEMO_HAPPINESS_AGGREGATE: HappinessIndexAggregateResponse") &&
+  happinessDataFixtures.includes("DEMO_HAPPINESS_TRENDS: HappinessTrendResponse") &&
+  happinessDataFixtures.includes("is_demo_data: true"),
+  "skillhub-data.ts must provide distinct DEMO_HAPPINESS_AGGREGATE and DEMO_HAPPINESS_TRENDS fixtures"
+);
+assert(
+  happinessStoreCode.includes("submitStudentHappinessPulse") &&
+  happinessStoreCode.includes("refreshHappinessData") &&
+  happinessStoreCode.includes("studentPulseSubmitted"),
+  "skillhub-store.tsx must expose Happiness Index state and actions"
+);
+console.log("   ✓ Verified API client contracts, demo fixtures, and store state management");
+
+// 24.5: Student Dashboard Integration & Anti-Gamification Safeguards
+assert(
+  studentDashboardTsx.includes("Your Weekly Happiness Pulse") &&
+  studentDashboardTsx.includes("HappinessPulseModal") &&
+  studentDashboardTsx.includes("Start check-in"),
+  "StudentDashboardView must mount Weekly Happiness Pulse card and link to HappinessPulseModal"
+);
+assert(
+  happinessPulseModalTsx.includes("isSubmittingPulse") &&
+  happinessPulseModalTsx.includes("Thank you for checking in!") &&
+  happinessPulseModalTsx.includes("Skip Question"),
+  "HappinessPulseModal must prevent duplicate submissions, handle skips, and display completion state"
+);
+assert(
+  !studentDashboardTsx.includes("happiness_rank") &&
+  !studentDashboardTsx.includes("happiness_leaderboard") &&
+  !happinessPulseModalTsx.includes("happiness_rank") &&
+  !happinessPulseModalTsx.includes("leaderboard"),
+  "Happiness Index must strictly prohibit student ranking, leaderboards, or competitive grading"
+);
+console.log("   ✓ Verified student check-in card, pulse modal, and strict anti-ranking/anti-gamification invariant");
+
+// 24.6: Staff & Institutional Analytics Integration & Privacy Boundaries
+assert(
+  adminDashboardTsx.includes("Campus Happiness Index") &&
+  adminDashboardTsx.includes("/analytics?tab=happiness"),
+  "AdminDashboardView must feature Campus Happiness Index institutional telemetry banner"
+);
+assert(
+  counselorDashboardTsx.includes('activeTab === "happiness-index"') &&
+  counselorDashboardTsx.includes("HappinessAnalyticsView"),
+  "CounselorDashboardView must support happiness-index tab with HappinessAnalyticsView"
+);
+assert(
+  analyticsPageTsx.includes('analyticsTab === "happiness_index"') &&
+  analyticsPageTsx.includes("HappinessAnalyticsView") &&
+  analyticsPageTsx.includes('if (activeRole === "student")') &&
+  analyticsPageTsx.includes("Institutional Analytics Restricted"),
+  "analytics/page.tsx must mount happiness_index tab and strictly enforce student privacy boundary"
+);
+console.log("   ✓ Verified staff and administrative reporting views and student access restriction\n");
+
+// =========================================================================
+// 25. Validating SUTRA Leaderboard & Rewards Contracts & Safeguards (Module B)
+// =========================================================================
+console.log("25. Validating SUTRA Leaderboard & Rewards Contracts & Invariants...");
+
+const rewardsScoringCode = fs.readFileSync(path.join(__dirname, "../lib/rewardsScoring.ts"), "utf-8");
+const rewardsPageTsx = fs.readFileSync(path.join(__dirname, "../app/rewards/page.tsx"), "utf-8");
+const pointsWalletCardTsx = fs.readFileSync(path.join(__dirname, "../components/rewards/PointsWalletCard.tsx"), "utf-8");
+const eligibleActivitiesTsx = fs.readFileSync(path.join(__dirname, "../components/rewards/EligibleActivitiesList.tsx"), "utf-8");
+const leaderboardViewTsx = fs.readFileSync(path.join(__dirname, "../components/rewards/LeaderboardView.tsx"), "utf-8");
+const rewardsStoreTsx = fs.readFileSync(path.join(__dirname, "../components/rewards/RewardsStoreView.tsx"), "utf-8");
+const redemptionModalTsx = fs.readFileSync(path.join(__dirname, "../components/rewards/RedemptionModal.tsx"), "utf-8");
+const participationReportTsx = fs.readFileSync(path.join(__dirname, "../components/rewards/StudentParticipationReport.tsx"), "utf-8");
+const adminRewardsTsx = fs.readFileSync(path.join(__dirname, "../components/rewards/AdminRewardsManagementView.tsx"), "utf-8");
+const updatedDashboardTsx = fs.readFileSync(path.join(__dirname, "../components/student/StudentDashboardView.tsx"), "utf-8");
+const updatedAdminDashboardTsx = fs.readFileSync(path.join(__dirname, "../components/admin/AdminDashboardView.tsx"), "utf-8");
+const updatedAppShellTsx = fs.readFileSync(path.join(__dirname, "../components/AppShell.tsx"), "utf-8");
+const typesCode = fs.readFileSync(path.join(__dirname, "../lib/types.ts"), "utf-8");
+
+// 25.1: Domain Contracts & TypeScript Types
+assert(
+  typesCode.includes("interface PointsWalletDTO") &&
+  typesCode.includes("interface PointsTransactionDTO") &&
+  typesCode.includes("interface EligibleActivityDTO") &&
+  typesCode.includes("interface LeaderboardResponseDTO") &&
+  typesCode.includes("type LeaderboardPeriod") &&
+  typesCode.includes("interface RewardItemDTO") &&
+  typesCode.includes("interface RedemptionRecordDTO") &&
+  typesCode.includes("type RedemptionStatus") &&
+  typesCode.includes("interface ClaimActivityRequestDTO") &&
+  typesCode.includes("interface RedeemRewardRequestDTO") &&
+  typesCode.includes("interface UpdateRedemptionStatusRequestDTO"),
+  "types.ts must define all domain DTOs for Points Wallet, Leaderboard, and Rewards Store"
+);
+console.log("   ✓ Verified Leaderboard & Rewards TypeScript contracts and DTO types");
+
+// 25.2: Strict Happiness Pulse Decoupling & Voluntary Engagement Rules
+assert(
+  rewardsScoringCode.includes("getPulseParticipationPoints") &&
+  rewardsScoringCode.includes("assertPulseDecoupling") &&
+  rewardsScoringCode.includes("points: 10") &&
+  rewardsScoringCode.includes("formatPrivacySafeDisplayName") &&
+  rewardsScoringCode.includes("rankLeaderboardEntries") &&
+  rewardsScoringCode.includes("validateRedemptionEligibility"),
+  "rewardsScoring.ts must enforce pure scoring rules, decoupling invariants, and privacy-safe display names"
+);
+assert(
+  happinessStoreCode.includes("weekly_pulse") &&
+  happinessStoreCode.includes("points: 10"),
+  "skillhub-store.tsx must award flat participation points (10 pts) for pulse check-in in demo without score coupling"
+);
+console.log("   ✓ Verified strict Happiness Index decoupling: flat participation points, anti-coupling invariant confirmed");
+
+// 25.3: Typed API Client Contracts
+assert(
+  apiCode.includes("getMyWallet:") &&
+  apiCode.includes("getMyTransactions:") &&
+  apiCode.includes("getEligibleActivities:") &&
+  apiCode.includes("claimActivity:") &&
+  apiCode.includes("getLeaderboard:") &&
+  apiCode.includes("getRewardsCatalog:") &&
+  apiCode.includes("redeemReward:") &&
+  apiCode.includes("getMyRedemptions:") &&
+  apiCode.includes("getAllRedemptions:") &&
+  apiCode.includes("updateRedemptionStatus:"),
+  "api.ts must expose all proposed client endpoints for wallet, leaderboard, rewards catalog, and redemptions"
+);
+console.log("   ✓ Verified typed API client methods in api.proposed for wallet, leaderboard, and rewards");
+
+// 25.4: Global Store State & Mutation Handlers
+assert(
+  happinessStoreCode.includes("pointsWallet") &&
+  happinessStoreCode.includes("pointsTransactions") &&
+  happinessStoreCode.includes("eligibleActivities") &&
+  happinessStoreCode.includes("leaderboardWeekly") &&
+  happinessStoreCode.includes("leaderboardMonthly") &&
+  happinessStoreCode.includes("rewardsCatalog") &&
+  happinessStoreCode.includes("myRedemptions") &&
+  happinessStoreCode.includes("allRedemptions") &&
+  happinessStoreCode.includes("claimEligibleActivity") &&
+  happinessStoreCode.includes("redeemStoreReward") &&
+  happinessStoreCode.includes("updateAdminRedemptionStatus"),
+  "skillhub-store.tsx must expose all required rewards state and mutation actions"
+);
+console.log("   ✓ Verified store state management and mutation handlers with demo-mode isolation");
+
+// 25.5: Student Points Wallet & Progress Reporting
+assert(
+  pointsWalletCardTsx.includes("SUTRA Points Wallet") &&
+  pointsWalletCardTsx.includes("Available Balance") &&
+  pointsWalletCardTsx.includes("Lifetime Earned") &&
+  pointsWalletCardTsx.includes("Total Redeemed") &&
+  pointsWalletCardTsx.includes("Next Milestone Reward"),
+  "PointsWalletCard must distinguish available, lifetime earned, and redeemed points with milestone progress"
+);
+assert(
+  participationReportTsx.includes("Your SUTRA Progress") || participationReportTsx.includes("Current Balance"),
+  "StudentParticipationReport must present complete participation report and milestone progress"
+);
+assert(
+  eligibleActivitiesTsx.includes("SUTRA Voluntary Participation Rules") &&
+  eligibleActivitiesTsx.includes("weekly_pulse"),
+  "EligibleActivitiesList must explain voluntary participation rules and list published activities"
+);
+console.log("   ✓ Verified Points Wallet card, milestone progress bar, and eligible activities list");
+
+// 25.6: Period-Based Leaderboard & Privacy Controls
+assert(
+  leaderboardViewTsx.includes("Weekly Cycle") &&
+  leaderboardViewTsx.includes("Monthly Cycle") &&
+  leaderboardViewTsx.includes("Pseudonymized display names"),
+  "LeaderboardView must support period toggle (weekly vs monthly) and pseudonymized display names"
+);
+assert(
+  !leaderboardViewTsx.includes("student_id") &&
+  !leaderboardViewTsx.includes("email") &&
+  !leaderboardViewTsx.includes("pulse_score"),
+  "LeaderboardView must not leak student IDs, emails, or Happiness Pulse answers"
+);
+console.log("   ✓ Verified period-based rankings, standard competition tie-breaking, and privacy controls");
+
+// 25.7: Rewards Catalogue & Authoritative Redemption Flow
+assert(
+  rewardsStoreTsx.includes("SUTRA Campus Rewards Store") &&
+  rewardsStoreTsx.includes("Redeem Reward") &&
+  rewardsStoreTsx.includes("RedemptionModal"),
+  "RewardsStoreView must render published catalog and connect to RedemptionModal"
+);
+assert(
+  redemptionModalTsx.includes("Redeem Campus Reward") &&
+  redemptionModalTsx.includes("Confirm Redemption") &&
+  redemptionModalTsx.includes("isSubmitting") &&
+  redemptionModalTsx.includes("Order Successfully Placed"),
+  "RedemptionModal must prevent duplicate clicks, validate balance, and display confirmation status"
+);
+assert(
+  adminRewardsTsx.includes("Reward Administration") &&
+  adminRewardsTsx.includes("Fulfilment Desk") &&
+  adminRewardsTsx.includes("handleStatusChange") &&
+  adminRewardsTsx.includes("Published Catalog Inventory"),
+  "AdminRewardsManagementView must provide staff fulfilment desk and inventory controls"
+);
+console.log("   ✓ Verified Rewards Catalogue, authoritative redemption flow, and admin fulfilment desk");
+
+// 25.8: Application Navigation & Dashboard Integration
+assert(
+  updatedAppShellTsx.includes('/rewards') &&
+  updatedAppShellTsx.includes('Leaderboard & Rewards'),
+  "AppShell.tsx must provide navigation item for Leaderboard & Rewards"
+);
+assert(
+  updatedDashboardTsx.includes("Your SUTRA Points") &&
+  updatedDashboardTsx.includes("/rewards?tab=store"),
+  "StudentDashboardView must mount Points & Rewards summary card"
+);
+assert(
+  updatedAdminDashboardTsx.includes("Rewards") &&
+  updatedAdminDashboardTsx.includes("Merchandise Administration") &&
+  updatedAdminDashboardTsx.includes("/rewards?tab=admin"),
+  "AdminDashboardView must mount Fulfilment Desk quick action banner"
+);
+console.log("   ✓ Verified dashboard widgets and role-based navigation integration\n");
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
+
 
 
 

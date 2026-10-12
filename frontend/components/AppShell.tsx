@@ -38,6 +38,7 @@ import {
   Calendar,
   Sparkles,
   ShieldCheck,
+  Gift,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -177,6 +178,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       href: "/messages",
       icon: MessageCircle,
     },
+    {
+      name: "Leaderboard & Rewards",
+      shortName: "Rewards",
+      href: "/rewards",
+      icon: Gift,
+    },
   ];
 
   const teacherNavItems = [
@@ -311,6 +318,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       shortName: t("nav.documents_short", "Documents"),
       href: "/documents",
       icon: ShieldCheck,
+    },
+    {
+      name: "Rewards Fulfilment",
+      shortName: "Rewards",
+      href: "/rewards?tab=admin",
+      icon: Gift,
     },
   ];
 

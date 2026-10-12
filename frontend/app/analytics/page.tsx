@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useSkillHub } from "@/lib/store";
 import { api } from "@/lib/api";
 import { CohortAnalyticsSummaryResponse } from "@/lib/types";
@@ -31,10 +32,13 @@ import {
   RefreshCw,
   Info,
   ShieldCheck,
+  ShieldAlert,
   Cpu,
   History,
+  Heart,
 } from "lucide-react";
 import CounselorAnalyticsPage from "../counselor/analytics/page";
+import { HappinessAnalyticsView } from "@/components/happiness/HappinessAnalyticsView";
 
 
 export default function AnalyticsPage() {
@@ -52,13 +56,13 @@ export default function AnalyticsPage() {
   const timeframes = ["This Week", "This Month", "This Year"] as const;
 
   // Filter States (Requirement 5)
-  const [analyticsTab, setAnalyticsTab] = useState<"cohort" | "model_performance" | "historical_trends">("cohort");
+  const [analyticsTab, setAnalyticsTab] = useState<"cohort" | "model_performance" | "historical_trends" | "happiness_index">("cohort");
   const [selectedCohort, setSelectedCohort] = useState<string>("");
   const [selectedRiskTier, setSelectedRiskTier] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>(new Date().toLocaleTimeString());
 
-  // Listen to ?tab=model-performance or ?tab=historical-trends URL search parameters
+  // Listen to ?tab=model-performance, ?tab=historical-trends, or ?tab=happiness URL search parameters
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -66,6 +70,8 @@ export default function AnalyticsPage() {
         setAnalyticsTab("model_performance");
       } else if (params.get("tab") === "historical-trends") {
         setAnalyticsTab("historical_trends");
+      } else if (params.get("tab") === "happiness" || params.get("tab") === "happiness-index") {
+        setAnalyticsTab("happiness_index");
       }
     }
   }, []);
@@ -98,6 +104,28 @@ export default function AnalyticsPage() {
   useEffect(() => {
     fetchCohortAnalytics();
   }, [selectedCohort, analyticsTimeframe, backendConnected]);
+
+  if (activeRole === "student") {
+    return (
+      <div className="p-8 max-w-lg mx-auto bg-white rounded-3xl border border-neutral-200 shadow-sm text-center space-y-4 my-12">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-neutral-900 font-heading">
+          Institutional Analytics Restricted
+        </h2>
+        <p className="text-xs text-neutral-600 leading-relaxed">
+          Aggregated analytics and institutional reporting are restricted to authorized faculty, counselors, and administrators. Please visit your student dashboard to complete your weekly check-in or view your support cases.
+        </p>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all"
+        >
+          <span>Return to Student Overview</span>
+        </Link>
+      </div>
+    );
+  }
 
   if (activeRole === "counselor") {
     return <CounselorAnalyticsPage />;
@@ -225,9 +253,23 @@ export default function AnalyticsPage() {
           <History className="w-3.5 h-3.5" />
           <span>Historical Trends &amp; Monitoring</span>
         </button>
+
+        <button
+          onClick={() => setAnalyticsTab("happiness_index")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            analyticsTab === "happiness_index"
+              ? "bg-neutral-900 text-white shadow-xs"
+              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70"
+          }`}
+        >
+          <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+          <span>Happiness Index</span>
+        </button>
       </div>
 
-      {analyticsTab === "model_performance" ? (
+      {analyticsTab === "happiness_index" ? (
+        <HappinessAnalyticsView roleScope="admin" />
+      ) : analyticsTab === "model_performance" ? (
         <ModelPerformanceDashboard />
       ) : analyticsTab === "historical_trends" ? (
         <HistoricalRiskTrendsDashboard

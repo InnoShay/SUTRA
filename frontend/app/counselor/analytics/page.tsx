@@ -3,9 +3,12 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useSkillHub } from "@/lib/store";
+import { Heart, Activity } from "lucide-react";
+import { HappinessAnalyticsView } from "@/components/happiness/HappinessAnalyticsView";
 
 export default function CounselorAnalyticsPage() {
   const { counselorProfile } = useSkillHub();
+  const [activeView, setActiveView] = useState<"clinical" | "happiness">("clinical");
   const [timeframe, setTimeframe] = useState<"7d" | "30d" | "semester">("30d");
 
   // Essential KPI summary (White, Black, Red - Zero SVGs)
@@ -91,7 +94,38 @@ export default function CounselorAnalyticsPage() {
         </div>
       </div>
 
-      {/* 2. CORE KPI TILES (No SVGs, Clean Typography) */}
+      {/* View Switcher: Clinical Metrics vs Campus Happiness Pulse */}
+      <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">
+        <button
+          onClick={() => setActiveView("clinical")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            activeView === "clinical"
+              ? "bg-neutral-900 text-white shadow-xs"
+              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70"
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5" />
+          <span>Consultation &amp; Clinical Impact</span>
+        </button>
+
+        <button
+          onClick={() => setActiveView("happiness")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            activeView === "happiness"
+              ? "bg-neutral-900 text-white shadow-xs"
+              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70"
+          }`}
+        >
+          <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+          <span>Campus Happiness Pulse</span>
+        </button>
+      </div>
+
+      {activeView === "happiness" ? (
+        <HappinessAnalyticsView roleScope="counselor" />
+      ) : (
+        <>
+          {/* 2. CORE KPI TILES (No SVGs, Clean Typography) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {kpiData.map((kpi, idx) => (
           <div
@@ -342,6 +376,8 @@ export default function CounselorAnalyticsPage() {
           </table>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1147,3 +1147,218 @@ export interface CaseMessagesListResponse {
   messages: CaseMessageDTO[];
   total: number;
 }
+
+// ============================================================================
+// SUTRA Happiness Index Domain Contracts (Phase 9 / Happiness Pulse)
+// ============================================================================
+
+export type HappinessDimensionKey =
+  | 'emotional_wellbeing'
+  | 'belonging_community'
+  | 'academic_experience'
+  | 'support_trust'
+  | 'safety_respect'
+  | 'growth_confidence';
+
+export interface HappinessQuestion {
+  id: string;
+  dimensionKey: HappinessDimensionKey;
+  prompt: string;
+  order: number;
+}
+
+export interface HappinessPulseSubmissionRequest {
+  questionnaire_version: string;
+  responses: Record<string, number>; // question_id -> Likert rating 1..5
+  reflection?: string;
+  submitted_at?: string;
+}
+
+export interface HappinessPulseSubmissionResponse {
+  submission_id: string;
+  status: 'accepted';
+  period_id: string;
+  timestamp: string;
+}
+
+export interface HappinessPulseStatusResponse {
+  has_completed_current_period: boolean;
+  current_period_id: string;
+  last_completed_at?: string | null;
+}
+
+export interface HappinessDimensionScoreDTO {
+  dimension_key: HappinessDimensionKey;
+  dimension_name: string;
+  score: number | null; // 0-100 normalized score, or null if insufficient
+  previous_score: number | null;
+  change_points: number | null;
+  response_count: number;
+  sufficiency_status: 'sufficient' | 'insufficient' | 'suppressed_privacy';
+}
+
+export interface HappinessIndexAggregateResponse {
+  reporting_period: string;
+  calculation_version: string;
+  happiness_index: number | null; // 0-100 composite index
+  previous_index: number | null;
+  change_points: number | null;
+  dimension_scores: Record<HappinessDimensionKey, HappinessDimensionScoreDTO>;
+  response_count: number;
+  eligible_students_count?: number | null;
+  participation_rate?: number | null; // 0-100%
+  data_sufficiency_status: 'sufficient' | 'insufficient' | 'suppressed_privacy';
+  last_refreshed_at: string;
+  is_demo_data?: boolean;
+}
+
+export interface HappinessTrendPointDTO {
+  period_id: string;
+  period_label: string;
+  happiness_index: number | null;
+  response_count: number;
+}
+
+export interface HappinessTrendResponse {
+  periods: HappinessTrendPointDTO[];
+  is_demo_data?: boolean;
+}
+
+// ==========================================
+// Leaderboard & Rewards Domain Contracts
+// ==========================================
+
+export type ActivityCategory =
+  | "wellness_pulse"
+  | "micro_challenge"
+  | "workshop"
+  | "student_development"
+  | "learning_activity"
+  | "campus_improvement";
+
+export interface EligibleActivityDTO {
+  key: string;
+  title: string;
+  description: string;
+  category: ActivityCategory;
+  points: number;
+  frequency_label: string;
+  is_completed_in_period?: boolean;
+}
+
+export type PointsTransactionStatus = "credited" | "debited" | "pending" | "cancelled";
+
+export interface PointsTransactionDTO {
+  id: string;
+  student_id: string;
+  activity_or_reward_id: string;
+  points: number; // positive for credit, negative for debit
+  status: PointsTransactionStatus;
+  description: string;
+  created_at: string;
+}
+
+export interface PointsWalletDTO {
+  student_id: string;
+  available_balance: number;
+  total_earned: number;
+  total_redeemed: number;
+  points_this_week: number;
+  points_this_month: number;
+  next_reward_title?: string;
+  next_reward_cost?: number;
+  next_reward_points_needed?: number;
+  updated_at: string;
+  is_demo_data?: boolean;
+}
+
+export type LeaderboardPeriod = "weekly" | "monthly";
+
+export interface LeaderboardEntryDTO {
+  rank: number;
+  student_id?: string;
+  display_name: string;
+  avatar?: string;
+  points_in_period: number;
+  is_current_user?: boolean;
+  activities_count?: number;
+}
+
+export interface LeaderboardResponseDTO {
+  period: LeaderboardPeriod;
+  cycle_label: string;
+  entries: LeaderboardEntryDTO[];
+  current_user_entry?: LeaderboardEntryDTO | null;
+  total_participants: number;
+  last_updated_at: string;
+  is_demo_data?: boolean;
+}
+
+export type RewardCategory = "digital" | "merchandise" | "experience";
+
+export type RedemptionStatus =
+  | "requested"
+  | "approved"
+  | "ready_for_collection"
+  | "collected"
+  | "cancelled";
+
+export interface RewardItemDTO {
+  id: string;
+  title: string;
+  description: string;
+  points_cost: number;
+  category: RewardCategory;
+  stock: number;
+  is_available: boolean;
+  is_digital: boolean;
+  image_url?: string;
+  eligibility_notes?: string;
+}
+
+export interface RedemptionRecordDTO {
+  id: string;
+  reward_id: string;
+  reward_title: string;
+  reward_category: RewardCategory;
+  points_spent: number;
+  is_digital: boolean;
+  student_id: string;
+  student_display_name?: string;
+  status: RedemptionStatus;
+  collection_location?: string;
+  redeemed_at: string;
+  updated_at?: string;
+  notes?: string;
+}
+
+export interface ClaimActivityRequestDTO {
+  activity_key: string;
+  metadata?: Record<string, any>;
+}
+
+export interface ClaimActivityResponseDTO {
+  success: boolean;
+  transaction: PointsTransactionDTO;
+  new_balance: number;
+  message: string;
+}
+
+export interface RedeemRewardRequestDTO {
+  reward_id: string;
+  notes?: string;
+}
+
+export interface RedeemRewardResponseDTO {
+  success: boolean;
+  redemption: RedemptionRecordDTO;
+  transaction: PointsTransactionDTO;
+  new_balance: number;
+  message: string;
+}
+
+export interface UpdateRedemptionStatusRequestDTO {
+  status: RedemptionStatus;
+  notes?: string;
+}
+
