@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F7F9F5"/>
+      <stop offset="100%" stop-color="#E8ECE2"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(20,40,30,0.18)"/>
+      <stop offset="100%" stop-color="rgba(20,40,30,0)"/>
+    </radialGradient>
+    <linearGradient id="teeGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E4735"/>
+      <stop offset="50%" stop-color="#16392A"/>
+      <stop offset="100%" stop-color="#0F2B1F"/>
+    </linearGradient>
+    <linearGradient id="collarGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#265741"/>
+      <stop offset="100%" stop-color="#143627"/>
+    </linearGradient>
+    <filter id="subtleDrop" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#0d261a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Studio Background -->
+  <rect width="600" height="750" fill="url(#bg)"/>
+  <ellipse cx="300" cy="650" rx="220" ry="32" fill="url(#shadow)"/>
+
+  <!-- T-Shirt Body -->
+  <g filter="url(#subtleDrop)">
+    <!-- Main Folded/Form Shirt Silhouette -->
+    <path d="M 210,130 Q 300,165 390,130 L 490,185 L 435,275 L 395,250 L 400,600 Q 300,615 200,600 L 205,250 L 165,275 L 110,185 Z" fill="url(#teeGrad)"/>
+    
+    <!-- Sleeve Folds & Shading -->
+    <path d="M 205,250 L 165,275 L 110,185 L 210,130 L 205,250" fill="#133124" opacity="0.35"/>
+    <path d="M 395,250 L 435,275 L 490,185 L 390,130 L 395,250" fill="#133124" opacity="0.45"/>
+    
+    <!-- Collar -->
+    <path d="M 230,135 Q 300,185 370,135 Q 300,165 230,135 Z" fill="url(#collarGrad)"/>
+    <path d="M 245,142 Q 300,175 355,142" stroke="#2D634B" stroke-width="2.5" fill="none"/>
+    
+    <!-- Subtle Fabric Texture Lines -->
+    <path d="M 205,260 Q 230,420 203,595" stroke="rgba(255,255,255,0.04)" stroke-width="2" fill="none"/>
+    <path d="M 395,260 Q 370,420 397,595" stroke="rgba(0,0,0,0.15)" stroke-width="2" fill="none"/>
+  </g>
+
+  <!-- PROMINENT SUTRA BRANDING -->
+  <g transform="translate(300, 310)">
+    <!-- Embroidered Crest Container -->
+    <rect x="-85" y="-55" width="170" height="110" rx="14" fill="#0E2419" stroke="#2A5C44" stroke-width="1.5" opacity="0.95"/>
+    
+    <!-- SUTRA Compass / Leaf Mark -->
+    <g transform="translate(0, -18) scale(0.7)">
+      <circle cx="0" cy="0" r="16" fill="none" stroke="#A3E635" stroke-width="2.5"/>
+      <path d="M 0,-12 L 3,-3 L 12,0 L 3,3 L 0,12 L -3,3 L -12,0 L -3,-3 Z" fill="#A3E635"/>
+    </g>
+
+    <!-- Bold SUTRA Brand Name -->
+    <text x="0" y="16" font-family="'Plus Jakarta Sans', Inter, -apple-system, sans-serif" font-weight="900" font-size="24" fill="#FFFFFF" letter-spacing="4" text-anchor="middle">SUTRA</text>
+    
+    <!-- Tagline Subtext -->
+    <text x="0" y="34" font-family="'Inter', sans-serif" font-weight="600" font-size="8.5" fill="#8FAF91" letter-spacing="2.5" text-anchor="middle">SUPPLY • PROVISIONS</text>
+  </g>
+
+  <!-- Hem Label Detail -->
+  <g transform="translate(210, 582)">
+    <rect x="0" y="0" width="34" height="18" fill="#F4F5F0" rx="2"/>
+    <text x="17" y="12" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="7" fill="#153D30" text-anchor="middle">SUTRA</text>
+  </g>
+</svg>

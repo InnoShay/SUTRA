@@ -133,4 +133,34 @@ h6 {
   background: 
     linear-gradient(180deg, rgba(20, 126, 232, 0.92) 0%, rgba(27, 140, 242, 0.85) 50%, rgba(56, 166, 249, 0.8) 100%),
     url('/clouds-bg.jpe') center bottom / cover no-repeat;
+}
+
+/* High-End Merch Editorial Typography & Variable Font Utilities */
+.font-merch-display {
+  font-family: 'Plus Jakarta Sans', var(--font-inter), sans-serif;
+  letter-spacing: -0.04em;
+  font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1, 'ss01' 1;
+  text-rendering: optimizeLegibility;
+}
+
+.font-merch-mono {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  letter-spacing: -0.02em;
+}
+
+/* Marquee infinite ticker animation */
+@keyframes merch-marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-merch-marquee {
+  display: flex;
+  width: max-content;
+  animation: merch-marquee 28s linear infinite;
+}
+
+.animate-merch-marquee:hover {
+  animation-play-state: paused;
 }

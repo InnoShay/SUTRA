@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F7F9F5"/>
+      <stop offset="100%" stop-color="#E8ECE2"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(15,35,25,0.2)"/>
+      <stop offset="100%" stop-color="rgba(15,35,25,0)"/>
+    </radialGradient>
+    <linearGradient id="canvasGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E3E30"/>
+      <stop offset="50%" stop-color="#142F24"/>
+      <stop offset="100%" stop-color="#0B1C15"/>
+    </linearGradient>
+    <filter id="sleeveDrop" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="6" dy="20" stdDeviation="22" flood-color="#071b12" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="600" height="750" fill="url(#bg)"/>
+  <ellipse cx="300" cy="650" rx="220" ry="32" fill="url(#shadow)"/>
+
+  <!-- Main Sleeve Envelope -->
+  <g filter="url(#sleeveDrop)">
+    <!-- Sleeve Body -->
+    <rect x="90" y="160" width="420" height="440" rx="20" fill="url(#canvasGrad)" stroke="#235440" stroke-width="2"/>
+
+    <!-- Subtle Ripstop Grid Texture -->
+    <path d="M 90,240 L 510,240 M 90,320 L 510,320 M 90,400 L 510,400 M 90,480 L 510,480" stroke="rgba(255,255,255,0.04)" stroke-width="1.5"/>
+    <path d="M 170,160 L 170,600 M 250,160 L 250,600 M 330,160 L 330,600 M 410,160 L 410,600" stroke="rgba(255,255,255,0.04)" stroke-width="1.5"/>
+
+    <!-- Envelope Top Magnetic Flap -->
+    <path d="M 90,160 L 510,160 L 480,270 Q 300,320 120,270 Z" fill="#132E23" stroke="#255843" stroke-width="1.5"/>
+    <path d="M 120,265 Q 300,315 480,265" stroke="#2E6B52" stroke-width="2" fill="none"/>
+
+    <!-- Front Document Slip Pocket -->
+    <rect x="110" y="360" width="380" height="220" rx="14" fill="#0E231B" stroke="#1D4A37" stroke-width="1.5"/>
+
+    <!-- PROMINENT SUTRA RUBBERIZED PATCH -->
+    <g transform="translate(300, 470)">
+      <rect x="-85" y="-45" width="170" height="90" rx="12" fill="#081A12" stroke="#A3E635" stroke-width="2"/>
+      
+      <!-- SUTRA Leaf Icon -->
+      <g transform="translate(0, -14) scale(0.7)">
+        <circle cx="0" cy="0" r="16" fill="#A3E635"/>
+        <path d="M 0,-10 L 3,-3 L 10,0 L 3,3 L 0,10 L -3,3 L -10,0 L -3,-3 Z" fill="#081A12"/>
+      </g>
+
+      <!-- Bold SUTRA Name -->
+      <text x="0" y="16" font-family="'Plus Jakarta Sans', Inter, sans-serif" font-weight="900" font-size="22" fill="#FFFFFF" letter-spacing="4" text-anchor="middle">SUTRA</text>
+      
+      <!-- Sleeve Spec Tag -->
+      <text x="0" y="32" font-family="'Inter', sans-serif" font-weight="600" font-size="8" fill="#8FAF91" letter-spacing="2" text-anchor="middle">RECYCLED RIPSTOP • 14 INCH</text>
+    </g>
+
+    <!-- Side Tab Label -->
+    <g transform="translate(505, 340)">
+      <rect x="0" y="0" width="16" height="40" rx="2" fill="#F4F5F0"/>
+      <text x="8" y="24" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="7" fill="#153D30" text-anchor="middle" transform="rotate(90 8 24)">SUTRA</text>
+    </g>
+  </g>
+</svg>

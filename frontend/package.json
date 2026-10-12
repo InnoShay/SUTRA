@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsc --noEmit && node scripts/test-contract.mjs"
+    "test": "tsc --noEmit && node scripts/test-contract.mjs && node scripts/test-shop.mjs && node scripts/test-shop-ledger.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
     "clsx": "^2.1.1",
+    "gsap": "^3.15.0",
     "lucide-react": "^0.453.0",
     "next": "^14.2.15",
     "react": "^18.3.1",
