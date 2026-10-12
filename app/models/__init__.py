@@ -11,6 +11,13 @@ from app.models.ml import MLInferenceLog
 from app.models.idempotency import IdempotencyRecord
 from app.models.ai import AIOrchestrationLog
 
+from app.models.counselor import (
+    CounselorProfile,
+    AuthorityContact,
+    CaseEscalationRecord,
+    CounselorCallRequest,
+)
+
 __all__ = [
     "Base",
     "Institution",
@@ -34,4 +41,8 @@ __all__ = [
     "MLInferenceLog",
     "IdempotencyRecord",
     "AIOrchestrationLog",
+    "CounselorProfile",
+    "AuthorityContact",
+    "CaseEscalationRecord",
+    "CounselorCallRequest",
 ]

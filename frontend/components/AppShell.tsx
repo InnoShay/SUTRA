@@ -118,11 +118,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const mainNavItems = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutGrid },
-    { name: "Courses", href: "/courses", icon: Bookmark },
-    { name: "Students", href: "/students", icon: GraduationCap },
-    { name: "Community", href: "/community", icon: Users },
-    { name: "Analytics", href: "/analytics", icon: BarChart2 },
+    { name: "Overview", shortName: "Overview", href: "/dashboard", icon: LayoutGrid },
+    { name: "Interventions & Protocols", shortName: "Protocols", href: "/courses", icon: Bookmark },
+    { name: "Student Directory", shortName: "Students", href: "/students", icon: GraduationCap },
+    { name: "Case Management", shortName: "Cases", href: "/community", icon: Users },
+    { name: "Institutional Analytics", shortName: "Analytics", href: "/analytics", icon: BarChart2 },
   ];
 
   const othersNavItems = [
@@ -628,8 +628,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <item.icon className="w-4 h-4" />
                 </div>
-                <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[56px]">
-                  {item.name}
+                <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[64px]">
+                  {(item as any).shortName || item.name}
                 </span>
               </Link>
             );

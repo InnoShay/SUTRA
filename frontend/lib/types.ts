@@ -384,3 +384,150 @@ export interface AIServiceStatusResponse {
   timeout_seconds: number;
   governance_invariants: string[];
 }
+
+// ==========================================
+// Counselor Subsystem & Onboarding Domain
+// ==========================================
+
+export type CounselorOnboardingStatus =
+  | 'NOT_STARTED'
+  | 'INCOMPLETE'
+  | 'PENDING_VERIFICATION'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'SUSPENDED';
+
+export interface CounselorProfileDTO {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  designation: string;
+  department: string;
+  specializations: string[];
+  campus_id: string;
+  campus_name: string;
+  qualification: string;
+  certifications: string[];
+  registration_number?: string;
+  credentials_verified: boolean;
+  contact_methods: ('phone' | 'in_person' | 'video')[];
+  availability_schedule: string;
+  availability_status: 'available' | 'in_session' | 'away';
+  preferred_notification: string;
+  assigned_cohorts: string[];
+  onboarding_status: CounselorOnboardingStatus;
+  rejection_reason?: string;
+  approved_by?: string;
+  approved_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CounselorOnboardingRequest {
+  full_name: string;
+  email: string;
+  phone?: string;
+  designation: string;
+  department: string;
+  specializations: string[];
+  campus_id: string;
+  qualification: string;
+  certifications: string[];
+  registration_number?: string;
+  contact_methods: ('phone' | 'in_person' | 'video')[];
+  availability_schedule: string;
+  preferred_notification: string;
+  assigned_cohorts: string[];
+}
+
+export interface AuthorityContactItem {
+  id: string;
+  service_name: string;
+  contact_name: string;
+  designation: string;
+  department: string;
+  escalation_category:
+    | 'academic_support'
+    | 'student_welfare'
+    | 'counseling_supervisor'
+    | 'institutional_emergency'
+    | 'campus_medical';
+  contact_number: string;
+  contact_email: string;
+  communication_method: 'phone' | 'email' | 'portal';
+  availability: string;
+  verified: boolean;
+  is_emergency: boolean;
+}
+
+export interface EscalationRequest {
+  case_id?: string;
+  student_id: string;
+  authority_contact_id: string;
+  escalation_category: string;
+  reason: string;
+  notes: string;
+  communication_method: 'phone' | 'email' | 'portal';
+  urgent: boolean;
+}
+
+export interface EscalationRecordDTO {
+  id: string;
+  case_id?: string;
+  student_id: string;
+  student_name: string;
+  authority_contact_id: string;
+  authority_name: string;
+  escalation_category: string;
+  initiated_by_user_id: string;
+  initiator_name: string;
+  timestamp: string;
+  reason: string;
+  communication_method: string;
+  status:
+    | 'initiated'
+    | 'contact_attempted'
+    | 'contact_confirmed'
+    | 'follow_up_required'
+    | 'resolved';
+  follow_up_notes?: string;
+}
+
+export interface CounselorCallRequestDTO {
+  id: string;
+  student_id: string;
+  student_name: string;
+  external_student_ref: string;
+  case_id?: string;
+  signal_id?: string;
+  risk_score: number;
+  preferred_contact_method: 'phone' | 'in_person' | 'video';
+  preferred_time_slot: 'morning' | 'afternoon' | 'flexible';
+  student_notes?: string;
+  status:
+    | 'requested'
+    | 'awaiting_assignment'
+    | 'assigned'
+    | 'contact_attempted'
+    | 'contact_completed'
+    | 'closed';
+  assigned_counselor_id?: string;
+  assigned_counselor_name?: string;
+  contact_attempt_count: number;
+  last_attempt_at?: string;
+  resolution_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCallRequestInput {
+  student_id: string;
+  case_id?: string;
+  signal_id?: string;
+  risk_score?: number;
+  preferred_contact_method: 'phone' | 'in_person' | 'video';
+  preferred_time_slot: 'morning' | 'afternoon' | 'flexible';
+  student_notes?: string;
+}

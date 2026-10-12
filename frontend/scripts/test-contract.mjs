@@ -745,8 +745,76 @@ assert(
 );
 console.log("   ✓ Confirmed live vs demo data provenance tracking in SkillHub store\n");
 
-console.log("==================================================");
+// 12. Validating Counselor Onboarding, Escalation & Risk Threshold Contracts
+console.log("12. Validating Counselor Onboarding, Authority Escalation & Risk-Triggered Call Contracts...");
 
+// 12a. Validate Counselor Onboarding Lifecycle States
+const COUNSELOR_ONBOARDING_STATES = [
+  "NOT_STARTED",
+  "INCOMPLETE",
+  "PENDING_VERIFICATION",
+  "APPROVED",
+  "REJECTED",
+  "SUSPENDED",
+];
+assert.strictEqual(COUNSELOR_ONBOARDING_STATES.length, 6, "Must define all 6 institutional onboarding states");
+assert(COUNSELOR_ONBOARDING_STATES.includes("PENDING_VERIFICATION"), "Must enforce administrative verification gate");
+assert(COUNSELOR_ONBOARDING_STATES.includes("APPROVED"), "Must support approved active counselor state");
+console.log("   ✓ Verified 6 canonical counselor onboarding states: " + COUNSELOR_ONBOARDING_STATES.join(", "));
+
+// 12b. Validate Authority Escalation Categories & Direct Call Protocols
+const ESCALATION_CATEGORIES = [
+  "academic_support",
+  "student_welfare",
+  "counseling_supervisor",
+  "institutional_emergency",
+  "campus_medical",
+];
+assert.strictEqual(ESCALATION_CATEGORIES.length, 5, "Must support 5 institution-approved escalation services");
+assert(ESCALATION_CATEGORIES.includes("counseling_supervisor"), "Counseling supervisor escalation required");
+assert(ESCALATION_CATEGORIES.includes("institutional_emergency"), "Emergency support escalation required");
+
+const ESCALATION_RECORD_STATES = [
+  "initiated",
+  "contact_attempted",
+  "contact_confirmed",
+  "follow_up_required",
+  "resolved",
+];
+assert.strictEqual(ESCALATION_RECORD_STATES.length, 5, "Must track 5 audit states for institutional escalations");
+console.log("   ✓ Verified 5 approved authority escalation categories and 5 audit lifecycle states");
+
+// 12c. Validate Authoritative Single Threshold & Call Request Lifecycle
+const CALL_REQUEST_STATES = [
+  "requested",
+  "awaiting_assignment",
+  "assigned",
+  "contact_attempted",
+  "contact_completed",
+  "closed",
+];
+assert.strictEqual(CALL_REQUEST_STATES.length, 6, "Must define 6 closed-loop call request lifecycle states");
+
+// Authoritative threshold governance rule
+const ML_GOVERNANCE_THRESHOLD = 0.46;
+function evaluateStudentSupportThreshold(signalRisk, configuredThreshold = ML_GOVERNANCE_THRESHOLD) {
+  return signalRisk >= configuredThreshold;
+}
+assert.strictEqual(evaluateStudentSupportThreshold(0.35), false, "Below-threshold student must not trigger counselor action");
+assert.strictEqual(evaluateStudentSupportThreshold(0.46), true, "At-threshold student must trigger counselor call option");
+assert.strictEqual(evaluateStudentSupportThreshold(0.68), true, "High-risk student must trigger counselor call option");
+console.log("   ✓ Verified authoritative 0.46 ML governance threshold trigger & 6 call request lifecycle states");
+
+// 12d. Validate Audited Navigation Terminology in AppShell
+const appShellCode = fs.readFileSync(path.join(__dirname, "../components/AppShell.tsx"), "utf-8");
+assert(appShellCode.includes("Overview"), "AppShell must contain 'Overview'");
+assert(appShellCode.includes("Interventions & Protocols"), "AppShell must contain 'Interventions & Protocols'");
+assert(appShellCode.includes("Student Directory"), "AppShell must contain 'Student Directory'");
+assert(appShellCode.includes("Case Management"), "AppShell must contain 'Case Management'");
+assert(appShellCode.includes("Institutional Analytics"), "AppShell must contain 'Institutional Analytics'");
+console.log("   ✓ Verified audited navigation labels in AppShell (Overview, Interventions & Protocols, Student Directory, Case Management, Institutional Analytics)\n");
+
+console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
 

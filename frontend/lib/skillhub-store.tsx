@@ -13,6 +13,10 @@ import {
   DEMO_CASES,
   DEMO_INTERVENTIONS,
   DEMO_ML_MODEL_INFO,
+  INITIAL_COUNSELOR_PROFILE,
+  INITIAL_AUTHORITY_CONTACTS,
+  INITIAL_CALL_REQUESTS,
+  INITIAL_ESCALATIONS,
 } from "./skillhub-data";
 import {
   UserRole,
@@ -31,6 +35,13 @@ import {
   FollowUpDTO,
   OutcomeRequest,
   CaseOutcomeDTO,
+  CounselorProfileDTO,
+  CounselorOnboardingRequest,
+  AuthorityContactItem,
+  EscalationRequest,
+  EscalationRecordDTO,
+  CounselorCallRequestDTO,
+  CreateCallRequestInput,
 } from "./types";
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
 import { api } from "./api";
@@ -145,6 +156,17 @@ interface SkillHubContextType {
   recordCaseFollowUp: (id: string, req: FollowUpRequest) => Promise<FollowUpDTO>;
   recordCaseOutcome: (id: string, req: OutcomeRequest) => Promise<CaseOutcomeDTO>;
 
+  // Counselor Subsystem Actions & State
+  counselorProfile: CounselorProfileDTO | null;
+  authorityContacts: AuthorityContactItem[];
+  escalations: EscalationRecordDTO[];
+  callRequests: CounselorCallRequestDTO[];
+  submitCounselorOnboarding: (req: CounselorOnboardingRequest) => Promise<CounselorProfileDTO>;
+  approveCounselorOnboarding: (counselorId: string, decision: 'approve' | 'reject' | 'suspend', reason?: string) => Promise<void>;
+  escalateCaseToAuthority: (req: EscalationRequest) => Promise<EscalationRecordDTO>;
+  requestCounselorCall: (input: CreateCallRequestInput) => Promise<CounselorCallRequestDTO>;
+  updateCallRequestStatus: (id: string, status: string, notes?: string, incrementAttempt?: boolean) => Promise<void>;
+
   // Existing UI compatibility state
   user: typeof CURRENT_USER;
   updateUser: (data: Partial<typeof CURRENT_USER>) => void;
@@ -216,6 +238,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [cases, setCases] = useState<CaseDetailDTO[]>([]);
   const [interventions, setInterventions] = useState<InterventionItem[]>([]);
   const [mlModelInfo, setMlModelInfo] = useState<MLModelInfo | null>(null);
+
+  // Counselor Subsystem Entities
+  const [counselorProfile, setCounselorProfile] = useState<CounselorProfileDTO | null>(INITIAL_COUNSELOR_PROFILE);
+  const [authorityContacts, setAuthorityContacts] = useState<AuthorityContactItem[]>(INITIAL_AUTHORITY_CONTACTS);
+  const [escalations, setEscalations] = useState<EscalationRecordDTO[]>(INITIAL_ESCALATIONS);
+  const [callRequests, setCallRequests] = useState<CounselorCallRequestDTO[]>(INITIAL_CALL_REQUESTS);
 
   // UI state initialized with canonical synthetic fixtures
   const [user, setUser] = useState({
@@ -467,6 +495,22 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
+
+      // 4. Fetch counselor subsystem entities
+      try {
+        const [profile, authContacts, escList, callList] = await Promise.all([
+          api.counselors.getProfile().catch(() => INITIAL_COUNSELOR_PROFILE),
+          api.counselors.getAuthorityContacts().catch(() => INITIAL_AUTHORITY_CONTACTS),
+          api.counselors.listEscalations().catch(() => INITIAL_ESCALATIONS),
+          api.counselors.listCallRequests().catch(() => INITIAL_CALL_REQUESTS),
+        ]);
+        if (profile) setCounselorProfile(profile);
+        if (Array.isArray(authContacts)) setAuthorityContacts(authContacts);
+        if (Array.isArray(escList)) setEscalations(escList);
+        if (Array.isArray(callList)) setCallRequests(callList);
+      } catch (e: any) {
+        console.warn("Non-fatal error loading counselor entities:", e);
+      }
     } catch (err: any) {
       console.warn("Backend API not reachable; operating in verified SUTRA demo mode:", err);
       setBackendConnected(false);
@@ -483,6 +527,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       setCases(DEMO_CASES);
       setInterventions(DEMO_INTERVENTIONS);
       setMlModelInfo(DEMO_ML_MODEL_INFO);
+      setCounselorProfile(INITIAL_COUNSELOR_PROFILE);
+      setAuthorityContacts(INITIAL_AUTHORITY_CONTACTS);
+      setEscalations(INITIAL_ESCALATIONS);
+      setCallRequests(INITIAL_CALL_REQUESTS);
     } finally {
       setIsLoadingBackend(false);
     }
@@ -759,6 +807,150 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const submitCounselorOnboarding = async (req: CounselorOnboardingRequest): Promise<CounselorProfileDTO> => {
+    try {
+      const res = await api.counselors.submitOnboarding(req);
+      setCounselorProfile(res);
+      await refreshBackendData().catch(console.warn);
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; storing onboarding in local demo state:", err);
+      const updatedProfile: CounselorProfileDTO = {
+        ...INITIAL_COUNSELOR_PROFILE,
+        ...req,
+        onboarding_status: "APPROVED",
+        credentials_verified: true,
+        updated_at: new Date().toISOString(),
+      };
+      setCounselorProfile(updatedProfile);
+      return updatedProfile;
+    }
+  };
+
+  const approveCounselorOnboarding = async (
+    counselorId: string,
+    decision: 'approve' | 'reject' | 'suspend',
+    reason?: string
+  ): Promise<void> => {
+    try {
+      await api.counselors.approveOnboarding({ counselor_id: counselorId, decision, reason });
+      await refreshBackendData().catch(console.warn);
+    } catch (err: any) {
+      console.warn("Backend API offline; updating counselor status in local demo state:", err);
+      setCounselorProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              onboarding_status: decision === "approve" ? "APPROVED" : decision === "reject" ? "REJECTED" : "SUSPENDED",
+              credentials_verified: decision === "approve",
+              rejection_reason: decision === "reject" ? reason || "Application rejected" : undefined,
+              approved_by: decision === "approve" ? user.fullName : undefined,
+              approved_at: decision === "approve" ? new Date().toISOString() : undefined,
+            }
+          : prev
+      );
+    }
+  };
+
+  const escalateCaseToAuthority = async (req: EscalationRequest): Promise<EscalationRecordDTO> => {
+    try {
+      const res = await api.counselors.escalate(req);
+      setEscalations((prev) => [res, ...prev]);
+      await refreshBackendData().catch(console.warn);
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; recording escalation in local demo state:", err);
+      const matchedAuth =
+        authorityContacts.find((a) => a.id === req.authority_contact_id) || authorityContacts[0];
+      const newEsc: EscalationRecordDTO = {
+        id: `ESC-${Date.now().toString().slice(-4)}`,
+        case_id: req.case_id,
+        student_id: req.student_id,
+        student_name: students.find((s) => s.id === req.student_id)?.name || req.student_id,
+        authority_contact_id: matchedAuth.id,
+        authority_name: `${matchedAuth.contact_name} (${matchedAuth.designation})`,
+        escalation_category: req.escalation_category,
+        initiated_by_user_id: user.name || "counselor",
+        initiator_name: user.fullName || "Dr. Meera Nambiar",
+        timestamp: new Date().toISOString(),
+        reason: req.reason,
+        communication_method: req.communication_method,
+        status: "contact_attempted",
+        follow_up_notes: req.notes,
+      };
+      setEscalations((prev) => [newEsc, ...prev]);
+      return newEsc;
+    }
+  };
+
+  const requestCounselorCall = async (input: CreateCallRequestInput): Promise<CounselorCallRequestDTO> => {
+    try {
+      const res = await api.counselors.createCallRequest(input);
+      setCallRequests((prev) => [res, ...prev.filter((r) => r.student_id !== input.student_id)]);
+      await refreshBackendData().catch(console.warn);
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; recording call request in local demo state:", err);
+      const stu = students.find((s) => s.id === input.student_id);
+      const newReq: CounselorCallRequestDTO = {
+        id: `CALL-REQ-${Date.now().toString().slice(-4)}`,
+        student_id: input.student_id,
+        student_name: stu?.name || input.student_id,
+        external_student_ref: input.student_id,
+        case_id: input.case_id,
+        signal_id: input.signal_id,
+        risk_score: input.risk_score || 0.68,
+        preferred_contact_method: input.preferred_contact_method,
+        preferred_time_slot: input.preferred_time_slot,
+        student_notes: input.student_notes,
+        status: "requested",
+        assigned_counselor_id: DEMO_PERSONAS.counselor.userId,
+        assigned_counselor_name: DEMO_PERSONAS.counselor.name,
+        contact_attempt_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setCallRequests((prev) => [newReq, ...prev.filter((r) => r.student_id !== input.student_id)]);
+      return newReq;
+    }
+  };
+
+  const updateCallRequestStatus = async (
+    id: string,
+    status: string,
+    notes?: string,
+    incrementAttempt?: boolean
+  ): Promise<void> => {
+    try {
+      await api.counselors.updateCallRequestStatus(id, {
+        status,
+        notes,
+        attempt_increment: incrementAttempt,
+      });
+      await refreshBackendData().catch(console.warn);
+    } catch (err: any) {
+      console.warn("Backend API offline; updating call request in local demo state:", err);
+      setCallRequests((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                status: status as any,
+                resolution_notes: notes || r.resolution_notes,
+                contact_attempt_count: incrementAttempt
+                  ? r.contact_attempt_count + 1
+                  : r.contact_attempt_count,
+                last_attempt_at: incrementAttempt
+                  ? new Date().toISOString()
+                  : r.last_attempt_at,
+                updated_at: new Date().toISOString(),
+              }
+            : r
+        )
+      );
+    }
+  };
+
   const updateUser = (data: Partial<typeof CURRENT_USER>) => {
     setUser((prev) => ({
       ...prev,
@@ -933,6 +1125,15 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         createCaseTask,
         recordCaseFollowUp,
         recordCaseOutcome,
+        counselorProfile,
+        authorityContacts,
+        escalations,
+        callRequests,
+        submitCounselorOnboarding,
+        approveCounselorOnboarding,
+        escalateCaseToAuthority,
+        requestCounselorCall,
+        updateCallRequestStatus,
         user,
         updateUser,
         courses,

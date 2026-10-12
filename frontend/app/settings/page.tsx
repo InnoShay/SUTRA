@@ -3,10 +3,16 @@
 import React, { useState } from "react";
 import { useSkillHub } from "@/lib/store";
 import { UserAvatar } from "@/components/UserAvatar";
+import { CounselorStatusBadge } from "@/components/counselor/CounselorStatusBadge";
+import { CounselorOnboardingModal } from "@/components/counselor/CounselorOnboardingModal";
 import {
   Check,
   Lock,
   LogOut,
+  UserCheck,
+  ShieldCheck,
+  AlertCircle,
+  HeartHandshake,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -17,12 +23,16 @@ export default function SettingsPage() {
     activeCampusName,
     supabaseSession,
     logout,
+    counselorProfile,
+    approveCounselorOnboarding,
   } = useSkillHub();
 
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [name, setName] = useState(user.fullName || user.name);
   const [role, setRole] = useState(user.role);
   const [email, setEmail] = useState(user.email || "faculty@sutra.edu");
   const [saved, setSaved] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +134,115 @@ export default function SettingsPage() {
         </form>
       </div>
 
+      {/* Counselor Onboarding & Credential Governance */}
+      <div className="skill-card bg-white p-5 sm:p-6 md:p-8 space-y-5 border border-neutral-200/80 rounded-3xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-neutral-900 font-heading">
+                Counselor Onboarding &amp; Credentials
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Institutional accreditation, professional credentials, and escalation authority configuration.
+              </p>
+            </div>
+          </div>
+          <CounselorStatusBadge
+            status={counselorProfile?.onboarding_status || "NOT_STARTED"}
+          />
+        </div>
+
+        <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div>
+              <span className="text-neutral-400 block text-[11px]">Counselor Name</span>
+              <span className="font-semibold text-neutral-900">
+                {counselorProfile?.full_name || "Not Configured"}
+              </span>
+            </div>
+            <div>
+              <span className="text-neutral-400 block text-[11px]">Designation</span>
+              <span className="font-medium text-neutral-800">
+                {counselorProfile?.designation || "Counseling Specialist"}
+              </span>
+            </div>
+            <div>
+              <span className="text-neutral-400 block text-[11px]">Assigned Unit</span>
+              <span className="font-medium text-neutral-800">
+                {counselorProfile?.department || "Student Wellness Center"}
+              </span>
+            </div>
+            <div>
+              <span className="text-neutral-400 block text-[11px]">Credentials Verified</span>
+              <span
+                className={`font-semibold ${
+                  counselorProfile?.credentials_verified
+                    ? "text-emerald-700"
+                    : "text-amber-700"
+                }`}
+              >
+                {counselorProfile?.credentials_verified ? "Yes (Verified)" : "Pending Review"}
+              </span>
+            </div>
+          </div>
+
+          {counselorProfile?.onboarding_status === "PENDING_VERIFICATION" && (
+            <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200/60 text-xs text-amber-800 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold">Pending Institutional Verification:</span> Credentials submitted. Authorized administrator review required before sensitive student records become accessible.
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          <p className="text-xs text-neutral-400">
+            Adheres to institutional FERPA and student welfare governance standards.
+          </p>
+
+          <div className="flex items-center gap-2">
+            {(activeRole === "leadership" || user.role === "admin") &&
+              counselorProfile?.onboarding_status === "PENDING_VERIFICATION" && (
+                <button
+                  type="button"
+                  disabled={isApproving}
+                  onClick={async () => {
+                    setIsApproving(true);
+                    try {
+                      await approveCounselorOnboarding(
+                        counselorProfile.id,
+                        "approve"
+                      );
+                    } finally {
+                      setIsApproving(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-semibold shadow-2xs transition-colors"
+                >
+                  Approve Counselor
+                </button>
+              )}
+
+            <button
+              type="button"
+              onClick={() => setIsOnboardingModalOpen(true)}
+              className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5"
+            >
+              <HeartHandshake className="w-3.5 h-3.5 text-emerald-400" />
+              <span>
+                {counselorProfile?.onboarding_status === "APPROVED"
+                  ? "Update Counselor Profile"
+                  : "Launch Onboarding Wizard"}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Session Management & Sign Out */}
       <div className="skill-card bg-white p-5 sm:p-6 md:p-8 space-y-4 border border-neutral-200/80 rounded-3xl">
         <div className="flex items-center justify-between">
@@ -156,6 +275,11 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      <CounselorOnboardingModal
+        isOpen={isOnboardingModalOpen}
+        onClose={() => setIsOnboardingModalOpen(false)}
+      />
     </div>
   );
 }

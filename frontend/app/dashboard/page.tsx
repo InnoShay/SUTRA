@@ -8,6 +8,8 @@ import { EngagementChart } from "@/components/EngagementChart";
 import { SignalReviewModal } from "@/components/SignalReviewModal";
 import { SignalDTO, CaseDetailDTO, CaseState } from "@/lib/types";
 import { UserAvatar } from "@/components/UserAvatar";
+import { CounselorDashboardView } from "@/components/counselor/CounselorDashboardView";
+import { RequestCounselorCallModal } from "@/components/RequestCounselorCallModal";
 import {
   computeDashboardMetrics,
   getNearestUpcomingFollowUp,
@@ -28,6 +30,8 @@ import {
   Lock,
   ListFilter,
   SlidersHorizontal,
+  HeartHandshake,
+  PhoneCall,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -47,6 +51,7 @@ export default function DashboardPage() {
     activeCampusName,
     supabaseSession,
     isAuthenticated,
+    mlModelInfo,
   } = useSkillHub();
 
   const [activeTab, setActiveTab] = useState<"overview" | "triage">("overview");
@@ -54,6 +59,20 @@ export default function DashboardPage() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [selectedSignalForReview, setSelectedSignalForReview] =
     useState<SignalDTO | null>(null);
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+
+  // Authoritative single threshold from ML model governance
+  const configuredThreshold =
+    mlModelInfo?.decision_threshold ?? mlModelInfo?.threshold ?? 0.46;
+  const thresholdCrossedSignal = signals.find(
+    (s) =>
+      (s.explanation?.baseline_risk_probability ?? 0.68) >= configuredThreshold
+  );
+
+  // Dedicated role-based counselor view
+  if (activeRole === "counselor") {
+    return <CounselorDashboardView />;
+  }
 
   // Timeframe selector states for the Apple-style cards
   const timeframes: ("This Week" | "This Month" | "This Year")[] = [
@@ -221,6 +240,45 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* THRESHOLD-TRIGGERED COUNSELOR CONTACT ACTION */}
+      {thresholdCrossedSignal && activeRole !== "leadership" && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs animate-in fade-in duration-200">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 bg-amber-100 text-amber-800 rounded-xl shrink-0 mt-0.5">
+              <HeartHandshake className="w-5 h-5 text-amber-700" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm font-bold text-neutral-900">
+                  Additional Support Recommended
+                </h4>
+                <span className="text-[10px] font-semibold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+                  Risk &ge; {configuredThreshold}
+                </span>
+              </div>
+              <p className="text-xs text-neutral-600 mt-1 max-w-2xl leading-relaxed">
+                Student risk indicators for {thresholdCrossedSignal.student_display_name} (
+                {(
+                  thresholdCrossedSignal.explanation?.baseline_risk_probability ??
+                  0.68
+                ).toFixed(2)}
+                ) exceed the institutional review threshold ({configuredThreshold}). Direct
+                counselor contact can be initiated.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 flex items-center gap-2">
+            <button
+              onClick={() => setIsCallModalOpen(true)}
+              className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all"
+            >
+              <PhoneCall className="w-3.5 h-3.5" />
+              <span>Request a Counselor Call</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 2. OVERVIEW TAB: EXACT HACKINGLY 2-COLUMN APPLE-INSPIRED GRID */}
       {activeTab === "overview" && (
@@ -747,6 +805,21 @@ export default function DashboardPage() {
         <SignalReviewModal
           signal={selectedSignalForReview}
           onClose={() => setSelectedSignalForReview(null)}
+        />
+      )}
+
+      {/* Threshold-Triggered Counselor Call Request Modal */}
+      {isCallModalOpen && thresholdCrossedSignal && (
+        <RequestCounselorCallModal
+          isOpen={isCallModalOpen}
+          onClose={() => setIsCallModalOpen(false)}
+          studentId={thresholdCrossedSignal.student_id}
+          studentName={thresholdCrossedSignal.student_display_name}
+          caseId={`CASE-${thresholdCrossedSignal.student_id}`}
+          signalId={thresholdCrossedSignal.id}
+          riskScore={
+            thresholdCrossedSignal.explanation?.baseline_risk_probability ?? 0.68
+          }
         />
       )}
     </div>

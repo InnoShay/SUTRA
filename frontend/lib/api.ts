@@ -33,6 +33,13 @@ import {
   AISummarizeEvidenceResponse,
   AISuggestInterventionsResponse,
   AIServiceStatusResponse,
+  CounselorProfileDTO,
+  CounselorOnboardingRequest,
+  AuthorityContactItem,
+  EscalationRequest,
+  EscalationRecordDTO,
+  CounselorCallRequestDTO,
+  CreateCallRequestInput,
 } from './types';
 import {
   DEMO_SIGNALS,
@@ -40,6 +47,10 @@ import {
   DEMO_INTERVENTIONS,
   DEMO_ML_MODEL_INFO,
   INITIAL_STUDENTS,
+  INITIAL_COUNSELOR_PROFILE,
+  INITIAL_AUTHORITY_CONTACTS,
+  INITIAL_CALL_REQUESTS,
+  INITIAL_ESCALATIONS,
 } from './skillhub-data';
 
 const API_BASE_URL =
@@ -264,6 +275,92 @@ class ApiClient {
     if (cleanEndpoint.endsWith('/ai/suggest-interventions')) {
       return {
         suggestions: DEMO_INTERVENTIONS.slice(0, 3),
+      } as unknown as T;
+    }
+
+    // --- Counselor Subsystem Offline Fallbacks ---
+    if (cleanEndpoint.endsWith('/counselors/profile')) {
+      return INITIAL_COUNSELOR_PROFILE as unknown as T;
+    }
+
+    if (cleanEndpoint.endsWith('/counselors/authority-contacts')) {
+      return INITIAL_AUTHORITY_CONTACTS as unknown as T;
+    }
+
+    if (cleanEndpoint.endsWith('/counselors/escalations')) {
+      return INITIAL_ESCALATIONS as unknown as T;
+    }
+
+    if (cleanEndpoint.endsWith('/counselors/call-requests') && (!options.method || options.method.toUpperCase() === 'GET')) {
+      return INITIAL_CALL_REQUESTS as unknown as T;
+    }
+
+    if (cleanEndpoint.endsWith('/counselors/onboarding') && options.method?.toUpperCase() === 'POST') {
+      let bodyData: any = {};
+      try {
+        if (typeof options.body === 'string') bodyData = JSON.parse(options.body);
+      } catch {
+        // ignore
+      }
+      return {
+        ...INITIAL_COUNSELOR_PROFILE,
+        ...bodyData,
+        onboarding_status: 'APPROVED',
+        credentials_verified: true,
+        updated_at: new Date().toISOString(),
+      } as unknown as T;
+    }
+
+    if (cleanEndpoint.endsWith('/counselors/escalate') && options.method?.toUpperCase() === 'POST') {
+      let bodyData: any = {};
+      try {
+        if (typeof options.body === 'string') bodyData = JSON.parse(options.body);
+      } catch {
+        // ignore
+      }
+      const matchedAuth = INITIAL_AUTHORITY_CONTACTS.find((a) => a.id === bodyData.authority_contact_id) || INITIAL_AUTHORITY_CONTACTS[0];
+      return {
+        id: `ESC-${Date.now().toString().slice(-4)}`,
+        case_id: bodyData.case_id || 'CASE-SYN-1007',
+        student_id: bodyData.student_id || 'SYN-1007',
+        student_name: 'Asha (synthetic)',
+        authority_contact_id: matchedAuth.id,
+        authority_name: `${matchedAuth.contact_name} (${matchedAuth.designation})`,
+        escalation_category: bodyData.escalation_category || matchedAuth.escalation_category,
+        initiated_by_user_id: '22222222-2222-2222-2222-222222222222',
+        initiator_name: 'Dr. Meera Nambiar',
+        timestamp: new Date().toISOString(),
+        reason: bodyData.reason || 'Escalation requested',
+        communication_method: bodyData.communication_method || 'phone',
+        status: 'contact_attempted',
+        follow_up_notes: bodyData.notes || '',
+      } as unknown as T;
+    }
+
+    if (cleanEndpoint.endsWith('/counselors/call-requests') && options.method?.toUpperCase() === 'POST') {
+      let bodyData: any = {};
+      try {
+        if (typeof options.body === 'string') bodyData = JSON.parse(options.body);
+      } catch {
+        // ignore
+      }
+      return {
+        id: `CALL-REQ-${Date.now().toString().slice(-4)}`,
+        student_id: bodyData.student_id || 'SYN-1007',
+        student_name: 'Asha (synthetic)',
+        external_student_ref: bodyData.student_id || 'SYN-1007',
+        case_id: bodyData.case_id || 'CASE-SYN-1007',
+        signal_id: bodyData.signal_id || 'SIG-SYN-1007',
+        risk_score: bodyData.risk_score || 0.68,
+        preferred_contact_method: bodyData.preferred_contact_method || 'phone',
+        preferred_time_slot: bodyData.preferred_time_slot || 'flexible',
+        student_notes: bodyData.student_notes || '',
+        status: 'requested',
+        assigned_counselor_id: '22222222-2222-2222-2222-222222222222',
+        assigned_counselor_name: 'Dr. Meera Nambiar',
+        contact_attempt_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       } as unknown as T;
     }
 
@@ -492,6 +589,47 @@ class ApiClient {
           signal_id: signalId,
           max_suggestions: maxSuggestions || 3,
         }),
+      }),
+  };
+
+  // --- Counselor Subsystem ---
+  public counselors = {
+    getProfile: () => this.request<CounselorProfileDTO>('/counselors/profile'),
+    submitOnboarding: (payload: CounselorOnboardingRequest) =>
+      this.request<CounselorProfileDTO>('/counselors/onboarding', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    approveOnboarding: (payload: { counselor_id: string; decision: 'approve' | 'reject' | 'suspend'; reason?: string }) =>
+      this.request<{ counselor_id: string; onboarding_status: string }>('/counselors/onboarding/approve', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    getAuthorityContacts: () =>
+      this.request<AuthorityContactItem[]>('/counselors/authority-contacts'),
+    escalate: (payload: EscalationRequest) =>
+      this.request<EscalationRecordDTO>('/counselors/escalate', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    listEscalations: () =>
+      this.request<EscalationRecordDTO[]>('/counselors/escalations'),
+    createCallRequest: (payload: CreateCallRequestInput) =>
+      this.request<CounselorCallRequestDTO>('/counselors/call-requests', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    listCallRequests: (status?: string) => {
+      const q = status ? `?status=${encodeURIComponent(status)}` : '';
+      return this.request<CounselorCallRequestDTO[]>(`/counselors/call-requests${q}`);
+    },
+    updateCallRequestStatus: (
+      id: string,
+      payload: { status: string; notes?: string; attempt_increment?: boolean }
+    ) =>
+      this.request<{ id: string; status: string }>(`/counselors/call-requests/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
       }),
   };
 
