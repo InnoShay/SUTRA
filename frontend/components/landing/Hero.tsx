@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "./Navbar";
-import { ArrowUpRight, Plus, Star } from "lucide-react";
+import { ArrowUpRight, Plus, Star, HeartHandshake } from "lucide-react";
 
 export default function Hero() {
   const ribbonRef = useRef<HTMLDivElement>(null);
@@ -233,17 +233,25 @@ export default function Hero() {
           {/* Action CTAs */}
           <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             <Link
-              href="/dashboard"
+              href="/dashboard?role=faculty"
               className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider border border-white/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              VIEW PLATFORM
+              FACULTY CONSOLE
+            </Link>
+
+            <Link
+              href="/dashboard?role=counselor&walkthrough=counselor"
+              className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider border border-white/30 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 group"
+            >
+              <HeartHandshake className="w-3.5 h-3.5 text-[#d2f831] group-hover:scale-110 transition-transform" />
+              <span>COUNSELOR WORKSPACE</span>
             </Link>
 
             <Link
               href="/dashboard?walkthrough=student"
               className="pl-5 sm:pl-6 pr-2 py-1.5 sm:py-2 rounded-full bg-[#d2f831] hover:bg-[#c4ec26] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2.5 sm:gap-3 group"
             >
-              <span>INTERACTIVE WALKTHROUGH</span>
+              <span>STUDENT WALKTHROUGH</span>
               <div className="w-7 h-7 rounded-full bg-slate-950 text-white flex items-center justify-center transition-transform group-hover:rotate-45">
                 <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
               </div>

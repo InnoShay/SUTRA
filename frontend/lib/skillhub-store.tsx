@@ -681,22 +681,36 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       try {
         const params = new URLSearchParams(window.location.search);
-        const isWalkthrough =
-          params.get("walkthrough") === "student" ||
-          params.get("role") === "student" ||
-          params.get("demo") === "true";
-        if (isWalkthrough) {
+        const roleParam = params.get("role") as UserRole | null;
+        const walkthroughParam = params.get("walkthrough");
+        const demoParam = params.get("demo") === "true";
+
+        const targetRole: UserRole | null =
+          roleParam ||
+          (walkthroughParam === "counselor"
+            ? "counselor"
+            : walkthroughParam === "faculty"
+            ? "faculty"
+            : walkthroughParam === "admin"
+            ? "admin"
+            : walkthroughParam === "student"
+            ? "student"
+            : demoParam
+            ? "student"
+            : null);
+
+        if (targetRole && (roleParam || walkthroughParam || demoParam)) {
           localStorage.setItem("sutra_demo_mode", "true");
-          setActiveRoleState("student");
-          const stuPersona = DEMO_PERSONAS.student;
-          api.setToken(stuPersona.token);
+          setActiveRoleState(targetRole);
+          const persona = DEMO_PERSONAS[targetRole] || DEMO_PERSONAS.faculty;
+          api.setToken(persona.token);
           api.setCampusId(DEMO_CAMPUS_ID);
           setUser({
             ...CURRENT_USER,
-            name: stuPersona.name.split(" ")[0],
-            fullName: stuPersona.name,
-            role: stuPersona.title,
-            avatar: stuPersona.avatar,
+            name: persona.name.split(" ")[0],
+            fullName: persona.name,
+            role: persona.title,
+            avatar: persona.avatar,
           });
           setCases(DEMO_CASES);
           setSignals(DEMO_SIGNALS);

@@ -774,6 +774,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Mobile Role Switcher */}
+            <div className="pt-2 pb-2 border-b border-neutral-100">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-2 px-1">
+                Active Role Workspace
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {personaList.map((p) => {
+                  const isSelected = activeRole === p.role;
+                  return (
+                    <button
+                      key={p.role}
+                      type="button"
+                      onClick={() => {
+                        handleRoleSelect(p.role);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-2 p-2 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                        isSelected
+                          ? "bg-neutral-900 text-white shadow-xs"
+                          : "bg-neutral-100/80 hover:bg-neutral-200/60 text-neutral-800"
+                      }`}
+                    >
+                      <UserAvatar src={p.avatar} name={p.fullName} className="w-6 h-6 shrink-0" />
+                      <div className="min-w-0 flex-1 truncate">
+                        <div className="truncate text-[11px] font-medium">
+                          {p.role === "counselor"
+                            ? "Counselor"
+                            : p.role === "faculty"
+                            ? "Faculty"
+                            : p.role === "student"
+                            ? "Student"
+                            : "Admin"}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Secondary Navigation Links */}
             <div className="space-y-1.5 pt-1">
               <button

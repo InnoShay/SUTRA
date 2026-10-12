@@ -99,6 +99,9 @@ export function CounselorDashboardView() {
             <CounselorStatusBadge
               status={counselorProfile?.onboarding_status || "APPROVED"}
             />
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-neutral-100 text-neutral-700 border border-neutral-300">
+              PR #7 • Authored by Aryan
+            </span>
           </div>
           <p className="text-xs text-neutral-500 mt-1 flex flex-wrap items-center gap-2">
             <span className="font-medium text-neutral-700">
