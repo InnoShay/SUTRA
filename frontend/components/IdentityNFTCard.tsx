@@ -9,12 +9,30 @@ type EthereumWindow = Window & {
   ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
 };
 
+function resolveArtworkUrl(rawUrl?: string | null): string | null {
+  if (!rawUrl) return null;
+  if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+    return rawUrl;
+  }
+  const apiBase = getApiBaseUrl();
+  const root = apiBase.replace(/\/api\/v1\/?$/, "");
+
+  if (rawUrl.startsWith("/api/v1")) {
+    return `${root}${rawUrl}`;
+  }
+  if (rawUrl.startsWith("/")) {
+    return `${apiBase}${rawUrl}`;
+  }
+  return `${apiBase}/${rawUrl}`;
+}
+
 export function IdentityNFTCard() {
   const { sutraIdentity, mintIdentityNFT } = useSkillHub();
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState<string | null>(null);
   const [justMinted, setJustMinted] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const isOnChain = sutraIdentity?.mint_mode === "onchain" && Boolean(sutraIdentity.collectible_tx_hash);
   const canMintOnChain = Boolean(sutraIdentity?.onchain_enabled) && !isOnChain;
@@ -45,10 +63,7 @@ export function IdentityNFTCard() {
     }
   };
 
-  const artworkSrc = sutraIdentity?.artwork_url
-    ? `${getApiBaseUrl()}${sutraIdentity.artwork_url}`
-    : null;
-
+  const artworkSrc = resolveArtworkUrl(sutraIdentity?.artwork_url);
   const artTitle = sutraIdentity?.art_title || "Generative Identity Painting";
   const paletteName = sutraIdentity?.artwork_traits?.Palette;
   const compositionName = sutraIdentity?.artwork_traits?.Composition || "Vector Flow Field";
@@ -67,11 +82,12 @@ export function IdentityNFTCard() {
             title="Inspect artwork"
             className="group relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-900 shadow-2xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-neutral-900/20"
           >
-            {artworkSrc ? (
+            {artworkSrc && !imageError ? (
               <>
                 <img
                   src={artworkSrc}
                   alt={artTitle}
+                  onError={() => setImageError(true)}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -183,10 +199,11 @@ export function IdentityNFTCard() {
             {/* High-Resolution Artwork Display */}
             <div className="p-4 bg-neutral-950 flex items-center justify-center">
               <div className="relative w-full aspect-square max-w-[340px] rounded-xl overflow-hidden shadow-lg border border-neutral-800 bg-neutral-900">
-                {artworkSrc ? (
+                {artworkSrc && !imageError ? (
                   <img
                     src={artworkSrc}
                     alt={artTitle}
+                    onError={() => setImageError(true)}
                     className="w-full h-full object-cover"
                   />
                 ) : (
