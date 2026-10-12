@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useSkillHub } from "@/lib/store";
 import { SkillHubProgressBar } from "./SkillHubProgressBar";
+import { UserAvatar } from "./UserAvatar";
 import {
   X,
   Mail,
@@ -54,17 +55,11 @@ export function StudentProfileModal() {
         <div className="relative p-4 sm:p-6 pb-3 sm:pb-4 bg-gradient-to-r from-neutral-50 via-white to-neutral-50 border-b border-neutral-100 flex items-start justify-between flex-shrink-0">
           <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-2">
             <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0">
-              {selectedStudent.avatar ? (
-                <img
-                  src={selectedStudent.avatar}
-                  alt={selectedStudent.name}
-                  className="w-full h-full rounded-full object-cover ring-4 ring-white shadow-md"
-                />
-              ) : (
-                <div className="w-full h-full rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-lg ring-4 ring-white shadow-md">
-                  {selectedStudent.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
-              )}
+              <UserAvatar
+                src={selectedStudent.avatar}
+                name={selectedStudent.name}
+                className="w-full h-full ring-4 ring-white shadow-md"
+              />
               {selectedStudent.isOnline && (
                 <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-400/50" />
               )}

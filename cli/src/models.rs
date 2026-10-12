@@ -86,12 +86,18 @@ pub struct CaseDto {
     #[serde(default)]
     pub due_at: Option<String>,
     #[serde(default)]
+    pub accepted_at: Option<String>,
+    #[serde(default)]
     pub is_escalated: Option<bool>,
     pub version: i32,
     #[serde(default)]
     pub tasks: Vec<serde_json::Value>,
     #[serde(default)]
     pub events: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub follow_ups: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub outcome: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,10 +121,14 @@ pub struct CaseAssignmentRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FollowUpRequest {
     pub follow_up_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contact_status: Option<String>,
     pub proof_kind: String,
     pub occurred_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proof_ref: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,4 +201,69 @@ pub struct AiSummarizeEvidenceResponse {
     pub uncertainties: Vec<String>,
     pub limitations: Vec<String>,
     pub metadata: AiMetadata,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CampusMembershipItem {
+    pub institution_id: Uuid,
+    #[serde(default)]
+    pub institution_name: Option<String>,
+    #[serde(default)]
+    pub roles: Vec<String>,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AuthMeResponse {
+    pub user_id: Uuid,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub memberships: Vec<CampusMembershipItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MLAttributionDto {
+    pub feature: String,
+    pub value: serde_json::Value,
+    pub attribution: f64,
+    pub direction: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MLEvidenceCardDto {
+    #[serde(default)]
+    pub card_type: Option<String>,
+    #[serde(default)]
+    pub model_name: Option<String>,
+    #[serde(default)]
+    pub model_version: Option<String>,
+    #[serde(default)]
+    pub prediction_cutoff: Option<String>,
+    pub risk_probability: f64,
+    pub threshold: f64,
+    pub classification: String,
+    #[serde(default)]
+    pub calibration_status: Option<String>,
+    #[serde(default)]
+    pub top_attributions: Vec<MLAttributionDto>,
+    #[serde(default)]
+    pub limitations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MLPredictRequestDto {
+    pub external_student_ref: String,
+    pub cutoff_days: i32,
+    pub features: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MLPredictResponseDto {
+    pub external_student_ref: String,
+    pub risk_probability: f64,
+    pub threshold: f64,
+    pub classification: String,
+    #[serde(default)]
+    pub evidence_card: Option<MLEvidenceCardDto>,
 }

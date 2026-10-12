@@ -241,10 +241,15 @@ async def test_model_version_threshold_traceability_and_root_aliases(
     Root compatibility aliases (/model-info, /predict, /predict/batch) function properly.
     """
     user_id = seed_data["user_faculty_id"]
+    campus_id = seed_data["campus_1"].id
     token = make_jwt(user_id=user_id)
+    auth_headers = {
+        "Authorization": f"Bearer {token}",
+        "X-Campus-Id": str(campus_id),
+    }
 
     # 1. API v1 route
-    res_v1 = await client.get("/api/v1/ml/model-info", headers={"Authorization": f"Bearer {token}"})
+    res_v1 = await client.get("/api/v1/ml/model-info", headers=auth_headers)
     assert res_v1.status_code == 200
     v1_data = res_v1.json()
     assert v1_data["model_version"] == "1.0.0"
@@ -252,12 +257,25 @@ async def test_model_version_threshold_traceability_and_root_aliases(
     assert len(v1_data["features"]) == 25
     assert v1_data["candidate_model"]["status"] == "research_only"
 
-    # 2. Root alias /model-info
-    res_root = await client.get("/model-info")
+    # 2. Root alias /model-info requires authentication
+    res_root_unauth = await client.get("/model-info")
+    assert res_root_unauth.status_code == 401
+
+    res_root = await client.get("/model-info", headers=auth_headers)
     assert res_root.status_code == 200
     assert res_root.json()["threshold"] == 0.46
 
-    # 3. Root alias /predict
+    # 3. Root alias /predict requires authentication and campus access
+    res_root_unauth_predict = await client.post(
+        "/predict",
+        json={
+            "external_student_ref": "SYN-1007",
+            "cutoff_days": 30,
+            "features": valid_features_fixture["features"],
+        },
+    )
+    assert res_root_unauth_predict.status_code == 401
+
     res_root_predict = await client.post(
         "/predict",
         json={
@@ -265,6 +283,7 @@ async def test_model_version_threshold_traceability_and_root_aliases(
             "cutoff_days": 30,
             "features": valid_features_fixture["features"],
         },
+        headers=auth_headers,
     )
     assert res_root_predict.status_code == 200
     assert res_root_predict.json()["classification"] == "At_Risk"

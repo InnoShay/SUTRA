@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSkillHub } from "@/lib/store";
 import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
+import { UserAvatar } from "@/components/UserAvatar";
 import Link from "next/link";
 import {
   MoreVertical,
@@ -208,17 +209,11 @@ export default function StudentsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3.5">
                   <div className="relative">
-                    {student.avatar ? (
-                      <img
-                        src={student.avatar}
-                        alt={student.name}
-                        className="w-12 h-12 rounded-full object-cover ring-2 ring-neutral-100"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-sm ring-2 ring-neutral-100">
-                        {student.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatar
+                      src={student.avatar}
+                      name={student.name}
+                      className="w-12 h-12 ring-2 ring-neutral-100 shadow-2xs"
+                    />
                     {student.isOnline && (
                       <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-400/50" />
                     )}

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useSkillHub } from "@/lib/store";
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   User,
   Bell,
@@ -174,17 +175,11 @@ export default function SettingsPage() {
       {/* Profile Card */}
       <div className="skill-card bg-white p-5 sm:p-6 md:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 pb-6 border-b border-neutral-100">
-          {user.avatar ? (
-            <img
-              src={user.avatar}
-              alt={user.fullName || user.name}
-              className="w-16 h-16 rounded-full object-cover ring-4 ring-neutral-100 flex-shrink-0"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-xl ring-4 ring-neutral-100 flex-shrink-0">
-              {(user.fullName || user.name || "U").charAt(0).toUpperCase()}
-            </div>
-          )}
+          <UserAvatar
+            src={user.avatar}
+            name={user.fullName || user.name}
+            className="w-16 h-16 ring-4 ring-neutral-100 shadow-sm"
+          />
           <div>
             <h3 className="text-lg font-bold text-neutral-900">{user.fullName || user.name}</h3>
             <p className="text-xs text-neutral-400">{user.role}</p>

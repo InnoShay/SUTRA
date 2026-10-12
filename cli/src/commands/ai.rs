@@ -71,6 +71,24 @@ pub async fn ai_review_brief(client: &SutraApiClient, signal_id: Uuid) -> Result
         brief.metadata.provider.dimmed(),
         brief.metadata.is_mock
     );
+
+    let top_key = brief
+        .candidate_interventions
+        .first()
+        .map(|c| c.intervention_key.as_str())
+        .unwrap_or("academic_tutoring_offer");
+
+    println!("\n{}", "Human Oversight & Workflow Next Step:".yellow().bold());
+    println!("  • This AI brief provides non-binding decision-support only (No Alert Without Action).");
+    println!("  • To act on this insight, an authorized staff member must record a verified review:");
+    println!(
+        "    {}",
+        format!(
+            "sutra signals review {} --decision approve --intervention {} --rationale \"Educator reviewed advisory brief and confirmed intervention.\"",
+            signal_id, top_key
+        )
+        .bold()
+    );
     Ok(())
 }
 
@@ -92,5 +110,9 @@ pub async fn ai_summarize_evidence(client: &SutraApiClient, student_id: Uuid) ->
     for u in summary.uncertainties {
         println!("  ⚠ {}", u);
     }
+
+    println!("\n{}", "Human Oversight & Policy Boundary:".yellow().bold());
+    println!("  • Financial records are strictly excluded per ADR-003.");
+    println!("  • Synthesized facts must be verified in coordination meetings before taking case action.");
     Ok(())
 }

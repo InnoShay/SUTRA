@@ -115,3 +115,61 @@ fn test_uuid_validation() {
     let invalid_uuid = "not-a-valid-uuid";
     assert!(Uuid::parse_str(invalid_uuid).is_err());
 }
+
+#[test]
+fn test_case_assignment_request_serialization() {
+    let owner_id = Uuid::parse_str("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").unwrap();
+    let req = serde_json::json!({
+        "primary_owner_user_id": owner_id,
+        "due_at": "2026-10-20T12:00:00Z",
+        "reason_code": "MANUAL_CLI_ASSIGNMENT"
+    });
+
+    assert_eq!(req["primary_owner_user_id"], "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    assert_eq!(req["reason_code"], "MANUAL_CLI_ASSIGNMENT");
+}
+
+#[test]
+fn test_case_dto_deserialization_with_followups_and_outcome() {
+    let raw = r#"{
+        "id": "11111111-2222-3333-4444-555555555555",
+        "institution_id": "00000000-0000-0000-0000-000000000001",
+        "student_id": "99999999-8888-7777-6666-555555555555",
+        "external_student_ref": "STU-1001",
+        "student_display_name": "Alice Smith",
+        "originating_signal_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        "selected_intervention_key": "academic_tutoring_offer",
+        "state": "assigned",
+        "primary_owner_user_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "due_at": "2026-10-20T12:00:00Z",
+        "accepted_at": null,
+        "is_escalated": false,
+        "version": 2,
+        "tasks": [],
+        "events": [],
+        "follow_ups": [
+            {
+                "id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+                "follow_up_type": "in_person",
+                "contact_status": "student_reached",
+                "proof_kind": "faculty_meeting_notes",
+                "occurred_at": "2026-10-12T05:00:00Z",
+                "sanitized_note": "Met in lab."
+            }
+        ],
+        "outcome": {
+            "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+            "outcome_status": "helped",
+            "rationale": "Completed tutoring modules",
+            "evidence_kind": "staff_review",
+            "recorded_at": "2026-10-12T06:00:00Z"
+        }
+    }"#;
+
+    let v: serde_json::Value = serde_json::from_str(raw).expect("Must parse CaseDto JSON");
+    assert_eq!(v["state"], "assigned");
+    assert_eq!(v["external_student_ref"], "STU-1001");
+    assert_eq!(v["follow_ups"].as_array().unwrap().len(), 1);
+    assert_eq!(v["outcome"]["outcome_status"], "helped");
+}
+

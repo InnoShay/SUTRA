@@ -3,6 +3,39 @@ use crate::models::{CaseAssignmentRequest, CaseTransitionRequest, FollowUpReques
 use colored::*;
 use uuid::Uuid;
 
+pub fn allowed_next_states(current_state: &str) -> &'static [&'static str] {
+    match current_state.to_lowercase().as_str() {
+        "suggested" => &["under_review"],
+        "under_review" => &["action_planned", "dismissed"],
+        "action_planned" => &["assigned"],
+        "assigned" => &["accepted", "assigned (reassign)"],
+        "accepted" => &["contact_attempted"],
+        "contact_attempted" => &["support_in_progress", "failed_contact"],
+        "support_in_progress" => &["follow_up_due", "service_unavailable"],
+        "follow_up_due" => &["outcome_reviewed"],
+        "outcome_reviewed" => &["closed"],
+        "failed_contact" => &["closed"],
+        "service_unavailable" => &["closed"],
+        "closed" => &["reopened"],
+        "dismissed" => &[],
+        "reopened" => &["assigned", "action_planned"],
+        _ => &[],
+    }
+}
+
+pub fn suggested_next_step(case_id: &Uuid, current_state: &str) -> Option<String> {
+    match current_state.to_lowercase().as_str() {
+        "action_planned" => Some(format!("sutra cases assign {} --user-id <STAFF_UUID>", case_id)),
+        "assigned" => Some(format!("sutra cases transition {} --to-state accepted", case_id)),
+        "accepted" => Some(format!("sutra cases follow-up {} --channel in_person --proof faculty_meeting_notes --note \"Met with student\"", case_id)),
+        "contact_attempted" => Some(format!("sutra cases transition {} --to-state support_in_progress", case_id)),
+        "support_in_progress" => Some(format!("sutra cases transition {} --to-state follow_up_due", case_id)),
+        "follow_up_due" | "outcome_reviewed" => Some(format!("sutra cases outcome {} --status helped --rationale \"Intervention completed with positive student engagement\"", case_id)),
+        "failed_contact" | "service_unavailable" => Some(format!("sutra cases transition {} --to-state closed --reason \"INTERVENTION_TERMINATED\"", case_id)),
+        _ => None,
+    }
+}
+
 pub async fn list_cases(client: &SutraApiClient, state_filter: Option<&str>) -> Result<(), String> {
     println!("{}", "=== SUTRA Student Support Cases ===".bold());
     let cases = client.list_cases(state_filter).await?;
@@ -16,10 +49,10 @@ pub async fn list_cases(client: &SutraApiClient, state_filter: Option<&str>) -> 
     println!("{}", "-".repeat(116));
 
     for c in cases {
-        let state_badge = match c.state.as_str() {
-            "CLOSED" | "RESOLVED" => c.state.green(),
-            "IN_PROGRESS" | "ACCEPTED" => c.state.cyan().bold(),
-            "ASSIGNED" | "ACTIONABLE" => c.state.yellow().bold(),
+        let state_badge = match c.state.to_lowercase().as_str() {
+            "closed" | "dismissed" => c.state.green(),
+            "in_progress" | "accepted" | "support_in_progress" => c.state.cyan().bold(),
+            "assigned" | "action_planned" => c.state.yellow().bold(),
             _ => c.state.white(),
         };
 
@@ -53,8 +86,43 @@ pub async fn get_case(client: &SutraApiClient, id: Uuid) -> Result<(), String> {
         println!("  Escalation:    {}", "YES (ESCALATED)".red().bold());
     }
 
+    // Display canonical state machine transitions
+    let next_states = allowed_next_states(&c.state);
+    if !next_states.is_empty() {
+        println!("\n{}", "Canonical Next States:".bold());
+        for ns in next_states {
+            println!("  ↳ {}", ns.cyan());
+        }
+    }
+
+    // Follow-ups & outcomes summary
+    if !c.follow_ups.is_empty() {
+        println!("\n{} ({} recorded):", "Follow-Up Audit History".bold(), c.follow_ups.len());
+        for fu in &c.follow_ups {
+            let ch = fu.get("follow_up_type").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let pk = fu.get("proof_kind").and_then(|v| v.as_str()).unwrap_or("none");
+            let dt = fu.get("occurred_at").and_then(|v| v.as_str()).unwrap_or("");
+            let note = fu.get("sanitized_note").and_then(|v| v.as_str()).unwrap_or("");
+            println!("  • [{}] channel: {}, proof: {} | \"{}\"", dt.dimmed(), ch.cyan(), pk, note);
+        }
+    }
+
+    if let Some(ref outcome) = c.outcome {
+        println!("\n{}", "Recorded Intervention Outcome:".bold());
+        let st = outcome.get("outcome_status").and_then(|v| v.as_str()).unwrap_or("unknown");
+        let rat = outcome.get("rationale").and_then(|v| v.as_str()).unwrap_or("");
+        println!("  Status:    {}", st.green().bold());
+        println!("  Rationale: {}", rat);
+    }
+
     println!("\n  Tasks:   {} registered", c.tasks.len());
     println!("  Events:  {} timeline entries", c.events.len());
+
+    if let Some(action) = suggested_next_step(&c.id, &c.state) {
+        println!("\n{}", "Suggested Next Workflow Action:".yellow().bold());
+        println!("  {}", action.bold());
+    }
+
     Ok(())
 }
 
@@ -65,7 +133,7 @@ pub async fn transition_case(
     reason_code: Option<&str>,
 ) -> Result<(), String> {
     let req = CaseTransitionRequest {
-        to_state: to_state.to_uppercase(),
+        to_state: to_state.to_lowercase(),
         reason_code: reason_code.map(|s| s.to_string()),
         metadata: None,
     };
@@ -76,6 +144,20 @@ pub async fn transition_case(
     println!("{} State transition confirmed!", "✓".green().bold());
     println!("  New State:   {}", updated.state.green().bold());
     println!("  New Version: {}", updated.version);
+
+    let next_states = allowed_next_states(&updated.state);
+    if !next_states.is_empty() {
+        println!("\n{}", "Allowed Next States:".bold());
+        for ns in next_states {
+            println!("  ↳ {}", ns.cyan());
+        }
+    }
+
+    if let Some(action) = suggested_next_step(&updated.id, &updated.state) {
+        println!("\n{}", "Suggested Next Workflow Step:".yellow().bold());
+        println!("  {}", action.bold());
+    }
+
     Ok(())
 }
 
@@ -97,6 +179,11 @@ pub async fn assign_case(
     println!("{} Case assigned successfully!", "✓".green().bold());
     println!("  Owner: {}", updated.primary_owner_user_id.map(|u| u.to_string()).unwrap_or_default().cyan());
     println!("  State: {}", updated.state.green().bold());
+
+    println!("\n{}", "Suggested Next Workflow Step:".yellow().bold());
+    println!("  Assigned owner accepts case responsibility:");
+    println!("  {}", format!("sutra cases transition {} --to-state accepted", id).bold());
+
     Ok(())
 }
 
@@ -109,14 +196,24 @@ pub async fn record_follow_up(
 ) -> Result<(), String> {
     let req = FollowUpRequest {
         follow_up_type: follow_up_type.to_string(),
+        contact_status: Some("student_reached".to_string()),
         proof_kind: proof_kind.to_string(),
         occurred_at: chrono::Utc::now().to_rfc3339(),
         note: note.map(|s| s.to_string()),
+        proof_ref: None,
     };
 
     println!("Recording follow-up for case #{}...", id);
     client.record_follow_up(id, req).await?;
     println!("{} Follow-up action logged in audit trail!", "✓".green().bold());
+
+    println!("\n{}", "Suggested Next Workflow Step:".yellow().bold());
+    println!("  Record final student intervention outcome:");
+    println!(
+        "  {}",
+        format!("sutra cases outcome {} --status helped --rationale \"Student attended review and completed assignments.\"", id).bold()
+    );
+
     Ok(())
 }
 
@@ -139,5 +236,10 @@ pub async fn record_outcome(
     println!("Recording final intervention outcome for case #{}...", id);
     client.record_outcome(id, req).await?;
     println!("{} Case outcome recorded and closed!", "✓".green().bold());
+
+    println!("\n{}", "Suggested Next Workflow Step:".yellow().bold());
+    println!("  Inspect completed case coordination record:");
+    println!("  {}", format!("sutra cases get {}", id).bold());
+
     Ok(())
 }
