@@ -17,6 +17,7 @@ import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
 import { UserAvatar } from "@/components/UserAvatar";
 import { FeatureAttributionChart } from "@/components/FeatureAttributionChart";
 import { StudentEvidenceLedger } from "@/components/student/StudentEvidenceLedger";
+import { GovernedScenarioPanel } from "@/components/student/GovernedScenarioPanel";
 import { StudentReadinessResponse } from "@/lib/types";
 import {
   ArrowLeft,
@@ -771,6 +772,18 @@ export default function StudentDetailPage() {
           mlPrediction={mlPrediction || supportView?.ml_prediction || null}
           signals={studentSignals}
           verifiedThreshold={verifiedThreshold}
+        />
+
+        {/* Governed What-If Scenario Exploration Panel (Phase 8) */}
+        <GovernedScenarioPanel
+          studentId={studentId}
+          externalStudentRef={externalRef}
+          initialPrediction={mlPrediction || supportView?.ml_prediction || null}
+          verifiedThreshold={verifiedThreshold}
+          onPlanSupport={() => {
+            const el = document.getElementById("observations-table");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }}
         />
 
         {/* Observations Table */}

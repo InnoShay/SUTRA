@@ -54,6 +54,9 @@ import {
   CohortRiskTrendResponse,
   StudentRiskTrajectoryResponse,
   HistoricalPerformanceMonitoringResponse,
+  SupportedScenarioFeature,
+  WhatIfScenarioRequest,
+  WhatIfScenarioResponse,
 } from './types';
 import {
   DEMO_SIGNALS,
@@ -931,6 +934,119 @@ class ApiClient {
       } as unknown as T;
     }
 
+    // --- Governed What-If Scenarios (Phase 8) ---
+    if (cleanEndpoint.includes('/supported-scenario-features')) {
+      return [
+        {
+          feature_name: 'vle_active_days_d30',
+          min_value: 0,
+          max_value: 30,
+          feature_type: 'int',
+          label: 'VLE Active Days (Day 0–30)',
+          unit: 'days',
+          default_value: 8,
+          description: 'Number of distinct calendar days the student accessed the virtual learning environment within the first 30 days.',
+        },
+        {
+          feature_name: 'vle_total_clicks_d30',
+          min_value: 0,
+          max_value: 5000,
+          feature_type: 'float',
+          label: 'Total VLE Interactions (Day 0–30)',
+          unit: 'clicks',
+          default_value: 142,
+          description: 'Cumulative count of interactions across all online course components by Day 30.',
+        },
+        {
+          feature_name: 'vle_clicks_last_7d',
+          min_value: 0,
+          max_value: 2000,
+          feature_type: 'float',
+          label: 'Recent Activity (Days 24–30)',
+          unit: 'clicks',
+          default_value: 12,
+          description: 'Interaction count within the final 7 days leading to the Day 30 evaluation boundary.',
+        },
+        {
+          feature_name: 'vle_days_since_last_click',
+          min_value: 0,
+          max_value: 30,
+          feature_type: 'float',
+          label: 'Days Since Last Interaction',
+          unit: 'days',
+          default_value: 6,
+          description: "Elapsed days between the student's most recent interaction and Day 30.",
+        },
+        {
+          feature_name: 'assessments_submitted_d30',
+          min_value: 0,
+          max_value: 10,
+          feature_type: 'int',
+          label: 'Assessments Submitted by Day 30',
+          unit: 'submissions',
+          default_value: 1,
+          description: 'Number of course assessment items submitted prior to Day 30.',
+        },
+        {
+          feature_name: 'has_early_assessment_submission_d30',
+          min_value: 0,
+          max_value: 1,
+          feature_type: 'int',
+          label: 'Early Assessment Submission',
+          unit: 'binary',
+          default_value: 1,
+          description: 'Binary indicator of whether an early diagnostic assessment was submitted by Day 30.',
+        },
+      ] as unknown as T;
+    }
+
+    if (cleanEndpoint.includes('/simulate-scenario')) {
+      return {
+        scenario_id: 'mock-scenario-uuid-1234',
+        student_ref: 'STUDENT-SIMULATED-DEMO',
+        model_name: 'Regularized Logistic Regression Baseline',
+        model_version: 'v1.0.0',
+        prediction_cutoff: 'Day 30',
+        threshold: 0.46,
+        baseline_risk_probability: 0.54,
+        baseline_classification: 'At_Risk',
+        baseline_top_attributions: [
+          { feature: 'vle_days_since_last_click', value: 16, attribution: 0.467, direction: 'increases_risk' },
+          { feature: 'assessments_submitted_d30', value: 0, attribution: 0.19, direction: 'increases_risk' },
+        ],
+        hypothetical_risk_probability: 0.38,
+        hypothetical_classification: 'On_Track',
+        hypothetical_top_attributions: [
+          { feature: 'vle_active_days_d30', value: 18, attribution: -0.40, direction: 'decreases_risk' },
+          { feature: 'vle_days_since_last_click', value: 1, attribution: -0.23, direction: 'decreases_risk' },
+        ],
+        delta_probability: -0.16,
+        delta_percentage_points: -16.0,
+        tier_transition: 'CROSSES_BELOW_THRESHOLD_TO_ON_TRACK',
+        modified_features: [
+          { feature: 'vle_active_days_d30', label: 'VLE Active Days', original_value: 3, hypothetical_value: 18, unit: 'days', delta: 15 },
+          { feature: 'vle_days_since_last_click', label: 'Days Since Last Interaction', original_value: 16, hypothetical_value: 1, unit: 'days', delta: -15 },
+        ],
+        is_hypothetical: true,
+        is_official_record: false,
+        ephemeral_notice: "EPHEMERAL SIMULATION: This calculation was evaluated strictly in memory. Hypothetical inputs are NEVER written to the student's official academic record, telemetry database, or ml_inference_logs. No automated cases, signals, or disciplinary actions have been triggered.",
+        non_causal_disclaimer: 'NON-CAUSAL MODEL CALCULATION NOTICE: The hypothetical score is a mathematical evaluation of the frozen Day-30 logistic regression model. It is NOT a causal estimate of intervention effectiveness. Statistical correlation does not equal intervention causality.',
+        temporal_cutoff_notice: 'DAY-30 TEMPORAL INTEGRITY NOTICE: Hypothetical adjustments reflect only plausible behavioral variation within the Day 0–30 window. Unobserved future events (e.g., attending future tutoring or post-cutoff scores) are strictly prohibited from entering this calculation.',
+        support_planning_guidance: {
+          title: 'Explanatory Non-Predictive Support Planning Guidance',
+          why_model_cannot_estimate_causal_interventions: 'The production early-warning model (LogisticRegressionBaseline v1.0.0) is a correlational classifier trained on historical observational registration data at Day 30. It evaluates observational correlations between early engagement telemetry and completion. It does NOT estimate the causal treatment effect of educator interventions.',
+          recommended_educator_actions: [
+            'Conduct a personalized, empathetic check-in with the student regarding study routines and obstacles.',
+            'Offer optional peer tutoring, academic mentoring, or writing lab support without attributing false statistical guarantees.',
+            'Verify whether non-engagement reflects illness, technical access hurdles, or family commitments.',
+            'Coordinate with course instructors on clarifying difficult early assessment assignments.',
+            'Document support plans qualitatively in Case Management rather than altering official ML logs.',
+          ],
+          causal_claim_warning: 'PROHIBITION ON CAUSAL CLAIMS: Do not claim or document to students that attending tutoring or reaching a specific click threshold will reduce course failure risk by a specific percentage. Such claims are scientifically unsupported by the correlational model.',
+        },
+      } as unknown as T;
+    }
+
     // AI endpoints
     if (cleanEndpoint.endsWith('/ai/status')) {
       return { status: 'operational', provider: 'local_synthesizer', model_ready: true } as unknown as T;
@@ -1289,6 +1405,11 @@ class ApiClient {
       }),
     getReadiness: (id: string) =>
       this.request<StudentReadinessResponse>(`/students/${id}/readiness`),
+    simulateScenario: (id: string, payload: WhatIfScenarioRequest) =>
+      this.request<WhatIfScenarioResponse>(`/students/${id}/simulate-scenario`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   };
 
   // --- Signals & Review ---
@@ -1378,6 +1499,13 @@ class ApiClient {
       const qs = modelVersion ? `?model_version=${encodeURIComponent(modelVersion)}` : '';
       return this.request<ModelPerformanceResponse>(`/ml/performance${qs}`);
     },
+    getSupportedScenarioFeatures: () =>
+      this.request<SupportedScenarioFeature[]>('/ml/supported-scenario-features'),
+    simulateScenario: (payload: WhatIfScenarioRequest) =>
+      this.request<WhatIfScenarioResponse>('/ml/simulate-scenario', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   };
 
 
