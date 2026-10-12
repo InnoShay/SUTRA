@@ -9,14 +9,20 @@ import math
 import re
 from typing import Any, Optional, Union
 
-from backend.app.orchestration.catalog import SyntheticDemoCatalog
+from backend.app.orchestration.catalog import SyntheticCommunicationCatalog, SyntheticDemoCatalog
 from backend.app.orchestration.contracts import (
+    CohortAggregatePacket,
+    CohortInsightReport,
+    CommunicationDraft,
+    CommunicationDraftStatus,
+    EvidenceChallengeReport,
     EvidencePacket,
     EvidenceReference,
     InterventionProposal,
     SignalInterpretation,
+    StructuredNoteDraft,
+    StructuredNoteStatus,
     SupportPlanDraft,
-    EvidenceChallengeReport,
     ValidationFinding,
     ValidationSeverity,
     ValidationSummary,
@@ -549,3 +555,368 @@ class DeterministicValidator:
             error_count=error_count,
             warning_count=warning_count,
         )
+
+    # -------------------------------------------------------------------------
+    # Agent 5 & 6 Validation Gates (Phase 5)
+    # -------------------------------------------------------------------------
+
+    PROHIBITED_RISK_LEAK_PATTERNS = [
+        (
+            re.compile(r"\b(risk\s+(probability|tier|score|level)|dropout\s+probability|at-risk\s+student|high\s+risk|tier\s+high)\b", re.IGNORECASE),
+            "Forbidden internal risk score, probability, or tier disclosure"
+        ),
+        (
+            re.compile(r"\b(predicted\s+to\s+fail|predicted\s+dropout)\b", re.IGNORECASE),
+            "Forbidden deficit-focused prediction label disclosure"
+        ),
+    ]
+
+    PROHIBITED_SENSITIVE_DEMOGRAPHIC_PATTERNS = [
+        (
+            re.compile(r"\b(imd_band|deprivation\s+decile|imd\s+decile|disability\s+status|gender\s+category)\b", re.IGNORECASE),
+            "Forbidden demographic or socioeconomic proxy disclosure"
+        ),
+    ]
+
+    PROHIBITED_COMMUNICATION_PROMISES = [
+        (
+            re.compile(r"\b(tuition\s+waiver|guaranteed\s+(pass|grade|funding|extension)|financial\s+grant|free\s+housing)\b", re.IGNORECASE),
+            "Forbidden institutional funding or academic grade guarantee"
+        ),
+        (
+            re.compile(r"\b(appointment\s+is\s+confirmed\s+for|scheduled\s+at\s+\d{1,2}:\d{2}|booked\s+in\s+room)\b", re.IGNORECASE),
+            "Forbidden calendar booking or room assignment commitment"
+        ),
+    ]
+
+    @classmethod
+    def validate_communication_draft(
+        cls,
+        draft: CommunicationDraft,
+        is_plan_approved: bool = True,
+    ) -> ValidationSummary:
+        """
+        Deterministic validation gate for Agent 5 CommunicationDraft.
+        Enforces catalog alignment, role constraints, privacy, and non-stigmatizing language.
+        """
+        findings: list[ValidationFinding] = []
+
+        # 1. Verify plan approval status
+        if not is_plan_approved:
+            findings.append(
+                ValidationFinding(
+                    field="draft.approved_plan_version",
+                    severity=ValidationSeverity.ERROR,
+                    message="Communication draft must reference a genuinely approved support plan version.",
+                    code="ERR_UNAPPROVED_PLAN_VERSION",
+                )
+            )
+
+        # 2. Template validity
+        template = SyntheticCommunicationCatalog.get_template(draft.template_id)
+        if not template:
+            findings.append(
+                ValidationFinding(
+                    field="draft.template_id",
+                    severity=ValidationSeverity.ERROR,
+                    message=f"Template '{draft.template_id}' is not registered in SyntheticCommunicationCatalog.",
+                    code="ERR_UNKNOWN_COMM_TEMPLATE",
+                )
+            )
+        else:
+            # 3. Purpose alignment
+            if draft.communication_purpose != template.purpose:
+                findings.append(
+                    ValidationFinding(
+                        field="draft.communication_purpose",
+                        severity=ValidationSeverity.ERROR,
+                        message=f"Purpose '{draft.communication_purpose}' diverges from template purpose '{template.purpose}'.",
+                        code="ERR_PURPOSE_MISMATCH",
+                    )
+                )
+
+            # 4. Role permissibility
+            if draft.intended_role not in template.allowed_roles:
+                findings.append(
+                    ValidationFinding(
+                        field="draft.intended_role",
+                        severity=ValidationSeverity.ERROR,
+                        message=f"Intended role '{draft.intended_role}' is not allowed for template '{draft.template_id}'. Allowed: {sorted(template.allowed_roles)}.",
+                        code="ERR_DISALLOWED_STAKEHOLDER_ROLE",
+                    )
+                )
+
+        # 5. Review status constraint
+        if draft.human_review_status != CommunicationDraftStatus.DRAFT_AWAITING_REVIEW:
+            findings.append(
+                ValidationFinding(
+                    field="draft.human_review_status",
+                    severity=ValidationSeverity.ERROR,
+                    message="Model-generated draft must have status 'DRAFT_AWAITING_REVIEW'. Models cannot self-authorize drafts.",
+                    code="ERR_UNAUTHORIZED_DRAFT_STATUS",
+                )
+            )
+
+        # 6. Content screening across subject and body
+        combined_text = f"{draft.subject}\n{draft.message_body}"
+
+        # Risk disclosure checks
+        for pattern, desc in cls.PROHIBITED_RISK_LEAK_PATTERNS:
+            if pattern.search(combined_text):
+                findings.append(
+                    ValidationFinding(
+                        field="draft.message_body",
+                        severity=ValidationSeverity.ERROR,
+                        message=f"Risk leak detected: {desc}.",
+                        code="ERR_RISK_LEAK_DETECTED",
+                    )
+                )
+
+        # Sensitive demographic checks
+        for pattern, desc in cls.PROHIBITED_SENSITIVE_DEMOGRAPHIC_PATTERNS:
+            if pattern.search(combined_text):
+                findings.append(
+                    ValidationFinding(
+                        field="draft.message_body",
+                        severity=ValidationSeverity.ERROR,
+                        message=f"Sensitive demographic disclosure: {desc}.",
+                        code="ERR_SENSITIVE_DEMOGRAPHIC_LEAK",
+                    )
+                )
+
+        # Clinical diagnosis checks
+        for pattern in cls.PROHIBITED_CLINICAL_PATTERNS:
+            if pattern.search(combined_text):
+                findings.append(
+                    ValidationFinding(
+                        field="draft.message_body",
+                        severity=ValidationSeverity.ERROR,
+                        message="Prohibited clinical diagnosis or medical language in communication draft.",
+                        code="ERR_CLINICAL_LANGUAGE_DETECTED",
+                    )
+                )
+
+        # Institutional promise checks
+        for pattern, desc in cls.PROHIBITED_COMMUNICATION_PROMISES:
+            if pattern.search(combined_text):
+                findings.append(
+                    ValidationFinding(
+                        field="draft.message_body",
+                        severity=ValidationSeverity.ERROR,
+                        message=f"Unauthorized commitment detected: {desc}.",
+                        code="ERR_UNAUTHORIZED_COMMITMENT",
+                    )
+                )
+
+        # 7. Source references required
+        if not draft.source_references:
+            findings.append(
+                ValidationFinding(
+                    field="draft.source_references",
+                    severity=ValidationSeverity.WARNING,
+                    message="Communication draft lacks explicit citations to approved plan steps.",
+                    code="WARN_MISSING_PLAN_CITATIONS",
+                )
+            )
+
+        error_count = sum(1 for f in findings if f.severity == ValidationSeverity.ERROR)
+        warning_count = sum(1 for f in findings if f.severity == ValidationSeverity.WARNING)
+
+        return ValidationSummary(
+            passed=(error_count == 0),
+            findings=findings,
+            error_count=error_count,
+            warning_count=warning_count,
+        )
+
+    @classmethod
+    def validate_structured_note(
+        cls,
+        draft: StructuredNoteDraft,
+    ) -> ValidationSummary:
+        """
+        Deterministic validation gate for Agent 6 StructuredNoteDraft.
+        Enforces provenance segregation, outcome non-conflation, and unconfirmed status.
+        """
+        findings: list[ValidationFinding] = []
+
+        # 1. Review status constraint
+        if draft.human_confirmation_status != StructuredNoteStatus.DRAFT_AWAITING_CONFIRMATION:
+            findings.append(
+                ValidationFinding(
+                    field="draft.human_confirmation_status",
+                    severity=ValidationSeverity.ERROR,
+                    message="AI-structured note draft must be in 'DRAFT_AWAITING_CONFIRMATION' status.",
+                    code="ERR_UNCONFIRMED_NOTE_STATUS",
+                )
+            )
+
+        # 2. Hash integrity check
+        import hashlib
+        computed_hash = hashlib.sha256(draft.raw_note_content.strip().encode("utf-8")).hexdigest()
+        if draft.source_note_hash != computed_hash:
+            findings.append(
+                ValidationFinding(
+                    field="draft.source_note_hash",
+                    severity=ValidationSeverity.ERROR,
+                    message="Source note hash does not match SHA-256 fingerprint of raw_note_content.",
+                    code="ERR_SOURCE_NOTE_HASH_MISMATCH",
+                )
+            )
+
+        # 3. Check for unwarranted outcome assertions in structured fields
+        all_structured_text = " ".join(
+            draft.reported_actions_taken
+            + draft.staff_observations
+            + draft.attributed_student_statements
+            + draft.claims_requiring_confirmation
+        )
+
+        for pattern in cls.TASK_OUTCOME_CONFLATION_PATTERNS:
+            if pattern.search(all_structured_text):
+                findings.append(
+                    ValidationFinding(
+                        field="draft.structured_claims",
+                        severity=ValidationSeverity.ERROR,
+                        message="Structured note draft contains prohibited task-outcome conflation claims.",
+                        code="ERR_TASK_OUTCOME_CONFLATION",
+                    )
+                )
+
+        # 4. Check for clinical language in structured output
+        for pattern in cls.PROHIBITED_CLINICAL_PATTERNS:
+            if pattern.search(all_structured_text):
+                findings.append(
+                    ValidationFinding(
+                        field="draft.structured_claims",
+                        severity=ValidationSeverity.ERROR,
+                        message="Prohibited clinical diagnosis in structured note output.",
+                        code="ERR_CLINICAL_LANGUAGE_DETECTED",
+                    )
+                )
+
+        error_count = sum(1 for f in findings if f.severity == ValidationSeverity.ERROR)
+        warning_count = sum(1 for f in findings if f.severity == ValidationSeverity.WARNING)
+
+        return ValidationSummary(
+            passed=(error_count == 0),
+            findings=findings,
+            error_count=error_count,
+            warning_count=warning_count,
+        )
+
+    # -------------------------------------------------------------------------
+    # Agent 7 Validation Gate (Phase 6)
+    # -------------------------------------------------------------------------
+
+    PROHIBITED_CAUSAL_PATTERNS = [
+        (
+            re.compile(r"\b(caused\s+(improved|higher|better|retention|success|passing)|proves?\s+that\s+(the\s+)?(intervention|support|outreach)\s+(caused|drove|guaranteed))\b", re.IGNORECASE),
+            "Forbidden causal claim: observational cohort metrics cannot prove intervention caused student outcomes."
+        ),
+        (
+            re.compile(r"\b(intervention\s+directly\s+caused|proved\s+(causal\s+)?effectiveness\s+of)\b", re.IGNORECASE),
+            "Forbidden intervention efficacy claim: data is observational and cannot establish causal efficacy."
+        ),
+    ]
+
+    PROHIBITED_STUDENT_SINGLING_PATTERNS = [
+        (
+            re.compile(r"\b(student\s+[A-Z0-9_\-]+\s+(should|must|is\s+ranked)|punish\s+student|expel\s+student|rank(ing)?\s+individual\s+students)\b", re.IGNORECASE),
+            "Forbidden individual student singling out, ranking, or punitive recommendation in cohort report."
+        ),
+    ]
+
+    @classmethod
+    def validate_cohort_report(
+        cls,
+        report: CohortInsightReport,
+        packet: CohortAggregatePacket,
+    ) -> ValidationSummary:
+        """
+        Deterministic validation gate for Agent 7 CohortInsightReport.
+        Enforces metric citation grounding, snapshot alignment, non-causal claims,
+        and privacy-appropriate aggregate reporting.
+        """
+        findings: list[ValidationFinding] = []
+
+        # 1. Snapshot and Campus Alignment
+        if report.snapshot_id != packet.snapshot_id:
+            findings.append(
+                ValidationFinding(
+                    field="report.snapshot_id",
+                    severity=ValidationSeverity.ERROR,
+                    message=f"Report snapshot_id '{report.snapshot_id}' does not match packet '{packet.snapshot_id}'.",
+                    code="ERR_SNAPSHOT_MISMATCH",
+                )
+            )
+
+        if report.campus_id != packet.campus_id:
+            findings.append(
+                ValidationFinding(
+                    field="report.campus_id",
+                    severity=ValidationSeverity.ERROR,
+                    message=f"Report campus_id '{report.campus_id}' does not match packet '{packet.campus_id}'.",
+                    code="ERR_CAMPUS_MISMATCH",
+                )
+            )
+
+        # 2. Metric Reference Grounding
+        valid_metric_ids = {m.metric_id for m in packet.metrics}
+        for ref in report.metric_references:
+            if ref not in valid_metric_ids:
+                findings.append(
+                    ValidationFinding(
+                        field="report.metric_references",
+                        severity=ValidationSeverity.ERROR,
+                        message=f"Cited metric '{ref}' does not exist in source CohortAggregatePacket.",
+                        code="ERR_UNGROUNDED_METRIC_CITATION",
+                    )
+                )
+
+        # 3. Check for Prohibited Causal Efficacy Claims
+        text_to_check = report.summary_narrative + " " + " ".join(report.observed_patterns)
+        for pattern, reason in cls.PROHIBITED_CAUSAL_PATTERNS:
+            if pattern.search(text_to_check):
+                findings.append(
+                    ValidationFinding(
+                        field="report.summary_narrative",
+                        severity=ValidationSeverity.ERROR,
+                        message=reason,
+                        code="ERR_PROHIBITED_CAUSAL_CLAIM",
+                    )
+                )
+
+        # 4. Check for Prohibited Individual Student References
+        for pattern, reason in cls.PROHIBITED_STUDENT_SINGLING_PATTERNS:
+            if pattern.search(text_to_check):
+                findings.append(
+                    ValidationFinding(
+                        field="report.summary_narrative",
+                        severity=ValidationSeverity.ERROR,
+                        message=reason,
+                        code="ERR_INDIVIDUAL_STUDENT_REFERENCE",
+                    )
+                )
+
+        # 5. Limitations & Caveats Presence Check
+        if packet.data_quality_limitations and not report.limitations_and_caveats:
+            findings.append(
+                ValidationFinding(
+                    field="report.limitations_and_caveats",
+                    severity=ValidationSeverity.WARNING,
+                    message="Packet has data quality limitations, but report limitations list is empty.",
+                    code="WARN_MISSING_LIMITATIONS_CAVEATS",
+                )
+            )
+
+        error_count = sum(1 for f in findings if f.severity == ValidationSeverity.ERROR)
+        warning_count = sum(1 for f in findings if f.severity == ValidationSeverity.WARNING)
+
+        return ValidationSummary(
+            passed=(error_count == 0),
+            findings=findings,
+            error_count=error_count,
+            warning_count=warning_count,
+        )
+

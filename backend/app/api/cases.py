@@ -15,7 +15,11 @@ from backend.app.orchestration.auth.demo_auth import (
     DemoPersona,
     get_current_security_context,
 )
-from backend.app.orchestration.catalog import SyntheticDemoCatalog
+from backend.app.orchestration.catalog import (
+    DemoCommunicationTemplate,
+    SyntheticCommunicationCatalog,
+    SyntheticDemoCatalog,
+)
 from backend.app.orchestration.contracts import (
     ActionStep,
     ChallengeFinding,
@@ -23,23 +27,35 @@ from backend.app.orchestration.contracts import (
     EvidenceChallengeReport,
     EvidencePacket,
     EvidenceReference,
+    CohortAggregatePacket,
+    CohortInsightReport,
     InterventionProposal,
     SignalInterpretation,
     SupportPlanDraft,
     ValidationSeverity,
 )
+from backend.app.orchestration.analytics import compute_cohort_aggregates
 from backend.app.orchestration.coordinator import OrchestrationCoordinator
 from backend.app.orchestration.persistence.db import create_connection, init_db
 from backend.app.orchestration.persistence.models import (
+    AuditExportPackage,
     AuditVerificationResult,
     CaseDecisionRequest,
     CaseDetailResponse,
     CaseRecord,
     CaseStatus,
     CaseSummaryItem,
+    CohortInsightReportRecord,
+    CohortReportGenerateRequest,
+    CommunicationDraftCreateRequest,
+    CommunicationDraftRecord,
+    CommunicationDraftUpdateRequest,
     FollowUpCreateRequest,
     FollowUpRecord,
+    NoteStructureRequest,
     OutcomeRecordRequest,
+    StructuredNoteConfirmRequest,
+    StructuredNoteDraftRecord,
     TaskRecord,
     TaskStatusUpdateRequest,
 )
@@ -287,15 +303,16 @@ class SeedCaseRequest(BaseModel):
 
 @router.post("/cases/seed", response_model=CaseDetailResponse)
 def seed_synthetic_case(
-    payload: SeedCaseRequest,
     request: Request,
+    payload: Optional[SeedCaseRequest] = None,
     repo: CaseRepository = Depends(get_case_repo),
     ctx: SecurityContext = Depends(get_current_security_context),
 ) -> CaseDetailResponse:
     """
     Seed reproducible synthetic case using real ML model inference & 4-agent triage pipeline.
     """
-    campus_id = payload.campus_id or ctx.campus_id
+    req_payload = payload or SeedCaseRequest()
+    campus_id = req_payload.campus_id or ctx.campus_id
 
     # 1. Load named scenario
     scenarios_file = Path("ml/data/synthetic/named_scenarios.json")
@@ -305,11 +322,11 @@ def seed_synthetic_case(
     with open(scenarios_file, "r") as f:
         named_scenarios = json.load(f)
 
-    scenario_data = named_scenarios.get(payload.scenario_name)
+    scenario_data = named_scenarios.get(req_payload.scenario_name)
     if not scenario_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Scenario '{payload.scenario_name}' not found. Available: {list(named_scenarios.keys())}",
+            detail=f"Scenario '{req_payload.scenario_name}' not found. Available: {list(named_scenarios.keys())}",
         )
 
     # Clean description field if present
@@ -484,3 +501,306 @@ def seed_synthetic_case(
     if not detail:
         raise RuntimeError(f"Failed to retrieve seeded case CASE-{student_input.record_id}")
     return detail
+
+
+# -----------------------------------------------------------------------------
+# Phase 5: Agent 5 (Communication Drafting) & Agent 6 (Note Structuring) Endpoints
+# -----------------------------------------------------------------------------
+
+@router.get("/cases/{case_id}/communication-templates", response_model=list[DemoCommunicationTemplate])
+def get_communication_templates(
+    case_id: str,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> list[DemoCommunicationTemplate]:
+    """Retrieve approved synthetic communication templates available for drafting."""
+    case = repo.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Case {case_id} not found.")
+    if case.campus_id != ctx.campus_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden: Campus mismatch.")
+    return SyntheticCommunicationCatalog.list_templates()
+
+
+@router.post("/cases/{case_id}/communication-drafts", response_model=CommunicationDraftRecord)
+def create_communication_draft_endpoint(
+    case_id: str,
+    payload: CommunicationDraftCreateRequest,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> CommunicationDraftRecord:
+    """
+    Generate and persist a draft stakeholder communication using Agent 5.
+    CRITICAL: Does NOT send messages or trigger external outreach.
+    """
+    try:
+        return repo.create_communication_draft(
+            case_id=case_id,
+            request=payload,
+            actor_id=ctx.actor_id,
+            actor_role=ctx.role.value,
+            campus_id=ctx.campus_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+
+
+@router.get("/cases/{case_id}/communication-drafts", response_model=list[CommunicationDraftRecord])
+def list_communication_drafts_endpoint(
+    case_id: str,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> list[CommunicationDraftRecord]:
+    """List all persisted communication drafts for a case."""
+    case = repo.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Case {case_id} not found.")
+    if case.campus_id != ctx.campus_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden: Campus mismatch.")
+    return repo.get_communication_drafts(case_id)
+
+
+@router.patch("/cases/{case_id}/communication-drafts/{draft_id}", response_model=CommunicationDraftRecord)
+def update_communication_draft_endpoint(
+    case_id: str,
+    draft_id: str,
+    payload: CommunicationDraftUpdateRequest,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> CommunicationDraftRecord:
+    """
+    Update, approve for future use, or discard a communication draft.
+    Approval does NOT send the message.
+    """
+    try:
+        return repo.update_communication_draft(
+            case_id=case_id,
+            draft_id=draft_id,
+            request=payload,
+            actor_id=ctx.actor_id,
+            actor_role=ctx.role.value,
+            campus_id=ctx.campus_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.post("/cases/{case_id}/follow-ups/structure-note", response_model=StructuredNoteDraftRecord)
+def structure_follow_up_note_endpoint(
+    case_id: str,
+    payload: NoteStructureRequest,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> StructuredNoteDraftRecord:
+    """
+    Structure an unstructured staff follow-up note via Agent 6.
+    Saves an unconfirmed draft; preserves original note and does not alter student outcome.
+    """
+    try:
+        return repo.structure_follow_up_note(
+            case_id=case_id,
+            request=payload,
+            actor_id=ctx.actor_id,
+            actor_role=ctx.role.value,
+            campus_id=ctx.campus_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+
+
+@router.get("/cases/{case_id}/follow-ups/drafts", response_model=list[StructuredNoteDraftRecord])
+def list_structured_note_drafts_endpoint(
+    case_id: str,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> list[StructuredNoteDraftRecord]:
+    """List unconfirmed structured follow-up note drafts for a case."""
+    case = repo.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Case {case_id} not found.")
+    if case.campus_id != ctx.campus_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden: Campus mismatch.")
+    return repo.get_structured_note_drafts(case_id)
+
+
+@router.post("/cases/{case_id}/follow-ups/confirm-structured", response_model=FollowUpRecord)
+def confirm_structured_note_endpoint(
+    case_id: str,
+    payload: StructuredNoteConfirmRequest,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> FollowUpRecord:
+    """
+    Human review confirmation of structured follow-up note into durable ledger.
+    Strictly preserves student outcome status as distinct and unchanged.
+    """
+    try:
+        return repo.confirm_structured_note(
+            case_id=case_id,
+            request=payload,
+            actor_id=ctx.actor_id,
+            actor_role=ctx.role.value,
+            campus_id=ctx.campus_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+
+
+@router.post("/cases/{case_id}/follow-ups/drafts/{draft_id}/reject", response_model=StructuredNoteDraftRecord)
+def reject_structured_note_endpoint(
+    case_id: str,
+    draft_id: str,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> StructuredNoteDraftRecord:
+    """Reject an AI-structured follow-up note draft."""
+    try:
+        return repo.reject_structured_note(
+            case_id=case_id,
+            draft_id=draft_id,
+            actor_id=ctx.actor_id,
+            actor_role=ctx.role.value,
+            campus_id=ctx.campus_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+# -----------------------------------------------------------------------------
+# Phase 6: Cohort Learning Analyst & Audit Export Endpoints
+# -----------------------------------------------------------------------------
+
+@router.get("/cohort/analytics", response_model=CohortAggregatePacket)
+def get_cohort_analytics_endpoint(
+    campus_id: Optional[str] = Query(None, description="Campus identifier or omit for current user's campus"),
+    min_cohort_threshold: int = Query(5, ge=1, description="Minimum cell count for small-group suppression"),
+    grouping_dimension: str = Query("ALL_CAMPUS_CASES", description="Grouping dimension"),
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> CohortAggregatePacket:
+    """
+    Deterministic cohort analytics packet endpoint.
+    Guarantees:
+    - Pure pre-agent SQL computation; zero LLM hallucination in denominators or values.
+    - Small-group privacy suppression for cells with N < min_cohort_threshold.
+    - Campus boundary isolation.
+    """
+    target_campus = campus_id or ctx.campus_id
+    if ctx.campus_id != "CAMPUS-SYSTEM" and target_campus != ctx.campus_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Campus boundary mismatch.",
+        )
+
+    return compute_cohort_aggregates(
+        repo=repo,
+        campus_id=target_campus,
+        min_cohort_threshold=min_cohort_threshold,
+        grouping_dimension=grouping_dimension,
+    )
+
+
+@router.post("/cohort/report", response_model=CohortInsightReportRecord)
+def generate_cohort_report_endpoint(
+    payload: CohortReportGenerateRequest,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> CohortInsightReportRecord:
+    """
+    Generate an authoritative Cohort Learning Analyst insight report (Agent 7).
+    Guarantees:
+    - Input contains only precomputed AggregateMetricItem items; zero raw telemetry/PII.
+    - Deterministic validation gate checks metric citation grounding and anti-causality.
+    - Persistence in cohort_insight_reports table and append to Support Evidence Ledger.
+    """
+    if ctx.campus_id != "CAMPUS-SYSTEM" and payload.campus_id != ctx.campus_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Campus boundary mismatch.",
+        )
+
+    try:
+        return repo.generate_cohort_report(
+            request=payload,
+            actor_id=ctx.actor_id,
+            actor_role=ctx.role.value,
+            user_campus_id=ctx.campus_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+
+
+@router.get("/cohort/reports", response_model=list[CohortInsightReportRecord])
+def list_cohort_reports_endpoint(
+    campus_id: Optional[str] = Query(None, description="Campus filter"),
+    limit: int = Query(50, ge=1, le=200),
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> list[CohortInsightReportRecord]:
+    """List historical Cohort Learning Analyst insight reports."""
+    target_campus = campus_id or (None if ctx.campus_id == "CAMPUS-SYSTEM" else ctx.campus_id)
+    if ctx.campus_id != "CAMPUS-SYSTEM" and target_campus != ctx.campus_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Campus boundary mismatch.",
+        )
+
+    return repo.list_cohort_reports(campus_id=target_campus, limit=limit)
+
+
+@router.get("/cohort/reports/{report_id}", response_model=CohortInsightReportRecord)
+def get_cohort_report_endpoint(
+    report_id: str,
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> CohortInsightReportRecord:
+    """Retrieve a single Cohort Learning Analyst insight report by ID."""
+    report = repo.get_cohort_report(report_id)
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cohort report '{report_id}' not found.",
+        )
+    if ctx.campus_id != "CAMPUS-SYSTEM" and report.campus_id != ctx.campus_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Campus boundary mismatch.",
+        )
+    return report
+
+
+@router.get("/audit/export", response_model=AuditExportPackage)
+def export_audit_ledger_endpoint(
+    campus_id: Optional[str] = Query(None, description="Optional campus filter"),
+    repo: CaseRepository = Depends(get_case_repo),
+    ctx: SecurityContext = Depends(get_current_security_context),
+) -> AuditExportPackage:
+    """
+    Export full verifiable Support Evidence Ledger with cryptographic hash-pointer verification.
+    Guarantees:
+    - Verifies complete SHA-256 backward pointer chain from GENESIS.
+    - Yields signed tamper-evident export package.
+    """
+    if ctx.campus_id != "CAMPUS-SYSTEM" and campus_id and campus_id != ctx.campus_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Campus boundary mismatch.",
+        )
+
+    target_campus = campus_id if ctx.campus_id == "CAMPUS-SYSTEM" else ctx.campus_id
+
+    return repo.export_audit_ledger(campus_id=target_campus, actor_id=ctx.actor_id)
+
+

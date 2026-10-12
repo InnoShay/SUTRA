@@ -90,3 +90,101 @@ class SyntheticDemoCatalog:
     def list_entries(cls) -> list[DemoCatalogEntry]:
         """List all registered demo interventions."""
         return list(cls._ENTRIES.values())
+
+
+class DemoCommunicationTemplate(BaseModel):
+    """Specification of an approved synthetic communication template for Agent 5."""
+    model_config = ConfigDict(extra="forbid")
+
+    template_id: str = Field(..., description="Unique template identifier")
+    purpose: str = Field(..., description="Intended purpose (e.g. CHECK_IN_INVITATION, RESOURCE_REFERRAL)")
+    allowed_roles: set[str] = Field(..., description="Permitted stakeholder recipient roles")
+    title: str = Field(..., description="Descriptive template name")
+    description: str = Field(..., description="Operational summary and style guideline")
+    default_subject: str = Field(..., description="Standard non-stigmatizing subject line draft")
+    is_synthetic_demo_template: bool = Field(default=True, description="Synthetic demo marker")
+
+
+class SyntheticCommunicationCatalog:
+    """
+    Catalog of approved communication templates and permitted purposes for Agent 5.
+
+    Catalog Version: COMM_CATALOG_V1
+    """
+    CATALOG_VERSION: str = "COMM_CATALOG_V1"
+
+    ALLOWED_PURPOSES: set[str] = {
+        "CHECK_IN_INVITATION",
+        "RESOURCE_REFERRAL",
+        "TUTOR_COLLABORATION_BRIEF",
+        "SUCCESS_COACH_ALIGNMENT",
+    }
+
+    PERMITTED_STAKEHOLDER_ROLES: set[str] = {
+        "STUDENT",
+        "ACADEMIC_ADVISOR",
+        "MODULE_TUTOR",
+        "STUDENT_SUCCESS_COACH",
+    }
+
+    _TEMPLATES: dict[str, DemoCommunicationTemplate] = {
+        "TPL_STUDENT_SUPPORT_CHECKIN": DemoCommunicationTemplate(
+            template_id="TPL_STUDENT_SUPPORT_CHECKIN",
+            purpose="CHECK_IN_INVITATION",
+            allowed_roles={"STUDENT"},
+            title="[SYNTHETIC DEMO] Supportive Student Check-in Invitation",
+            description="Warm, respectful invitation offering an informal check-in on course navigation and study routine.",
+            default_subject="Checking in: How are your studies going this week?",
+        ),
+        "TPL_STUDENT_RESOURCE_GUIDE": DemoCommunicationTemplate(
+            template_id="TPL_STUDENT_RESOURCE_GUIDE",
+            purpose="RESOURCE_REFERRAL",
+            allowed_roles={"STUDENT"},
+            title="[SYNTHETIC DEMO] Course Resources & Academic Skills Referral",
+            description="Supportive message sharing module learning guides, tutoring hours, and academic skills resources.",
+            default_subject="Helpful resources for your course module",
+        ),
+        "TPL_TUTOR_ACADEMIC_BRIEF": DemoCommunicationTemplate(
+            template_id="TPL_TUTOR_ACADEMIC_BRIEF",
+            purpose="TUTOR_COLLABORATION_BRIEF",
+            allowed_roles={"MODULE_TUTOR"},
+            title="[SYNTHETIC DEMO] Module Tutor Formative Support Brief",
+            description="Professional coordination brief requesting tutor check-in or formative feedback review.",
+            default_subject="Advisor Coordination: Formative check-in support request",
+        ),
+        "TPL_COACH_COORDINATION_NOTE": DemoCommunicationTemplate(
+            template_id="TPL_COACH_COORDINATION_NOTE",
+            purpose="SUCCESS_COACH_ALIGNMENT",
+            allowed_roles={"STUDENT_SUCCESS_COACH"},
+            title="[SYNTHETIC DEMO] Success Coach & Peer Connection Note",
+            description="Internal coordination note to arrange student onboarding session with peer mentor or study group.",
+            default_subject="Success Coach Coordination: Study group and peer connection",
+        ),
+    }
+
+    @classmethod
+    def get_template(cls, template_id: str) -> Optional[DemoCommunicationTemplate]:
+        """Retrieve communication template by ID, or None if unknown."""
+        return cls._TEMPLATES.get(template_id)
+
+    @classmethod
+    def is_valid_template(cls, template_id: str) -> bool:
+        """Check if template exists in catalog."""
+        return template_id in cls._TEMPLATES
+
+    @classmethod
+    def is_allowed_purpose(cls, purpose: str) -> bool:
+        """Check if purpose is an allowed communication purpose."""
+        return purpose in cls.ALLOWED_PURPOSES
+
+    @classmethod
+    def get_allowed_roles_for_template(cls, template_id: str) -> set[str]:
+        """Return allowed roles for template."""
+        tpl = cls.get_template(template_id)
+        return tpl.allowed_roles if tpl else set()
+
+    @classmethod
+    def list_templates(cls) -> list[DemoCommunicationTemplate]:
+        """List all approved templates."""
+        return list(cls._TEMPLATES.values())
+

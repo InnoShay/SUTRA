@@ -144,6 +144,94 @@ class MockLLMClient:
                 tokens_used=120,
             )
 
+        # Check specialized default fallbacks for Phase 5 contracts if no canned response registered
+        if response_model.__name__ == "CommunicationDraft":
+            return ProviderResponse[T](
+                result=response_model(  # type: ignore
+                    schema_version="v1.0.0",
+                    case_id="MOCK-CASE",
+                    approved_plan_version=1,
+                    intended_role="STUDENT",
+                    communication_purpose="CHECK_IN_INVITATION",
+                    template_id="TPL_STUDENT_SUPPORT_CHECKIN",
+                    subject="Checking in: How are your studies going this week?",
+                    message_body=(
+                        "Hello, I wanted to reach out and see how you are settling into your course module. "
+                        "We have several study guides, tutoring drop-in hours, and library orientation materials "
+                        "available to help you navigate your coursework whenever you need."
+                    ),
+                    source_references=["Step 1: Digital check-in orientation"],
+                    missing_information_or_limitations=["Student communication channel preferences unverified"],
+                    human_review_status="DRAFT_AWAITING_REVIEW",
+                    generation_metadata={"model": "mock-deterministic-v1"},
+                ),
+                latency_ms=self.simulated_latency_sec * 1000.0,
+                model_name="mock-deterministic-v1",
+                provider_name="mock-offline-provider",
+                tokens_used=120,
+            )
+        elif response_model.__name__ == "StructuredNoteDraft":
+            import hashlib
+            default_content = "Staff completed introductory study check-in via LMS messaging."
+            source_hash = hashlib.sha256(default_content.encode("utf-8")).hexdigest()
+            return ProviderResponse[T](
+                result=response_model(  # type: ignore
+                    schema_version="v1.0.0",
+                    case_id="MOCK-CASE",
+                    raw_note_content=default_content,
+                    source_note_hash=source_hash,
+                    reported_actions_taken=["Conducted 15-minute introductory study check-in via LMS messaging"],
+                    staff_observations=["Student navigated LMS homepage but has not yet opened Quiz 1"],
+                    attributed_student_statements=["Student mentioned feeling unsure about course forum navigation"],
+                    documented_evidence_references=["Course LMS homepage", "Quiz 1"],
+                    unresolved_questions_or_concerns=["Whether student requires additional technical assistance"],
+                    missing_or_contradictory_information=["Note does not state if student accessed orientation guide"],
+                    potential_follow_up_evidence_required=["Quiz 1 completion confirmation"],
+                    claims_requiring_confirmation=[],
+                    human_confirmation_status="DRAFT_AWAITING_CONFIRMATION",
+                    generation_metadata={"model": "mock-deterministic-v1"},
+                ),
+                latency_ms=self.simulated_latency_sec * 1000.0,
+                model_name="mock-deterministic-v1",
+                provider_name="mock-offline-provider",
+                tokens_used=120,
+            )
+        elif response_model.__name__ == "CohortInsightReport":
+            return ProviderResponse[T](
+                result=response_model(  # type: ignore
+                    report_id="REP-MOCK-001",
+                    snapshot_id="SNAP-MOCK-001",
+                    campus_id="CAMPUS-MAIN",
+                    summary_narrative=(
+                        "Cohort analysis across monitored cases [M_CASE_COUNT_TOTAL] reveals active "
+                        "student engagement workflows with coordinated advisor intervention tasks [M_TASKS_TOTAL]."
+                    ),
+                    observed_patterns=[
+                        "Cohort monitoring encompasses active workflow staging [M_CASE_COUNT_TOTAL].",
+                        "Support tasks are actively in progress across catalog roles [M_TASKS_TOTAL].",
+                    ],
+                    metric_references=["M_CASE_COUNT_TOTAL", "M_TASKS_TOTAL"],
+                    missing_or_insufficient_evidence=[
+                        "Longitudinal end-of-term academic grade marks remain pending upcoming assessment dates.",
+                    ],
+                    limitations_and_caveats=[
+                        "Observational workflow distributions do not establish causal intervention efficacy.",
+                    ],
+                    institutional_review_questions=[
+                        "Are outreach windows keeping pace with early course milestone deadlines?",
+                    ],
+                    human_review_status="DRAFT_AWAITING_REVIEW",
+                    is_synthetic=True,
+                    agent_version="1.0.0",
+                    provider_mode="MOCK",
+                    created_at="2026-10-12T07:00:00Z",
+                ),
+                latency_ms=self.simulated_latency_sec * 1000.0,
+                model_name="mock-deterministic-v1",
+                provider_name="mock-offline-provider",
+                tokens_used=120,
+            )
+
         # If no explicit canned response is registered, try constructing a default instance
         try:
             default_instance = response_model.model_construct()

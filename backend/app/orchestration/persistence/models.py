@@ -8,11 +8,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.app.orchestration.contracts import (
     ActionStep,
+    CommunicationDraft,
+    CommunicationDraftStatus,
     EvidenceChallengeReport,
     InterventionProposal,
     OrchestrationResult,
     RunStatus,
     SignalInterpretation,
+    StructuredNoteDraft,
+    StructuredNoteStatus,
     SupportPlanDraft,
     ValidationSummary,
 )
@@ -149,6 +153,9 @@ class FollowUpRecord(BaseModel):
     observation_note: str
     evidence_reference: Optional[str] = None
     created_at: str
+    draft_id: Optional[str] = None
+    is_structured: bool = False
+    structured_data: Optional[dict[str, Any]] = None
 
 
 class AuditEventRecord(BaseModel):
@@ -256,4 +263,166 @@ class CaseDetailResponse(BaseModel):
     tasks: list[TaskRecord]
     follow_ups: list[FollowUpRecord]
     audit_events: list[AuditEventRecord]
+    communication_drafts: list["CommunicationDraftRecord"] = Field(default_factory=list)
+    structured_note_drafts: list["StructuredNoteDraftRecord"] = Field(default_factory=list)
+
+
+# -----------------------------------------------------------------------------
+# Phase 5: Communication Draft & Note Structuring Persistence Schemas
+# -----------------------------------------------------------------------------
+
+class CommunicationDraftRecord(BaseModel):
+    """Persisted communication draft record."""
+    model_config = ConfigDict(extra="forbid")
+
+    draft_id: str
+    case_id: str
+    plan_version: int
+    intended_role: str
+    communication_purpose: str
+    template_id: str
+    subject: str
+    message_body: str
+    source_references: list[str] = Field(default_factory=list)
+    missing_information_or_limitations: list[str] = Field(default_factory=list)
+    human_review_status: CommunicationDraftStatus
+    generation_metadata: dict[str, Any] = Field(default_factory=dict)
+    created_by: str
+    created_at: str
+    updated_at: str
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    review_notes: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+
+class StructuredNoteDraftRecord(BaseModel):
+    """Persisted structured follow-up note draft record."""
+    model_config = ConfigDict(extra="forbid")
+
+    draft_id: str
+    case_id: str
+    task_id: Optional[str] = None
+    raw_note_content: str
+    source_note_hash: str
+    reported_actions_taken: list[str] = Field(default_factory=list)
+    staff_observations: list[str] = Field(default_factory=list)
+    attributed_student_statements: list[str] = Field(default_factory=list)
+    documented_evidence_references: list[str] = Field(default_factory=list)
+    unresolved_questions_or_concerns: list[str] = Field(default_factory=list)
+    missing_or_contradictory_information: list[str] = Field(default_factory=list)
+    potential_follow_up_evidence_required: list[str] = Field(default_factory=list)
+    claims_requiring_confirmation: list[str] = Field(default_factory=list)
+    human_confirmation_status: StructuredNoteStatus
+    generation_metadata: dict[str, Any] = Field(default_factory=dict)
+    submitted_by: str
+    submitted_by_role: str
+    created_at: str
+    confirmed_by: Optional[str] = None
+    confirmed_at: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+
+class CommunicationDraftCreateRequest(BaseModel):
+    """Payload to request Agent 5 draft communication generation."""
+    template_id: str
+    intended_role: str
+    untrusted_advisor_notes: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+
+class CommunicationDraftUpdateRequest(BaseModel):
+    """Payload to edit, approve for future use, or discard a communication draft."""
+    subject: Optional[str] = None
+    message_body: Optional[str] = None
+    review_status: Optional[CommunicationDraftStatus] = None
+    review_notes: Optional[str] = None
+
+
+class NoteStructureRequest(BaseModel):
+    """Payload to invoke Agent 6 follow-up note structuring."""
+    raw_note: str
+    task_id: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+
+class StructuredNoteConfirmRequest(BaseModel):
+    """Payload to confirm an edited/reviewed structured note into durable ledger."""
+    draft_id: str
+    task_id: Optional[str] = None
+    reported_actions_taken: list[str] = Field(default_factory=list)
+    staff_observations: list[str] = Field(default_factory=list)
+    attributed_student_statements: list[str] = Field(default_factory=list)
+    documented_evidence_references: list[str] = Field(default_factory=list)
+    unresolved_questions_or_concerns: list[str] = Field(default_factory=list)
+    evidence_reference: Optional[str] = None
+    confirmation_notes: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+
+# -----------------------------------------------------------------------------
+# Phase 6 Models: Cohort Analytics & Support Evidence Ledger Export
+# -----------------------------------------------------------------------------
+
+class CohortInsightReportRecord(BaseModel):
+    """Durable record of an Agent 7 cohort learning insight report."""
+    model_config = ConfigDict(extra="forbid")
+
+    report_id: str
+    snapshot_id: str
+    campus_id: str
+    is_synthetic: bool = True
+    summary_narrative: str
+    observed_patterns: list[str] = Field(default_factory=list)
+    metric_references: list[str] = Field(default_factory=list)
+    missing_or_insufficient_evidence: list[str] = Field(default_factory=list)
+    limitations_and_caveats: list[str] = Field(default_factory=list)
+    institutional_review_questions: list[str] = Field(default_factory=list)
+    human_review_status: str = "DRAFT_AWAITING_REVIEW"
+    agent_version: str
+    provider_mode: str
+    created_by: str
+    created_at: str
+
+
+class CohortReportGenerateRequest(BaseModel):
+    """Request payload to generate a new Agent 7 cohort insight report."""
+    campus_id: Optional[str] = None
+    min_cohort_threshold: int = Field(default=5, ge=1)
+    grouping_dimension: str = Field(default="ALL_CAMPUS_CASES")
+
+
+class AuditExportEventItem(BaseModel):
+    """Single canonical audit ledger event in an export package."""
+    model_config = ConfigDict(extra="forbid")
+
+    seq_id: int
+    event_id: str
+    case_id: str
+    event_type: str
+    actor_id: str
+    actor_role: str
+    payload_canonical_json: str
+    prev_entry_hash: str
+    entry_hash: str
+    timestamp: str
+
+
+class AuditExportPackage(BaseModel):
+    """
+    Export package of the Support Evidence Ledger for institutional audit review.
+    Contains canonical event ordering, cryptographic backward hash pointers, and verification status.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    export_schema_version: str = "3.0"
+    exported_at: str
+    exported_by: str
+    campus_filter: Optional[str] = None
+    total_events: int
+    is_chain_valid: bool
+    chain_verification_message: str
+    events: list[AuditExportEventItem]
+
+
 

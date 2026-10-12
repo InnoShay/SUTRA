@@ -7,7 +7,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 
 CREATE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -107,6 +107,75 @@ CREATE TABLE IF NOT EXISTS follow_up_records (
     actor_role TEXT NOT NULL,
     observation_note TEXT NOT NULL,
     evidence_reference TEXT,
+    created_at TEXT NOT NULL,
+    draft_id TEXT,
+    is_structured INTEGER NOT NULL DEFAULT 0,
+    structured_data_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS communication_drafts (
+    draft_id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL REFERENCES cases(case_id),
+    plan_version INTEGER NOT NULL,
+    intended_role TEXT NOT NULL,
+    communication_purpose TEXT NOT NULL,
+    template_id TEXT NOT NULL,
+    subject TEXT,
+    message_body TEXT NOT NULL,
+    source_references_json TEXT NOT NULL DEFAULT '[]',
+    limitations_json TEXT NOT NULL DEFAULT '[]',
+    human_review_status TEXT NOT NULL DEFAULT 'DRAFT_AWAITING_REVIEW',
+    generation_metadata_json TEXT NOT NULL DEFAULT '{}',
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    reviewed_by TEXT,
+    reviewed_at TEXT,
+    review_notes TEXT,
+    idempotency_key TEXT,
+    UNIQUE(case_id, created_by, idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS structured_follow_up_drafts (
+    draft_id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL REFERENCES cases(case_id),
+    task_id TEXT REFERENCES tasks(task_id),
+    raw_note_content TEXT NOT NULL,
+    source_note_hash TEXT NOT NULL,
+    reported_actions_json TEXT NOT NULL DEFAULT '[]',
+    staff_observations_json TEXT NOT NULL DEFAULT '[]',
+    student_statements_json TEXT NOT NULL DEFAULT '[]',
+    evidence_references_json TEXT NOT NULL DEFAULT '[]',
+    unresolved_questions_json TEXT NOT NULL DEFAULT '[]',
+    missing_or_contradictory_json TEXT NOT NULL DEFAULT '[]',
+    potential_follow_up_evidence_json TEXT NOT NULL DEFAULT '[]',
+    claims_requiring_confirmation_json TEXT NOT NULL DEFAULT '[]',
+    human_confirmation_status TEXT NOT NULL DEFAULT 'DRAFT_AWAITING_CONFIRMATION',
+    generation_metadata_json TEXT NOT NULL DEFAULT '{}',
+    submitted_by TEXT NOT NULL,
+    submitted_by_role TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    confirmed_by TEXT,
+    confirmed_at TEXT,
+    idempotency_key TEXT,
+    UNIQUE(case_id, submitted_by, idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS cohort_insight_reports (
+    report_id TEXT PRIMARY KEY,
+    snapshot_id TEXT NOT NULL,
+    campus_id TEXT NOT NULL,
+    is_synthetic INTEGER NOT NULL DEFAULT 1,
+    summary_narrative TEXT NOT NULL,
+    observed_patterns_json TEXT NOT NULL DEFAULT '[]',
+    metric_references_json TEXT NOT NULL DEFAULT '[]',
+    missing_evidence_json TEXT NOT NULL DEFAULT '[]',
+    limitations_json TEXT NOT NULL DEFAULT '[]',
+    review_questions_json TEXT NOT NULL DEFAULT '[]',
+    human_review_status TEXT NOT NULL DEFAULT 'DRAFT_COHORT_SUMMARY',
+    agent_version TEXT NOT NULL,
+    provider_mode TEXT NOT NULL,
+    created_by TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
 
@@ -128,6 +197,9 @@ CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_case_id ON tasks(case_id);
 CREATE INDEX IF NOT EXISTS idx_audit_case_id ON audit_ledger(case_id);
 CREATE INDEX IF NOT EXISTS idx_audit_seq_id ON audit_ledger(seq_id);
+CREATE INDEX IF NOT EXISTS idx_comm_drafts_case_id ON communication_drafts(case_id);
+CREATE INDEX IF NOT EXISTS idx_struct_drafts_case_id ON structured_follow_up_drafts(case_id);
+CREATE INDEX IF NOT EXISTS idx_cohort_reports_campus ON cohort_insight_reports(campus_id);
 
 -- Anti-tamper database-level triggers
 CREATE TRIGGER IF NOT EXISTS prevent_audit_ledger_update
@@ -179,11 +251,23 @@ def create_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
 
 def init_db(conn: sqlite3.Connection) -> None:
     """Initialize database tables, indexes, triggers and record schema migration."""
+    from datetime import datetime, timezone
     with conn:
         conn.executescript(CREATE_TABLES_SQL)
+
+        # Migration: Check existing columns in follow_up_records
+        cursor = conn.execute("PRAGMA table_info(follow_up_records);")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "draft_id" not in columns:
+            conn.execute("ALTER TABLE follow_up_records ADD COLUMN draft_id TEXT;")
+        if "is_structured" not in columns:
+            conn.execute("ALTER TABLE follow_up_records ADD COLUMN is_structured INTEGER NOT NULL DEFAULT 0;")
+        if "structured_data_json" not in columns:
+            conn.execute("ALTER TABLE follow_up_records ADD COLUMN structured_data_json TEXT;")
+
+        # Record migration version
         cursor = conn.execute("SELECT version FROM schema_migrations WHERE version = ?", (SCHEMA_VERSION,))
         if not cursor.fetchone():
-            from datetime import datetime, timezone
             conn.execute(
                 "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
                 (SCHEMA_VERSION, datetime.now(timezone.utc).isoformat())

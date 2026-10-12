@@ -6,19 +6,26 @@ tamper-evident audit append, and strict task vs outcome separation.
 """
 
 from datetime import datetime, timezone
+import hashlib
 import json
 import sqlite3
 from typing import Any, Optional
 from uuid import uuid4
 
-from backend.app.orchestration.catalog import SyntheticDemoCatalog
+from backend.app.orchestration.agents import CommunicationDrafter, NoteStructuringAgent
+from backend.app.orchestration.catalog import SyntheticCommunicationCatalog, SyntheticDemoCatalog
 from backend.app.orchestration.contracts import (
     ActionStep,
+    CohortInsightReport,
+    CommunicationDraft,
+    CommunicationDraftStatus,
     EvidenceChallengeReport,
     InterventionProposal,
     OrchestrationResult,
     RunStatus,
     SignalInterpretation,
+    StructuredNoteDraft,
+    StructuredNoteStatus,
     SupportPlanDraft,
     ValidationSummary,
 )
@@ -32,6 +39,8 @@ from backend.app.orchestration.persistence.audit import (
 from backend.app.orchestration.persistence.models import (
     AdvisorDecisionKind,
     AuditEventRecord,
+    AuditExportEventItem,
+    AuditExportPackage,
     AuditVerificationResult,
     CaseDecisionRecord,
     CaseDecisionRequest,
@@ -39,15 +48,25 @@ from backend.app.orchestration.persistence.models import (
     CaseRecord,
     CaseStatus,
     CaseSummaryItem,
+    CohortInsightReportRecord,
+    CohortReportGenerateRequest,
+    CommunicationDraftCreateRequest,
+    CommunicationDraftRecord,
+    CommunicationDraftUpdateRequest,
     FollowUpCreateRequest,
     FollowUpRecord,
+    NoteStructureRequest,
     OutcomeRecordRequest,
     OutcomeStatus,
     PlanVersionRecord,
+    StructuredNoteConfirmRequest,
+    StructuredNoteDraftRecord,
     TaskRecord,
     TaskStatus,
     TaskStatusUpdateRequest,
 )
+from backend.app.orchestration.provider import LLMProviderProtocol, MockLLMClient
+from backend.app.orchestration.validator import DeterministicValidator
 from sutra_ml.schemas.evidence_card import SutraEvidenceCard
 
 
@@ -360,6 +379,32 @@ class CaseRepository:
             updated_at=row["updated_at"],
         )
 
+    def get_plan_version(self, case_id: str, version_number: int) -> Optional[PlanVersionRecord]:
+        """Fetch a specific plan version for a case."""
+        cur = self.conn.execute(
+            "SELECT * FROM plan_versions WHERE case_id = ? AND version_number = ?",
+            (case_id, version_number),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        steps_data = json.loads(row["action_steps_json"])
+        return PlanVersionRecord(
+            plan_id=row["plan_id"],
+            case_id=row["case_id"],
+            version_number=row["version_number"],
+            plan_hash=row["plan_hash"],
+            is_advisor_modified=bool(row["is_advisor_modified"]),
+            plan_title=row["plan_title"],
+            target_window_days=row["target_window_days"],
+            rationale=row["rationale"] or "",
+            action_steps=[ActionStep.model_validate(s) for s in steps_data],
+            evidence_requirements=json.loads(row["evidence_requirements_json"]),
+            limitations_and_questions=json.loads(row["limitations_json"]),
+            created_by=row["created_by"],
+            created_at=row["created_at"],
+        )
+
     def list_cases(
         self,
         campus_id: Optional[str] = None,
@@ -546,19 +591,30 @@ class CaseRepository:
             "SELECT * FROM follow_up_records WHERE case_id = ? ORDER BY created_at ASC",
             (case_id,),
         )
-        follow_ups: list[FollowUpRecord] = [
-            FollowUpRecord(
-                follow_up_id=fu["follow_up_id"],
-                case_id=fu["case_id"],
-                task_id=fu["task_id"],
-                actor_id=fu["actor_id"],
-                actor_role=fu["actor_role"],
-                observation_note=fu["observation_note"],
-                evidence_reference=fu["evidence_reference"],
-                created_at=fu["created_at"],
+        follow_ups: list[FollowUpRecord] = []
+        for fu in fu_cursor.fetchall():
+            cols = fu.keys()
+            struct_data = None
+            if "structured_data_json" in cols and fu["structured_data_json"]:
+                try:
+                    struct_data = json.loads(fu["structured_data_json"])
+                except Exception:
+                    struct_data = None
+            follow_ups.append(
+                FollowUpRecord(
+                    follow_up_id=fu["follow_up_id"],
+                    case_id=fu["case_id"],
+                    task_id=fu["task_id"],
+                    actor_id=fu["actor_id"],
+                    actor_role=fu["actor_role"],
+                    observation_note=fu["observation_note"],
+                    evidence_reference=fu["evidence_reference"],
+                    created_at=fu["created_at"],
+                    draft_id=fu["draft_id"] if "draft_id" in cols else None,
+                    is_structured=bool(fu["is_structured"]) if "is_structured" in cols else False,
+                    structured_data=struct_data,
+                )
             )
-            for fu in fu_cursor.fetchall()
-        ]
 
         # Load audit events
         audit_cursor = self.conn.execute(
@@ -581,6 +637,26 @@ class CaseRepository:
             for a in audit_cursor.fetchall()
         ]
 
+        # Load communication drafts
+        comm_cursor = self.conn.execute(
+            "SELECT * FROM communication_drafts WHERE case_id = ? ORDER BY created_at ASC",
+            (case_id,),
+        )
+        communication_drafts = [
+            self._row_to_communication_draft(r)
+            for r in comm_cursor.fetchall()
+        ]
+
+        # Load structured note drafts
+        note_cursor = self.conn.execute(
+            "SELECT * FROM structured_follow_up_drafts WHERE case_id = ? ORDER BY created_at ASC",
+            (case_id,),
+        )
+        structured_note_drafts = [
+            self._row_to_structured_note_draft(r)
+            for r in note_cursor.fetchall()
+        ]
+
         return CaseDetailResponse(
             case=case,
             evidence_card=evidence_card,
@@ -594,6 +670,8 @@ class CaseRepository:
             tasks=tasks,
             follow_ups=follow_ups,
             audit_events=audit_events,
+            communication_drafts=communication_drafts,
+            structured_note_drafts=structured_note_drafts,
         )
 
     def submit_advisor_decision(
@@ -1107,3 +1185,779 @@ class CaseRepository:
             for r in cursor.fetchall()
         ]
         return verify_audit_chain(events)
+
+    # -------------------------------------------------------------------------
+    # Phase 5: Communication Draft Management (Agent 5)
+    # -------------------------------------------------------------------------
+
+    def _row_to_communication_draft(self, r: sqlite3.Row) -> CommunicationDraftRecord:
+        """Helper deserializing communication_drafts row to typed record."""
+        return CommunicationDraftRecord(
+            draft_id=r["draft_id"],
+            case_id=r["case_id"],
+            plan_version=r["plan_version"],
+            intended_role=r["intended_role"],
+            communication_purpose=r["communication_purpose"],
+            template_id=r["template_id"],
+            subject=r["subject"] or "",
+            message_body=r["message_body"],
+            source_references=json.loads(r["source_references_json"]),
+            missing_information_or_limitations=json.loads(r["limitations_json"]),
+            human_review_status=CommunicationDraftStatus(r["human_review_status"]),
+            generation_metadata=json.loads(r["generation_metadata_json"]),
+            created_by=r["created_by"],
+            created_at=r["created_at"],
+            updated_at=r["updated_at"],
+            reviewed_by=r["reviewed_by"],
+            reviewed_at=r["reviewed_at"],
+            review_notes=r["review_notes"],
+            idempotency_key=r["idempotency_key"],
+        )
+
+    def _row_to_structured_note_draft(self, r: sqlite3.Row) -> StructuredNoteDraftRecord:
+        """Helper deserializing structured_follow_up_drafts row to typed record."""
+        return StructuredNoteDraftRecord(
+            draft_id=r["draft_id"],
+            case_id=r["case_id"],
+            task_id=r["task_id"],
+            raw_note_content=r["raw_note_content"],
+            source_note_hash=r["source_note_hash"],
+            reported_actions_taken=json.loads(r["reported_actions_json"]),
+            staff_observations=json.loads(r["staff_observations_json"]),
+            attributed_student_statements=json.loads(r["student_statements_json"]),
+            documented_evidence_references=json.loads(r["evidence_references_json"]),
+            unresolved_questions_or_concerns=json.loads(r["unresolved_questions_json"]),
+            missing_or_contradictory_information=json.loads(r["missing_or_contradictory_json"]),
+            potential_follow_up_evidence_required=json.loads(r["potential_follow_up_evidence_json"]),
+            claims_requiring_confirmation=json.loads(r["claims_requiring_confirmation_json"]),
+            human_confirmation_status=StructuredNoteStatus(r["human_confirmation_status"]),
+            generation_metadata=json.loads(r["generation_metadata_json"]),
+            submitted_by=r["submitted_by"],
+            submitted_by_role=r["submitted_by_role"],
+            created_at=r["created_at"],
+            confirmed_by=r["confirmed_by"],
+            confirmed_at=r["confirmed_at"],
+            idempotency_key=r["idempotency_key"],
+        )
+
+    def create_communication_draft(
+        self,
+        case_id: str,
+        request: CommunicationDraftCreateRequest,
+        actor_id: str,
+        actor_role: str,
+        campus_id: str,
+        provider: Optional[LLMProviderProtocol] = None,
+    ) -> CommunicationDraftRecord:
+        """
+        Generate and persist a draft stakeholder communication using Agent 5.
+        Enforces that plan is approved, role is permitted, and idempotency key is respected.
+        """
+        ts = self._now()
+        with self.conn:
+            case = self.get_case(case_id)
+            if not case:
+                raise ValueError(f"Case {case_id} not found.")
+            if case.campus_id != campus_id:
+                raise PermissionError("Forbidden: Campus mismatch.")
+
+            # Validate case has an approved plan version
+            if case.status not in (CaseStatus.APPROVED, CaseStatus.IN_PROGRESS, CaseStatus.TASKS_COMPLETED):
+                raise ValueError("Cannot draft communication: case does not have an approved support plan.")
+
+            plan = self.get_plan_version(case_id, case.current_plan_version)
+            if not plan:
+                raise ValueError(f"Plan version {case.current_plan_version} for case {case_id} not found.")
+
+            # Idempotency check
+            if request.idempotency_key:
+                cur = self.conn.execute(
+                    "SELECT * FROM communication_drafts WHERE case_id = ? AND created_by = ? AND idempotency_key = ?",
+                    (case_id, actor_id, request.idempotency_key),
+                )
+                existing = cur.fetchone()
+                if existing:
+                    # Compare request payload for consistency
+                    if (
+                        existing["template_id"] == request.template_id
+                        and existing["intended_role"] == request.intended_role
+                    ):
+                        return self._row_to_communication_draft(existing)
+                    raise ValueError("Idempotency key reused with different request payload.")
+
+            active_provider = provider or MockLLMClient()
+
+            # Execute Agent 5
+            draft = CommunicationDrafter.draft(
+                case_id=case_id,
+                plan=plan,
+                template_id=request.template_id,
+                intended_role=request.intended_role,
+                provider=active_provider,
+                untrusted_advisor_notes=request.untrusted_advisor_notes,
+            )
+
+            # Deterministic Validation Gate
+            validation = DeterministicValidator.validate_communication_draft(
+                draft=draft,
+                is_plan_approved=True,
+            )
+            if not validation.passed:
+                errors = [f.message for f in validation.findings if f.severity.value == "ERROR"]
+                raise ValueError(f"Communication draft failed validation gate: {'; '.join(errors)}")
+
+            draft_id = f"DRAFT-{uuid4().hex[:10]}"
+            self.conn.execute(
+                """
+                INSERT INTO communication_drafts (
+                    draft_id, case_id, plan_version, intended_role, communication_purpose,
+                    template_id, subject, message_body, source_references_json,
+                    limitations_json, human_review_status, generation_metadata_json,
+                    created_by, created_at, updated_at, idempotency_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    draft_id,
+                    case_id,
+                    plan.version_number,
+                    request.intended_role,
+                    draft.communication_purpose,
+                    request.template_id,
+                    draft.subject,
+                    draft.message_body,
+                    canonical_json(draft.source_references),
+                    canonical_json(draft.missing_information_or_limitations),
+                    CommunicationDraftStatus.DRAFT_AWAITING_REVIEW.value,
+                    canonical_json(draft.generation_metadata),
+                    actor_id,
+                    ts,
+                    ts,
+                    request.idempotency_key,
+                ),
+            )
+
+            self._append_audit_event(
+                case_id=case_id,
+                event_type="COMMUNICATION_DRAFT_CREATED",
+                actor_id=actor_id,
+                actor_role=actor_role,
+                payload={
+                    "draft_id": draft_id,
+                    "plan_version": plan.version_number,
+                    "template_id": request.template_id,
+                    "intended_role": request.intended_role,
+                    "subject": draft.subject,
+                },
+                timestamp=ts,
+            )
+
+            cur = self.conn.execute("SELECT * FROM communication_drafts WHERE draft_id = ?", (draft_id,))
+            return self._row_to_communication_draft(cur.fetchone())
+
+    def get_communication_drafts(self, case_id: str) -> list[CommunicationDraftRecord]:
+        """List all communication drafts for a case."""
+        cur = self.conn.execute(
+            "SELECT * FROM communication_drafts WHERE case_id = ? ORDER BY created_at ASC",
+            (case_id,),
+        )
+        return [self._row_to_communication_draft(r) for r in cur.fetchall()]
+
+    def get_communication_draft(self, case_id: str, draft_id: str) -> Optional[CommunicationDraftRecord]:
+        """Retrieve single communication draft."""
+        cur = self.conn.execute(
+            "SELECT * FROM communication_drafts WHERE case_id = ? AND draft_id = ?",
+            (case_id, draft_id),
+        )
+        row = cur.fetchone()
+        return self._row_to_communication_draft(row) if row else None
+
+    def update_communication_draft(
+        self,
+        case_id: str,
+        draft_id: str,
+        request: CommunicationDraftUpdateRequest,
+        actor_id: str,
+        actor_role: str,
+        campus_id: str,
+    ) -> CommunicationDraftRecord:
+        """
+        Update, approve for future use, or discard a communication draft.
+        Enforces that messages are never sent and reviews are audited.
+        """
+        ts = self._now()
+        with self.conn:
+            case = self.get_case(case_id)
+            if not case:
+                raise ValueError(f"Case {case_id} not found.")
+            if case.campus_id != campus_id:
+                raise PermissionError("Forbidden: Campus mismatch.")
+
+            draft = self.get_communication_draft(case_id, draft_id)
+            if not draft:
+                raise ValueError(f"Draft {draft_id} not found.")
+
+            new_subject = request.subject if request.subject is not None else draft.subject
+            new_body = request.message_body if request.message_body is not None else draft.message_body
+            new_status = request.review_status.value if request.review_status else draft.human_review_status.value
+            reviewed_by = actor_id if request.review_status else draft.reviewed_by
+            reviewed_at = ts if request.review_status else draft.reviewed_at
+            review_notes = request.review_notes if request.review_notes is not None else draft.review_notes
+
+            self.conn.execute(
+                """
+                UPDATE communication_drafts
+                SET subject = ?, message_body = ?, human_review_status = ?,
+                    reviewed_by = ?, reviewed_at = ?, review_notes = ?, updated_at = ?
+                WHERE draft_id = ?
+                """,
+                (
+                    new_subject,
+                    new_body,
+                    new_status,
+                    reviewed_by,
+                    reviewed_at,
+                    review_notes,
+                    ts,
+                    draft_id,
+                ),
+            )
+
+            # Determine audit event type
+            if request.review_status == CommunicationDraftStatus.APPROVED_FOR_USE:
+                event_type = "COMMUNICATION_DRAFT_APPROVED"
+            elif request.review_status == CommunicationDraftStatus.DISCARDED:
+                event_type = "COMMUNICATION_DRAFT_DISCARDED"
+            else:
+                event_type = "COMMUNICATION_DRAFT_UPDATED"
+
+            self._append_audit_event(
+                case_id=case_id,
+                event_type=event_type,
+                actor_id=actor_id,
+                actor_role=actor_role,
+                payload={
+                    "draft_id": draft_id,
+                    "review_status": new_status,
+                    "review_notes": review_notes,
+                },
+                timestamp=ts,
+            )
+
+            return self.get_communication_draft(case_id, draft_id)  # type: ignore
+
+    # -------------------------------------------------------------------------
+    # Phase 5: Follow-up Note Structuring & Confirmation (Agent 6)
+    # -------------------------------------------------------------------------
+
+    def structure_follow_up_note(
+        self,
+        case_id: str,
+        request: NoteStructureRequest,
+        actor_id: str,
+        actor_role: str,
+        campus_id: str,
+        provider: Optional[LLMProviderProtocol] = None,
+    ) -> StructuredNoteDraftRecord:
+        """
+        Structure a staff follow-up note into reviewable categories via Agent 6.
+        Saves as unconfirmed draft; does not modify case outcome.
+        """
+        ts = self._now()
+        with self.conn:
+            case = self.get_case(case_id)
+            if not case:
+                raise ValueError(f"Case {case_id} not found.")
+            if case.campus_id != campus_id:
+                raise PermissionError("Forbidden: Campus mismatch.")
+
+            # Idempotency check
+            if request.idempotency_key:
+                cur = self.conn.execute(
+                    "SELECT * FROM structured_follow_up_drafts WHERE case_id = ? AND submitted_by = ? AND idempotency_key = ?",
+                    (case_id, actor_id, request.idempotency_key),
+                )
+                existing = cur.fetchone()
+                if existing:
+                    if (
+                        existing["raw_note_content"] == request.raw_note
+                        and existing["task_id"] == request.task_id
+                    ):
+                        return self._row_to_structured_note_draft(existing)
+                    raise ValueError("Idempotency key reused with different request payload.")
+
+            # Look up task context if associated
+            task_desc = None
+            evidence_expected = None
+            if request.task_id:
+                cur = self.conn.execute("SELECT * FROM tasks WHERE task_id = ?", (request.task_id,))
+                t_row = cur.fetchone()
+                if t_row:
+                    task_desc = t_row["action_description"]
+                    evidence_expected = t_row["follow_up_evidence_required"]
+
+            active_provider = provider or MockLLMClient()
+
+            # Execute Agent 6
+            draft = NoteStructuringAgent.structure_note(
+                case_id=case_id,
+                raw_note=request.raw_note,
+                submitted_by=actor_id,
+                submitted_by_role=actor_role,
+                provider=active_provider,
+                task_id=request.task_id,
+                task_description=task_desc,
+                follow_up_evidence_expected=evidence_expected,
+                current_outcome_status=case.outcome_status.value,
+            )
+
+            # Deterministic Validation Gate
+            validation = DeterministicValidator.validate_structured_note(draft)
+            if not validation.passed:
+                errors = [f.message for f in validation.findings if f.severity.value == "ERROR"]
+                raise ValueError(f"Structured note failed validation gate: {'; '.join(errors)}")
+
+            draft_id = f"STR-FU-{uuid4().hex[:10]}"
+            self.conn.execute(
+                """
+                INSERT INTO structured_follow_up_drafts (
+                    draft_id, case_id, task_id, raw_note_content, source_note_hash,
+                    reported_actions_json, staff_observations_json, student_statements_json,
+                    evidence_references_json, unresolved_questions_json, missing_or_contradictory_json,
+                    potential_follow_up_evidence_json, claims_requiring_confirmation_json,
+                    human_confirmation_status, generation_metadata_json, submitted_by,
+                    submitted_by_role, created_at, idempotency_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    draft_id,
+                    case_id,
+                    request.task_id,
+                    request.raw_note,
+                    draft.source_note_hash,
+                    canonical_json(draft.reported_actions_taken),
+                    canonical_json(draft.staff_observations),
+                    canonical_json(draft.attributed_student_statements),
+                    canonical_json(draft.documented_evidence_references),
+                    canonical_json(draft.unresolved_questions_or_concerns),
+                    canonical_json(draft.missing_or_contradictory_information),
+                    canonical_json(draft.potential_follow_up_evidence_required),
+                    canonical_json(draft.claims_requiring_confirmation),
+                    StructuredNoteStatus.DRAFT_AWAITING_CONFIRMATION.value,
+                    canonical_json(draft.generation_metadata),
+                    actor_id,
+                    actor_role,
+                    ts,
+                    request.idempotency_key,
+                ),
+            )
+
+            self._append_audit_event(
+                case_id=case_id,
+                event_type="FOLLOW_UP_NOTE_STRUCTURED",
+                actor_id=actor_id,
+                actor_role=actor_role,
+                payload={
+                    "draft_id": draft_id,
+                    "task_id": request.task_id,
+                    "source_note_hash": draft.source_note_hash,
+                },
+                timestamp=ts,
+            )
+
+            cur = self.conn.execute("SELECT * FROM structured_follow_up_drafts WHERE draft_id = ?", (draft_id,))
+            return self._row_to_structured_note_draft(cur.fetchone())
+
+    def get_structured_note_drafts(self, case_id: str) -> list[StructuredNoteDraftRecord]:
+        """List all structured note drafts for a case."""
+        cur = self.conn.execute(
+            "SELECT * FROM structured_follow_up_drafts WHERE case_id = ? ORDER BY created_at ASC",
+            (case_id,),
+        )
+        return [self._row_to_structured_note_draft(r) for r in cur.fetchall()]
+
+    def get_structured_note_draft(self, case_id: str, draft_id: str) -> Optional[StructuredNoteDraftRecord]:
+        """Retrieve single structured note draft."""
+        cur = self.conn.execute(
+            "SELECT * FROM structured_follow_up_drafts WHERE case_id = ? AND draft_id = ?",
+            (case_id, draft_id),
+        )
+        row = cur.fetchone()
+        return self._row_to_structured_note_draft(row) if row else None
+
+    def confirm_structured_note(
+        self,
+        case_id: str,
+        request: StructuredNoteConfirmRequest,
+        actor_id: str,
+        actor_role: str,
+        campus_id: str,
+    ) -> FollowUpRecord:
+        """
+        Advisor reviews and confirms structured follow-up note into durable ledger.
+        Explicitly preserves case outcome (outcome remains unchanged).
+        """
+        ts = self._now()
+        with self.conn:
+            case = self.get_case(case_id)
+            if not case:
+                raise ValueError(f"Case {case_id} not found.")
+            if case.campus_id != campus_id:
+                raise PermissionError("Forbidden: Campus mismatch.")
+
+            draft = self.get_structured_note_draft(case_id, request.draft_id)
+            if not draft:
+                raise ValueError(f"Structured note draft {request.draft_id} not found.")
+            if draft.human_confirmation_status != StructuredNoteStatus.DRAFT_AWAITING_CONFIRMATION:
+                raise ValueError(f"Draft is already {draft.human_confirmation_status.value}.")
+
+            # Update draft to CONFIRMED
+            self.conn.execute(
+                """
+                UPDATE structured_follow_up_drafts
+                SET human_confirmation_status = ?, confirmed_by = ?, confirmed_at = ?
+                WHERE draft_id = ?
+                """,
+                (
+                    StructuredNoteStatus.CONFIRMED.value,
+                    actor_id,
+                    ts,
+                    request.draft_id,
+                ),
+            )
+
+            # Build human-readable structured note representation
+            summary_parts = []
+            if request.reported_actions_taken:
+                summary_parts.append(f"Actions: {'; '.join(request.reported_actions_taken)}")
+            if request.staff_observations:
+                summary_parts.append(f"Observations: {'; '.join(request.staff_observations)}")
+            if request.attributed_student_statements:
+                summary_parts.append(f"Student Statements: {'; '.join(request.attributed_student_statements)}")
+            if request.confirmation_notes:
+                summary_parts.append(f"Advisor Note: {request.confirmation_notes}")
+            obs_note = " | ".join(summary_parts) if summary_parts else draft.raw_note_content
+
+            follow_up_id = f"FU-{uuid4().hex[:10]}"
+            structured_data = {
+                "draft_id": request.draft_id,
+                "reported_actions_taken": request.reported_actions_taken,
+                "staff_observations": request.staff_observations,
+                "attributed_student_statements": request.attributed_student_statements,
+                "documented_evidence_references": request.documented_evidence_references,
+                "unresolved_questions_or_concerns": request.unresolved_questions_or_concerns,
+                "confirmation_notes": request.confirmation_notes,
+            }
+
+            self.conn.execute(
+                """
+                INSERT INTO follow_up_records (
+                    follow_up_id, case_id, task_id, actor_id, actor_role,
+                    observation_note, evidence_reference, created_at,
+                    draft_id, is_structured, structured_data_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    follow_up_id,
+                    case_id,
+                    request.task_id or draft.task_id,
+                    actor_id,
+                    actor_role,
+                    obs_note,
+                    request.evidence_reference,
+                    ts,
+                    request.draft_id,
+                    1,
+                    canonical_json(structured_data),
+                ),
+            )
+
+            self._append_audit_event(
+                case_id=case_id,
+                event_type="FOLLOW_UP_STRUCTURED_CONFIRMED",
+                actor_id=actor_id,
+                actor_role=actor_role,
+                payload={
+                    "follow_up_id": follow_up_id,
+                    "draft_id": request.draft_id,
+                    "task_id": request.task_id or draft.task_id,
+                    "confirmed_by": actor_id,
+                },
+                timestamp=ts,
+            )
+
+            return FollowUpRecord(
+                follow_up_id=follow_up_id,
+                case_id=case_id,
+                task_id=request.task_id or draft.task_id,
+                actor_id=actor_id,
+                actor_role=actor_role,
+                observation_note=obs_note,
+                evidence_reference=request.evidence_reference,
+                created_at=ts,
+                draft_id=request.draft_id,
+                is_structured=True,
+                structured_data=structured_data,
+            )
+
+    def reject_structured_note(
+        self,
+        case_id: str,
+        draft_id: str,
+        actor_id: str,
+        actor_role: str,
+        campus_id: str,
+        rejection_reason: Optional[str] = None,
+    ) -> StructuredNoteDraftRecord:
+        """Reject structured follow-up note draft."""
+        ts = self._now()
+        with self.conn:
+            case = self.get_case(case_id)
+            if not case:
+                raise ValueError(f"Case {case_id} not found.")
+            if case.campus_id != campus_id:
+                raise PermissionError("Forbidden: Campus mismatch.")
+
+            draft = self.get_structured_note_draft(case_id, draft_id)
+            if not draft:
+                raise ValueError(f"Draft {draft_id} not found.")
+
+            self.conn.execute(
+                """
+                UPDATE structured_follow_up_drafts
+                SET human_confirmation_status = ?
+                WHERE draft_id = ?
+                """,
+                (
+                    StructuredNoteStatus.REJECTED.value,
+                    draft_id,
+                ),
+            )
+
+            self._append_audit_event(
+                case_id=case_id,
+                event_type="FOLLOW_UP_STRUCTURED_REJECTED",
+                actor_id=actor_id,
+                actor_role=actor_role,
+                payload={
+                    "draft_id": draft_id,
+                    "rejection_reason": rejection_reason,
+                },
+                timestamp=ts,
+            )
+
+            return self.get_structured_note_draft(case_id, draft_id)  # type: ignore
+
+    # -------------------------------------------------------------------------
+    # Phase 6: Cohort Learning Analyst & Audit Export
+    # -------------------------------------------------------------------------
+
+    def _row_to_cohort_report(self, r: sqlite3.Row) -> CohortInsightReportRecord:
+        return CohortInsightReportRecord(
+            report_id=r["report_id"],
+            snapshot_id=r["snapshot_id"],
+            campus_id=r["campus_id"],
+            is_synthetic=bool(r["is_synthetic"]),
+            summary_narrative=r["summary_narrative"],
+            observed_patterns=json.loads(r["observed_patterns_json"]),
+            metric_references=json.loads(r["metric_references_json"]),
+            missing_or_insufficient_evidence=json.loads(r["missing_evidence_json"]),
+            limitations_and_caveats=json.loads(r["limitations_json"]),
+            institutional_review_questions=json.loads(r["review_questions_json"]),
+            human_review_status=r["human_review_status"],
+            agent_version=r["agent_version"],
+            provider_mode=r["provider_mode"],
+            created_by=r["created_by"],
+            created_at=r["created_at"],
+        )
+
+    def create_cohort_report(
+        self,
+        snapshot_id: str,
+        campus_id: str,
+        report: CohortInsightReport,
+        agent_version: str,
+        provider_mode: str,
+        actor_id: str = "SYSTEM_AGENT_7",
+        is_synthetic: bool = True,
+    ) -> CohortInsightReportRecord:
+        """Persist structured Cohort Learning Analyst insight report and append to ledger."""
+        report_id = f"rpt_{uuid4().hex[:12]}"
+        ts = self._now()
+
+        with self.conn:
+            self.conn.execute(
+                """
+                INSERT INTO cohort_insight_reports (
+                    report_id, snapshot_id, campus_id, is_synthetic,
+                    summary_narrative, observed_patterns_json, metric_references_json,
+                    missing_evidence_json, limitations_json, review_questions_json,
+                    human_review_status, agent_version, provider_mode, created_by, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    report_id,
+                    snapshot_id,
+                    campus_id,
+                    1 if is_synthetic else 0,
+                    report.summary_narrative,
+                    json.dumps(report.observed_patterns),
+                    json.dumps(report.metric_references),
+                    json.dumps(report.missing_or_insufficient_evidence),
+                    json.dumps(report.limitations_and_caveats),
+                    json.dumps(report.institutional_review_questions),
+                    "DRAFT_AWAITING_REVIEW",
+                    agent_version,
+                    provider_mode,
+                    actor_id,
+                    ts,
+                ),
+            )
+
+            self._append_audit_event(
+                case_id=f"COHORT:{campus_id}",
+                event_type="COHORT_REPORT_GENERATED",
+                actor_id=actor_id,
+                actor_role="COHORT_ANALYST",
+                payload={
+                    "report_id": report_id,
+                    "snapshot_id": snapshot_id,
+                    "campus_id": campus_id,
+                    "metric_references": report.metric_references,
+                    "agent_version": agent_version,
+                    "provider_mode": provider_mode,
+                },
+                timestamp=ts,
+            )
+
+        return self.get_cohort_report(report_id)  # type: ignore
+
+    def get_cohort_report(self, report_id: str) -> Optional[CohortInsightReportRecord]:
+        """Fetch a single cohort insight report by ID."""
+        cursor = self.conn.execute(
+            "SELECT * FROM cohort_insight_reports WHERE report_id = ?",
+            (report_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return self._row_to_cohort_report(row)
+
+    def list_cohort_reports(
+        self, campus_id: Optional[str] = None, limit: int = 50
+    ) -> list[CohortInsightReportRecord]:
+        """List cohort insight reports, optionally filtered by campus."""
+        if campus_id:
+            cursor = self.conn.execute(
+                "SELECT * FROM cohort_insight_reports WHERE campus_id = ? ORDER BY created_at DESC LIMIT ?",
+                (campus_id, limit),
+            )
+        else:
+            cursor = self.conn.execute(
+                "SELECT * FROM cohort_insight_reports ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            )
+        return [self._row_to_cohort_report(r) for r in cursor.fetchall()]
+
+    def generate_cohort_report(
+        self,
+        request: CohortReportGenerateRequest,
+        actor_id: str,
+        actor_role: str,
+        user_campus_id: str,
+        provider: Optional[LLMProviderProtocol] = None,
+    ) -> CohortInsightReportRecord:
+        """
+        Orchestrate Agent 7 (CohortLearningAnalyst) generation workflow:
+        1. Campus boundary isolation check.
+        2. Pure deterministic metric aggregation (compute_cohort_aggregates).
+        3. Invocation of CohortLearningAnalyst with structured metrics only.
+        4. Strict deterministic validation gate (grounding, anti-causality).
+        5. Atomic ledger persistence and audit trail append.
+        """
+        if user_campus_id != "CAMPUS-SYSTEM" and request.campus_id != user_campus_id:
+            raise PermissionError("Forbidden: Campus mismatch.")
+
+        from backend.app.orchestration.analytics import compute_cohort_aggregates
+        from backend.app.orchestration.agents.cohort_analyst import CohortLearningAnalyst
+
+        packet = compute_cohort_aggregates(
+            repo=self,
+            campus_id=request.campus_id,
+            min_cohort_threshold=request.min_cohort_threshold,
+            grouping_dimension=request.grouping_dimension,
+        )
+
+        active_provider = provider or MockLLMClient()
+        analyst = CohortLearningAnalyst(provider=active_provider)
+        report = analyst.analyze(packet)
+
+        # Validate with deterministic validator
+        val_summary = DeterministicValidator.validate_cohort_report(report, packet)
+        if not val_summary.passed:
+            err_msgs = [f"[{f.code}] {f.message}" for f in val_summary.findings]
+            raise ValueError(f"Cohort Insight Report failed validation: {'; '.join(err_msgs)}")
+
+        record = self.create_cohort_report(
+            snapshot_id=packet.snapshot_id,
+            campus_id=request.campus_id,
+            report=report,
+            agent_version=analyst.version,
+            provider_mode=analyst.provider_name,
+            actor_id=actor_id,
+            is_synthetic=True,
+        )
+        return record
+
+    def export_audit_ledger(
+        self,
+        campus_id: Optional[str] = None,
+        actor_id: str = "ADMIN",
+    ) -> AuditExportPackage:
+        """Export full verifiable audit ledger with cryptographic verification."""
+        verification = self.verify_audit_ledger()
+
+        if campus_id:
+            query = """
+                SELECT a.* FROM audit_ledger a
+                LEFT JOIN cases c ON a.case_id = c.case_id
+                WHERE (c.campus_id = ? OR a.case_id = 'COHORT_AGGREGATE' OR a.case_id LIKE ?)
+                ORDER BY a.seq_id ASC
+            """
+            params: list[Any] = [campus_id, f"COHORT:{campus_id}%"]
+        else:
+            query = "SELECT * FROM audit_ledger ORDER BY seq_id ASC"
+            params = []
+
+        cursor = self.conn.execute(query, params)
+        raw_rows = cursor.fetchall()
+
+        events: list[AuditExportEventItem] = []
+        for r in raw_rows:
+            events.append(
+                AuditExportEventItem(
+                    seq_id=r["seq_id"],
+                    event_id=r["event_id"],
+                    case_id=r["case_id"],
+                    event_type=r["event_type"],
+                    actor_id=r["actor_id"],
+                    actor_role=r["actor_role"],
+                    payload_canonical_json=r["payload_canonical_json"],
+                    prev_entry_hash=r["prev_entry_hash"],
+                    entry_hash=r["entry_hash"],
+                    timestamp=r["timestamp"],
+                )
+            )
+
+        ts = self._now()
+        return AuditExportPackage(
+            export_schema_version="3.0",
+            exported_at=ts,
+            exported_by=actor_id,
+            campus_filter=campus_id,
+            total_events=len(events),
+            is_chain_valid=verification.is_valid,
+            chain_verification_message=verification.message,
+            events=events,
+        )
+
+

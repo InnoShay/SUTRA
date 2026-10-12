@@ -305,3 +305,196 @@ class OrchestrationResult(BaseModel):
     )
     total_duration_ms: float = Field(ge=0.0, description="Total run duration in ms")
     retries_used: int = Field(default=0, ge=0, le=1, description="Number of retries used (max 1)")
+
+
+# -----------------------------------------------------------------------------
+# Phase 5: Agent 5 (Communication Drafter) & Agent 6 (Note Structuring) Contracts
+# -----------------------------------------------------------------------------
+
+class CommunicationDraftStatus(str, Enum):
+    """Lifecycle status of an AI-generated communication draft (never sent)."""
+    DRAFT_AWAITING_REVIEW = "DRAFT_AWAITING_REVIEW"
+    APPROVED_FOR_USE = "APPROVED_FOR_USE"
+    DISCARDED = "DISCARDED"
+
+
+class CommunicationDraft(BaseModel):
+    """
+    Agent 5 Output: Grounded draft communication for human advisor review.
+    CRITICAL NOTICE: Pure draft proposal for advisor guidance. Under NO circumstances
+    does this agent send messages or initiate external outreach.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = Field(default="v1.0.0", description="Contract version")
+    case_id: str = Field(..., description="Case identifier")
+    approved_plan_version: int = Field(ge=1, description="Approved plan version referenced")
+    intended_role: str = Field(..., description="Permitted stakeholder recipient role (e.g. STUDENT, MODULE_TUTOR)")
+    communication_purpose: str = Field(..., description="Approved purpose (e.g. CHECK_IN_INVITATION)")
+    template_id: str = Field(..., description="Template identifier from SyntheticCommunicationCatalog")
+    subject: str = Field(default="", description="Draft email or message subject line")
+    message_body: str = Field(..., description="Empathetic, non-stigmatizing draft message content")
+    source_references: list[str] = Field(
+        default_factory=list,
+        description="Factual references from approved plan steps supporting this draft"
+    )
+    missing_information_or_limitations: list[str] = Field(
+        default_factory=list,
+        description="Explicitly identified gaps, uncertainties, or advisor discretion items"
+    )
+    human_review_status: CommunicationDraftStatus = Field(
+        default=CommunicationDraftStatus.DRAFT_AWAITING_REVIEW,
+        description="Explicit review status (model-generated cannot constitute human authorization)"
+    )
+    generation_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadata capturing agent version, provider mode, and timestamp"
+    )
+
+
+class StructuredNoteStatus(str, Enum):
+    """Review and confirmation status of staff follow-up note structuring."""
+    DRAFT_AWAITING_CONFIRMATION = "DRAFT_AWAITING_CONFIRMATION"
+    CONFIRMED = "CONFIRMED"
+    REJECTED = "REJECTED"
+
+
+class StructuredNoteDraft(BaseModel):
+    """
+    Agent 6 Output: Structured breakdown of staff-entered follow-up note.
+    Preserves strict provenance: segregates reported actions from observations,
+    student statements, and unverified claims.
+    CRITICAL: Never sets or changes student course outcome.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = Field(default="v1.0.0", description="Contract version")
+    case_id: str = Field(..., description="Case identifier")
+    task_id: Optional[str] = Field(default=None, description="Optional associated task identifier")
+    raw_note_content: str = Field(..., description="Original raw note submitted by staff member")
+    source_note_hash: str = Field(..., description="SHA-256 fingerprint of original submitted note")
+    reported_actions_taken: list[str] = Field(
+        default_factory=list,
+        description="Actions the staff member reports having conducted"
+    )
+    staff_observations: list[str] = Field(
+        default_factory=list,
+        description="Observable facts directly witnessed by staff"
+    )
+    attributed_student_statements: list[str] = Field(
+        default_factory=list,
+        description="Statements explicitly attributed to the student or third party"
+    )
+    documented_evidence_references: list[str] = Field(
+        default_factory=list,
+        description="Explicit evidence or module citations referenced in note"
+    )
+    unresolved_questions_or_concerns: list[str] = Field(
+        default_factory=list,
+        description="Outstanding concerns or open questions identified"
+    )
+    missing_or_contradictory_information: list[str] = Field(
+        default_factory=list,
+        description="Gaps or contradictions identified within the note"
+    )
+    potential_follow_up_evidence_required: list[str] = Field(
+        default_factory=list,
+        description="Future observable items needed to verify completion"
+    )
+    claims_requiring_confirmation: list[str] = Field(
+        default_factory=list,
+        description="Unverified statements that require human advisor confirmation"
+    )
+    human_confirmation_status: StructuredNoteStatus = Field(
+        default=StructuredNoteStatus.DRAFT_AWAITING_CONFIRMATION,
+        description="Draft awaiting human confirmation; not confirmed until advisor review"
+    )
+    generation_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadata capturing agent version, provider mode, and timestamp"
+    )
+
+
+# -----------------------------------------------------------------------------
+# Phase 6: Agent 7 — Cohort Learning Analyst Contracts
+# -----------------------------------------------------------------------------
+
+class AggregateMetricItem(BaseModel):
+    """A single deterministically computed aggregate metric item."""
+    model_config = ConfigDict(extra="forbid")
+
+    metric_id: str = Field(description="Unique metric identifier, e.g., M_CASE_COUNT_TOTAL")
+    name: str = Field(description="Human-readable label for the metric")
+    category: str = Field(description="Category: WORKFLOW_STAGES, RISK_TIERS, TASK_EXECUTION, OUTCOMES, DATA_QUALITY")
+    value: float = Field(description="Numerical value of the metric")
+    numerator: Optional[float] = Field(default=None, description="Optional numerator for ratio/rate metrics")
+    denominator: Optional[float] = Field(default=None, description="Optional denominator for ratio/rate metrics")
+    unit: str = Field(default="count", description="Unit of measurement: count, percentage, ratio")
+    is_suppressed: bool = Field(default=False, description="True if value suppressed under small-group privacy threshold")
+    notes: Optional[str] = Field(default=None, description="Caveats or explanatory notes for this metric")
+
+
+class CohortAggregatePacket(BaseModel):
+    """
+    Deterministic precomputed aggregate metrics packet supplied to Agent 7.
+    Strictly devoid of raw student records, personal notes, PII, and individual telemetry.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    snapshot_id: str = Field(description="Unique snapshot identifier for the aggregate computation")
+    campus_id: str = Field(description="Authorized campus or organizational scope")
+    is_synthetic: bool = Field(default=True, description="Always True for synthetic demo data")
+    aggregation_timestamp: str = Field(description="ISO-8601 timestamp of deterministic aggregation")
+    total_cases_analyzed: int = Field(description="Total count of authorized cases in this cohort")
+    min_cohort_threshold: int = Field(default=5, description="Configured minimum subgroup size for privacy suppression")
+    grouping_dimension: str = Field(default="ALL_CAMPUS_CASES", description="Grouping dimension applied")
+    metrics: list[AggregateMetricItem] = Field(description="Deterministic precomputed metrics list")
+    data_quality_limitations: list[str] = Field(
+        default_factory=list,
+        description="Data completeness notes, missing observation rates, or small-cohort flags"
+    )
+    outcome_coverage_summary: str = Field(
+        description="Summary of outcome observation coverage (e.g. unobserved vs recorded)"
+    )
+
+
+class CohortInsightReport(BaseModel):
+    """
+    Agent 7 versioned output contract explaining precomputed cohort metrics.
+    Under NO circumstances may this agent claim causal efficacy or mutate database state.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    report_id: str = Field(description="Unique report identifier")
+    snapshot_id: str = Field(description="Reference to source CohortAggregatePacket snapshot_id")
+    campus_id: str = Field(description="Authorized campus scope")
+    summary_narrative: str = Field(description="Concise high-level synthesis of observed cohort metrics")
+    observed_patterns: list[str] = Field(
+        default_factory=list,
+        description="Key factual patterns supported by the precomputed metrics"
+    )
+    metric_references: list[str] = Field(
+        default_factory=list,
+        description="List of metric_ids cited to support material claims (e.g., ['M_CASE_COUNT_TOTAL'])"
+    )
+    missing_or_insufficient_evidence: list[str] = Field(
+        default_factory=list,
+        description="Explicit gaps where data is insufficient to draw conclusions"
+    )
+    limitations_and_caveats: list[str] = Field(
+        default_factory=list,
+        description="Statistical, observational, and governance caveats (e.g., correlation != causation)"
+    )
+    institutional_review_questions: list[str] = Field(
+        default_factory=list,
+        description="Suggested inquiry questions for human educational leaders"
+    )
+    human_review_status: str = Field(
+        default="DRAFT_AWAITING_REVIEW",
+        description="Report review status: DRAFT_AWAITING_REVIEW or ACCEPTED_BY_ADMIN"
+    )
+    is_synthetic: bool = Field(default=True, description="Synthetic data confirmation")
+    agent_version: str = Field(default="1.0.0", description="Agent 7 version string")
+    provider_mode: str = Field(default="MOCK", description="Provider mode: MOCK or LIVE")
+    created_at: str = Field(description="ISO-8601 generation timestamp")
+

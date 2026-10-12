@@ -9,6 +9,8 @@ const state = {
   activeDetail: null,
   activeView: "queue",
   pendingDecisionKind: null,
+  activeDraftId: null,
+  activeStructuredDraft: null,
 };
 
 // Helper: HTTP API request with authorization header
@@ -53,9 +55,13 @@ function switchView(viewName) {
   document.getElementById("view-queue").style.display = viewName === "queue" ? "block" : "none";
   document.getElementById("view-detail").style.display = viewName === "detail" ? "block" : "none";
   document.getElementById("view-timeline").style.display = viewName === "timeline" ? "block" : "none";
+  const viewCohort = document.getElementById("view-cohort");
+  if (viewCohort) viewCohort.style.display = viewName === "cohort" ? "block" : "none";
 
   if (viewName === "queue") {
     loadQueue();
+  } else if (viewName === "cohort") {
+    loadCohortAnalytics();
   } else if (state.activeCaseId) {
     if (viewName === "detail") renderCaseDetail();
     if (viewName === "timeline") renderLedgerAndTasks();
@@ -282,6 +288,182 @@ function renderCaseDetail() {
       chalList.innerHTML = `<span style="font-size: 0.75rem; color: var(--text-muted);">No advisory challenge flags raised.</span>`;
     }
   }
+
+  // Load Phase 5 Communication Drafting
+  loadCommunicationTemplatesAndDrafts(d.case.case_id);
+}
+
+// ============================================================================
+// AGENT 5: STAKEHOLDER COMMUNICATION DRAFTING
+// ============================================================================
+
+async function loadCommunicationTemplatesAndDrafts(caseId) {
+  const d = state.activeDetail;
+  const isApproved = d && ['APPROVED', 'IN_PROGRESS', 'TASKS_COMPLETED'].includes(d.case.status);
+
+  const unapprovedNotice = document.getElementById("comm-plan-unapproved-notice");
+  const drafterControls = document.getElementById("comm-drafter-controls");
+  const draftEditor = document.getElementById("comm-draft-editor");
+
+  if (!isApproved) {
+    if (unapprovedNotice) unapprovedNotice.style.display = "block";
+    if (drafterControls) drafterControls.style.display = "none";
+    if (draftEditor) draftEditor.style.display = "none";
+  } else {
+    if (unapprovedNotice) unapprovedNotice.style.display = "none";
+    if (drafterControls) drafterControls.style.display = "grid";
+
+    // Load available templates if not loaded
+    const select = document.getElementById("comm-template-select");
+    if (select && select.children.length === 0) {
+      try {
+        const templates = await apiRequest(`/api/v1/cases/${caseId}/communication-templates`);
+        select.innerHTML = templates.map(t => `<option value="${t.template_id}">${t.template_name} (${t.purpose})</option>`).join("");
+      } catch (err) {
+        console.error("Failed loading communication templates:", err);
+      }
+    }
+  }
+
+  // Load past drafts
+  try {
+    const drafts = await apiRequest(`/api/v1/cases/${caseId}/communication-drafts`);
+    const list = document.getElementById("comm-past-drafts-list");
+    if (list) {
+      if (!drafts || drafts.length === 0) {
+        list.innerHTML = `<p style="font-size: 0.8rem; color: var(--text-muted);">No communication drafts for this case yet.</p>`;
+      } else {
+        list.innerHTML = drafts.map(draft => `
+          <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.65rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.2rem;">
+                <span class="badge ${draft.human_review_status === 'APPROVED_FOR_USE' ? 'badge-pass' : (draft.human_review_status === 'DISCARDED' ? 'badge-fail' : 'badge-draft')}">${draft.human_review_status}</span>
+                <strong style="font-size: 0.8rem; color: var(--text-primary);">${draft.subject || draft.template_id}</strong>
+                <span style="font-size: 0.7rem; color: var(--accent-indigo);">&bull; Role: ${draft.intended_role}</span>
+              </div>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); max-width: 580px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${draft.message_body}</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="loadDraftIntoEditor('${draft.draft_id}')">View / Edit</button>
+          </div>
+        `).join("");
+      }
+    }
+  } catch (err) {
+    console.error("Failed loading drafts:", err);
+  }
+}
+
+window.loadDraftIntoEditor = async function(draftId) {
+  try {
+    const draft = await apiRequest(`/api/v1/cases/${state.activeCaseId}/communication-drafts/${draftId}`);
+    state.activeDraftId = draft.draft_id;
+
+    document.getElementById("comm-draft-id-display").textContent = draft.draft_id;
+    document.getElementById("comm-draft-subject").value = draft.subject || "";
+    document.getElementById("comm-draft-body").value = draft.message_body || "";
+    document.getElementById("comm-draft-role-badge").textContent = `ROLE: ${draft.intended_role}`;
+
+    const statusBadge = document.getElementById("comm-draft-status-badge");
+    statusBadge.textContent = draft.human_review_status;
+    statusBadge.className = `badge ${draft.human_review_status === 'APPROVED_FOR_USE' ? 'badge-pass' : (draft.human_review_status === 'DISCARDED' ? 'badge-fail' : 'badge-draft')}`;
+
+    const refsList = document.getElementById("comm-draft-references");
+    if (draft.grounded_plan_step_refs && draft.grounded_plan_step_refs.length > 0) {
+      refsList.innerHTML = draft.grounded_plan_step_refs.map(r => `<li>${r}</li>`).join("");
+    } else {
+      refsList.innerHTML = `<li>Approved Plan v${state.activeDetail.case.current_plan_version}</li>`;
+    }
+
+    document.getElementById("comm-draft-editor").style.display = "block";
+  } catch (err) {
+    showBanner(`Failed to load draft: ${err.message}`, "error");
+  }
+};
+
+async function generateCommunicationDraft() {
+  const templateId = document.getElementById("comm-template-select").value;
+  const intendedRole = document.getElementById("comm-role-select").value;
+
+  if (!state.activeCaseId) return;
+
+  try {
+    showBanner("Agent 5 is formulating role-tailored draft anchored to approved plan...", "info");
+    const draft = await apiRequest(`/api/v1/cases/${state.activeCaseId}/communication-drafts`, {
+      method: "POST",
+      body: JSON.stringify({
+        template_id: templateId,
+        intended_role: intendedRole,
+      }),
+    });
+
+    showBanner("Agent 5 communication draft formulated. Awaiting human review.", "success");
+    await loadCommunicationTemplatesAndDrafts(state.activeCaseId);
+    window.loadDraftIntoEditor(draft.draft_id);
+  } catch (err) {
+    showBanner(`Drafting failed: ${err.message}`, "error");
+  }
+}
+
+async function saveCommunicationDraft() {
+  if (!state.activeDraftId) return;
+  const subject = document.getElementById("comm-draft-subject").value.trim();
+  const body = document.getElementById("comm-draft-body").value.trim();
+
+  try {
+    await apiRequest(`/api/v1/cases/${state.activeCaseId}/communication-drafts/${state.activeDraftId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        subject: subject,
+        message_body: body,
+      }),
+    });
+    showBanner("Communication draft changes saved successfully.", "success");
+    await loadCommunicationTemplatesAndDrafts(state.activeCaseId);
+  } catch (err) {
+    showBanner(`Failed to save draft: ${err.message}`, "error");
+  }
+}
+
+async function approveCommunicationDraft() {
+  if (!state.activeDraftId) return;
+  const subject = document.getElementById("comm-draft-subject").value.trim();
+  const body = document.getElementById("comm-draft-body").value.trim();
+
+  try {
+    await apiRequest(`/api/v1/cases/${state.activeCaseId}/communication-drafts/${state.activeDraftId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        subject: subject,
+        message_body: body,
+        review_status: "APPROVED_FOR_USE",
+        review_notes: "Advisor approved draft for stakeholder engagement guidance.",
+      }),
+    });
+    showBanner("Draft approved for advisor reference. (No external message sent).", "success");
+    await loadCommunicationTemplatesAndDrafts(state.activeCaseId);
+    window.loadDraftIntoEditor(state.activeDraftId);
+  } catch (err) {
+    showBanner(`Failed to approve draft: ${err.message}`, "error");
+  }
+}
+
+async function discardCommunicationDraft() {
+  if (!state.activeDraftId) return;
+
+  try {
+    await apiRequest(`/api/v1/cases/${state.activeCaseId}/communication-drafts/${state.activeDraftId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        review_status: "DISCARDED",
+        review_notes: "Advisor discarded draft.",
+      }),
+    });
+    showBanner("Draft marked as discarded.", "info");
+    await loadCommunicationTemplatesAndDrafts(state.activeCaseId);
+    window.loadDraftIntoEditor(state.activeDraftId);
+  } catch (err) {
+    showBanner(`Failed to discard draft: ${err.message}`, "error");
+  }
 }
 
 // ============================================================================
@@ -419,16 +601,49 @@ function renderLedgerAndTasks() {
   // 2. Follow-ups
   const fuList = document.getElementById("followup-list");
   if (d.follow_ups && d.follow_ups.length > 0) {
-    fuList.innerHTML = d.follow_ups.map(fu => `
-      <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.65rem;">
-        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
-          <span><strong>${fu.actor_id}</strong> (${fu.actor_role})</span>
+    fuList.innerHTML = d.follow_ups.map(fu => {
+      let actions = [];
+      let obs = [];
+      let stmts = [];
+      let refs = [];
+      let qns = [];
+
+      try { if (fu.reported_actions_json) actions = JSON.parse(fu.reported_actions_json); } catch(_) {}
+      try { if (fu.staff_observations_json) obs = JSON.parse(fu.staff_observations_json); } catch(_) {}
+      try { if (fu.student_statements_json) stmts = JSON.parse(fu.student_statements_json); } catch(_) {}
+      try { if (fu.evidence_refs_json) refs = JSON.parse(fu.evidence_refs_json); } catch(_) {}
+      try { if (fu.unresolved_questions_json) qns = JSON.parse(fu.unresolved_questions_json); } catch(_) {}
+
+      const isStructured = Boolean(fu.is_structured);
+
+      return `
+      <div style="background: rgba(0,0,0,0.25); border: 1px solid ${isStructured ? 'rgba(139, 92, 246, 0.4)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+          <div>
+            <strong>${fu.actor_id}</strong> (${fu.actor_role})
+            <span class="badge" style="margin-left: 0.5rem; ${isStructured ? 'background: rgba(139, 92, 246, 0.2); color: #c4b5fd;' : 'background: rgba(255,255,255,0.08); color: var(--text-secondary);'}">
+              ${isStructured ? 'STRUCTURED &amp; CONFIRMED' : 'RAW NOTE'}
+            </span>
+          </div>
           <span>${formatDate(fu.created_at)}</span>
         </div>
-        <p style="font-size: 0.825rem; color: var(--text-primary);">${fu.observation_note}</p>
-        ${fu.evidence_reference ? `<span style="font-size: 0.7rem; color: var(--accent-cyan); font-family: var(--font-mono);">Ref: ${fu.evidence_reference}</span>` : ''}
+
+        <p style="font-size: 0.825rem; color: var(--text-primary); margin-bottom: 0.35rem;">${fu.observation_note}</p>
+
+        ${isStructured ? `
+          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle); font-size: 0.75rem; display: flex; flex-direction: column; gap: 0.25rem;">
+            ${actions.length ? `<div><span style="color: var(--accent-emerald); font-weight: 600;">Reported Actions:</span> ${actions.join('; ')}</div>` : ''}
+            ${obs.length ? `<div><span style="color: var(--accent-cyan); font-weight: 600;">Staff Observations:</span> ${obs.join('; ')}</div>` : ''}
+            ${stmts.length ? `<div><span style="color: var(--accent-amber); font-weight: 600;">Student Statements:</span> ${stmts.join('; ')}</div>` : ''}
+            ${refs.length ? `<div><span style="color: var(--text-muted); font-weight: 600;">Evidence Refs:</span> ${refs.join('; ')}</div>` : ''}
+            ${qns.length ? `<div><span style="color: var(--accent-rose); font-weight: 600;">Unresolved Questions:</span> ${qns.join('; ')}</div>` : ''}
+          </div>
+        ` : ''}
+
+        ${fu.evidence_reference ? `<span style="font-size: 0.7rem; color: var(--accent-cyan); font-family: var(--font-mono); display: inline-block; margin-top: 0.25rem;">Ref: ${fu.evidence_reference}</span>` : ''}
       </div>
-    `).join("");
+      `;
+    }).join("");
   } else {
     fuList.innerHTML = `<p style="font-size: 0.825rem; color: var(--text-muted);">No follow-up observation notes recorded.</p>`;
   }
@@ -533,6 +748,109 @@ async function submitFollowup() {
     renderLedgerAndTasks();
   } catch (err) {
     alert(`Failed to record follow-up: ${err.message}`);
+  }
+}
+
+// ============================================================================
+// AGENT 6: FOLLOW-UP NOTE STRUCTURING & CONFIRMATION
+// ============================================================================
+
+async function structureFollowupNote() {
+  const rawNote = document.getElementById("followup-note-input").value.trim();
+  if (!rawNote) {
+    alert("Please enter a follow-up interaction note first.");
+    return;
+  }
+
+  try {
+    showBanner("Agent 6 is structuring interaction note into provenance categories...", "info");
+    const draft = await apiRequest(`/api/v1/cases/${state.activeCaseId}/follow-ups/structure-note`, {
+      method: "POST",
+      body: JSON.stringify({ raw_note: rawNote }),
+    });
+
+    state.activeStructuredDraft = draft;
+    document.getElementById("agent6-draft-id").textContent = draft.draft_id;
+
+    const renderList = (id, items) => {
+      const el = document.getElementById(id);
+      if (items && items.length > 0) {
+        el.innerHTML = items.map(item => `<li>${item}</li>`).join("");
+      } else {
+        el.innerHTML = `<li style="color: var(--text-muted); font-style: italic;">None reported</li>`;
+      }
+    };
+
+    renderList("agent6-reported-actions", draft.reported_actions_taken);
+    renderList("agent6-staff-observations", draft.staff_observations);
+    renderList("agent6-student-statements", draft.attributed_student_statements);
+    renderList("agent6-evidence-refs", draft.documented_evidence_references);
+    renderList("agent6-unresolved-questions", draft.unresolved_questions_or_concerns);
+
+    const outcomeBox = document.getElementById("agent6-outcome-evidence-box");
+    if (draft.potential_outcome_evidence) {
+      document.getElementById("agent6-outcome-evidence-text").textContent = draft.potential_outcome_evidence;
+      outcomeBox.style.display = "block";
+    } else {
+      outcomeBox.style.display = "none";
+    }
+
+    document.getElementById("agent6-structured-preview").style.display = "block";
+    showBanner("Agent 6 structured note draft ready. Please review before confirmation.", "success");
+  } catch (err) {
+    showBanner(`Structuring failed: ${err.message}`, "error");
+  }
+}
+
+async function confirmStructuredNote() {
+  if (!state.activeStructuredDraft) return;
+
+  try {
+    await apiRequest(`/api/v1/cases/${state.activeCaseId}/follow-ups/confirm-structured`, {
+      method: "POST",
+      body: JSON.stringify({
+        draft_id: state.activeStructuredDraft.draft_id,
+        reported_actions_taken: state.activeStructuredDraft.reported_actions_taken,
+        staff_observations: state.activeStructuredDraft.staff_observations,
+        attributed_student_statements: state.activeStructuredDraft.attributed_student_statements,
+        documented_evidence_references: state.activeStructuredDraft.documented_evidence_references,
+        unresolved_questions_or_concerns: state.activeStructuredDraft.unresolved_questions_or_concerns,
+        confirmation_notes: "Human confirmed Agent 6 structured breakdown.",
+      }),
+    });
+
+    document.getElementById("modal-followup").classList.remove("open");
+    document.getElementById("followup-note-input").value = "";
+    document.getElementById("followup-ref-input").value = "";
+    document.getElementById("agent6-structured-preview").style.display = "none";
+    state.activeStructuredDraft = null;
+
+    showBanner("Structured follow-up confirmed to Support Evidence Ledger. Student course outcome remains UNOBSERVED.", "success");
+    const updated = await apiRequest(`/api/v1/cases/${state.activeCaseId}`);
+    state.activeDetail = updated;
+    renderLedgerAndTasks();
+  } catch (err) {
+    showBanner(`Confirmation failed: ${err.message}`, "error");
+  }
+}
+
+async function rejectStructuredNote() {
+  if (!state.activeStructuredDraft) return;
+
+  try {
+    await apiRequest(`/api/v1/cases/${state.activeCaseId}/follow-ups/reject-structured`, {
+      method: "POST",
+      body: JSON.stringify({
+        draft_id: state.activeStructuredDraft.draft_id,
+        rejection_reason: "Advisor opted not to record AI structuring.",
+      }),
+    });
+
+    document.getElementById("agent6-structured-preview").style.display = "none";
+    state.activeStructuredDraft = null;
+    showBanner("Agent 6 structured draft rejected. You may edit the note or record raw text.", "info");
+  } catch (err) {
+    showBanner(`Rejection failed: ${err.message}`, "error");
   }
 }
 
@@ -656,12 +974,30 @@ document.addEventListener("DOMContentLoaded", () => {
   // Task Actions
   document.getElementById("btn-submit-task-update").addEventListener("click", submitTaskUpdate);
 
-  // Follow-up & Outcome Actions
+  // Agent 5 Communication Drafter Listeners
+  const btnGenComm = document.getElementById("btn-generate-comm-draft");
+  if (btnGenComm) btnGenComm.addEventListener("click", generateCommunicationDraft);
+  const btnSaveComm = document.getElementById("btn-save-comm-draft");
+  if (btnSaveComm) btnSaveComm.addEventListener("click", saveCommunicationDraft);
+  const btnApprComm = document.getElementById("btn-approve-comm-draft");
+  if (btnApprComm) btnApprComm.addEventListener("click", approveCommunicationDraft);
+  const btnDiscComm = document.getElementById("btn-discard-comm-draft");
+  if (btnDiscComm) btnDiscComm.addEventListener("click", discardCommunicationDraft);
+
+  // Follow-up & Note Intelligence (Agent 6) Actions
   document.getElementById("btn-add-followup").addEventListener("click", () => {
     document.getElementById("modal-followup").classList.add("open");
   });
   document.getElementById("btn-submit-followup").addEventListener("click", submitFollowup);
 
+  const btnStructNote = document.getElementById("btn-structure-note");
+  if (btnStructNote) btnStructNote.addEventListener("click", structureFollowupNote);
+  const btnConfStruct = document.getElementById("btn-confirm-structured");
+  if (btnConfStruct) btnConfStruct.addEventListener("click", confirmStructuredNote);
+  const btnRejStruct = document.getElementById("btn-reject-structured");
+  if (btnRejStruct) btnRejStruct.addEventListener("click", rejectStructuredNote);
+
+  // Outcome Actions
   document.getElementById("btn-record-outcome").addEventListener("click", () => {
     document.getElementById("modal-outcome").classList.add("open");
   });
@@ -673,9 +1009,238 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("btn-submit-seed").addEventListener("click", submitSeed);
 
+// ============================================================================
+// SCREEN E: COHORT ANALYTICS & SUPPORT EVIDENCE LEDGER EXPORT
+// ============================================================================
+
+let currentExportPackage = null;
+
+function getActiveCohortCampus() {
+  const sel = document.getElementById("cohort-campus-select");
+  if (sel) return sel.value;
+  if (state.activePersona === "ADV-REMOTE-02") return "CAMPUS-REMOTE";
+  if (state.activePersona === "ADMIN-01") return "CAMPUS-SYSTEM";
+  return "CAMPUS-MAIN";
+}
+
+async function loadCohortAnalytics() {
+  const campus = getActiveCohortCampus();
+  const campusBadge = document.getElementById("cohort-campus-badge");
+  if (campusBadge) campusBadge.textContent = campus;
+
+  try {
+    const packet = await apiRequest(`/api/v1/cohort/analytics?campus_id=${encodeURIComponent(campus)}`);
+
+    // Total Cases
+    const mTotal = packet.metrics.find(m => m.metric_id === "M_CASE_COUNT_TOTAL");
+    document.getElementById("metric-total-cases").textContent = mTotal ? mTotal.value : 0;
+
+    // High-Risk Tier
+    const mHighTier = packet.metrics.find(m => m.metric_id === "M_TIER_HIGH");
+    const highRiskEl = document.getElementById("metric-high-risk-tier");
+    if (mHighTier) {
+      if (mHighTier.is_suppressed) {
+        highRiskEl.innerHTML = `<span class="metric-suppressed-badge">SUPPRESSED (N &lt; 5)</span>`;
+      } else {
+        highRiskEl.textContent = mHighTier.value;
+      }
+    } else {
+      highRiskEl.textContent = "0";
+    }
+
+    // Approved Plans
+    const mApproved = packet.metrics.find(m => m.metric_id === "M_STAGE_APPROVED");
+    document.getElementById("metric-approved-plans").textContent = mApproved ? mApproved.value : 0;
+
+    // Support Tasks Total
+    const mTasksTotal = packet.metrics.find(m => m.metric_id === "M_TASKS_TOTAL");
+    document.getElementById("metric-total-tasks").textContent = mTasksTotal ? mTasksTotal.value : 0;
+
+    // Task Completion Rate
+    const mTaskRate = packet.metrics.find(m => m.metric_id === "M_TASK_COMPLETION_RATE");
+    document.getElementById("metric-task-rate").textContent = mTaskRate ? `${mTaskRate.value}%` : "0.0%";
+
+    // Unobserved Outcomes
+    const mUnobserved = packet.metrics.find(m => m.metric_id === "M_OUTCOME_UNOBSERVED");
+    document.getElementById("metric-unobserved-outcomes").textContent = mUnobserved ? mUnobserved.value : 0;
+
+  } catch (err) {
+    showBanner(`Failed to load cohort analytics: ${err.message}`, "error");
+  }
+}
+
+async function generateCohortReport() {
+  const campus = getActiveCohortCampus();
+  const btn = document.getElementById("btn-generate-cohort-report");
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `Synthesizing Narrative...`;
+
+  try {
+    const report = await apiRequest("/api/v1/cohort/report", {
+      method: "POST",
+      body: JSON.stringify({
+        campus_id: campus,
+        min_cohort_threshold: 5,
+        grouping_dimension: "ALL_CAMPUS_CASES",
+      }),
+    });
+
+    renderCohortReport(report);
+    showBanner("Agent 7 Cohort Learning Report generated and verified successfully.", "success");
+  } catch (err) {
+    showBanner(`Report generation failed: ${err.message}`, "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+function renderCohortReport(report) {
+  const card = document.getElementById("cohort-report-card");
+  card.style.display = "block";
+
+  document.getElementById("report-version-badge").textContent = `v${report.agent_version || "1.0.0"}`;
+  document.getElementById("report-snapshot-badge").textContent = report.snapshot_id;
+  document.getElementById("report-timestamp").textContent = formatDate(report.created_at);
+  document.getElementById("report-summary-narrative").textContent = report.summary_narrative;
+
+  // Observed Patterns
+  const patternsEl = document.getElementById("report-observed-patterns");
+  patternsEl.innerHTML = "";
+  (report.observed_patterns || []).forEach(p => {
+    const div = document.createElement("div");
+    div.className = "pattern-item";
+    div.innerHTML = `<span class="pattern-bullet">&bull;</span><span>${p}</span>`;
+    patternsEl.appendChild(div);
+  });
+
+  // Metric Citations
+  const citationsEl = document.getElementById("report-metric-citations");
+  citationsEl.innerHTML = "";
+  (report.metric_references || []).forEach(ref => {
+    const span = document.createElement("span");
+    span.className = "citation-chip";
+    span.textContent = ref;
+    citationsEl.appendChild(span);
+  });
+
+  // Missing Evidence
+  const missingEl = document.getElementById("report-missing-evidence");
+  missingEl.innerHTML = "";
+  (report.missing_or_insufficient_evidence || []).forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    missingEl.appendChild(li);
+  });
+
+  // Limitations
+  const limitationsEl = document.getElementById("report-limitations");
+  limitationsEl.innerHTML = "";
+  (report.limitations_and_caveats || []).forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    limitationsEl.appendChild(li);
+  });
+
+  // Review Questions
+  const questionsEl = document.getElementById("report-review-questions");
+  questionsEl.innerHTML = "";
+  (report.institutional_review_questions || []).forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    questionsEl.appendChild(li);
+  });
+
+  card.scrollIntoView({ behavior: "smooth" });
+}
+
+async function exportAuditLedger() {
+  const campus = getActiveCohortCampus();
+  const btn = document.getElementById("btn-export-audit-ledger");
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `Verifying Chain...`;
+
+  try {
+    const pkg = await apiRequest(`/api/v1/audit/export?campus_id=${encodeURIComponent(campus)}`);
+    currentExportPackage = pkg;
+
+    const card = document.getElementById("ledger-export-card");
+    card.style.display = "block";
+
+    const validityBadge = document.getElementById("export-validity-badge");
+    if (pkg.is_chain_valid) {
+      validityBadge.className = "badge badge-approved";
+      validityBadge.textContent = "SHA-256 CHAIN VALID";
+    } else {
+      validityBadge.className = "badge badge-rejected";
+      validityBadge.textContent = "TAMPER DETECTED";
+    }
+
+    document.getElementById("export-timestamp").textContent = formatDate(pkg.exported_at);
+    document.getElementById("export-by").textContent = pkg.exported_by;
+    document.getElementById("export-total-events").textContent = pkg.total_events;
+
+    const tbody = document.getElementById("export-events-tbody");
+    tbody.innerHTML = "";
+    (pkg.events || []).forEach(ev => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="font-family: var(--font-mono); font-size: 0.75rem;">${ev.seq_id}</td>
+        <td><span class="badge badge-info" style="font-size: 0.7rem;">${ev.event_type}</span></td>
+        <td style="font-family: var(--font-mono); font-size: 0.75rem;">${ev.case_id}</td>
+        <td style="font-size: 0.75rem; color: var(--text-muted);">${ev.actor_id} (${ev.actor_role})</td>
+        <td style="font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${ev.prev_entry_hash}">${ev.prev_entry_hash}</td>
+        <td style="font-family: var(--font-mono); font-size: 0.65rem; color: var(--accent-cyan); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${ev.entry_hash}">${ev.entry_hash}</td>
+        <td style="font-size: 0.75rem; color: var(--text-muted);">${formatDate(ev.timestamp)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    card.scrollIntoView({ behavior: "smooth" });
+    showBanner(`Export package verified: ${pkg.total_events} canonical audit events.`, "success");
+  } catch (err) {
+    showBanner(`Audit export failed: ${err.message}`, "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+function downloadLedgerJson() {
+  if (!currentExportPackage) {
+    showBanner("No export package available to download.", "error");
+    return;
+  }
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentExportPackage, null, 2));
+  const downloadAnchor = document.createElement("a");
+  downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", `sutra_support_evidence_ledger_${getActiveCohortCampus()}_${Date.now()}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
   // Audit Verification Buttons
   document.getElementById("btn-verify-audit").addEventListener("click", () => runAuditVerification());
   document.getElementById("btn-verify-timeline-audit").addEventListener("click", () => runAuditVerification(state.activeCaseId));
+
+  // Screen E Cohort & Export Listeners
+  const btnRefreshCohort = document.getElementById("btn-refresh-cohort");
+  if (btnRefreshCohort) btnRefreshCohort.addEventListener("click", loadCohortAnalytics);
+
+  const selCohortCampus = document.getElementById("cohort-campus-select");
+  if (selCohortCampus) selCohortCampus.addEventListener("change", loadCohortAnalytics);
+
+  const btnGenCohort = document.getElementById("btn-generate-cohort-report");
+  if (btnGenCohort) btnGenCohort.addEventListener("click", generateCohortReport);
+
+  const btnExportLedger = document.getElementById("btn-export-audit-ledger");
+  if (btnExportLedger) btnExportLedger.addEventListener("click", exportAuditLedger);
+
+  const btnDownloadJson = document.getElementById("btn-download-export-json");
+  if (btnDownloadJson) btnDownloadJson.addEventListener("click", downloadLedgerJson);
 
   // Modal Closers
   document.querySelectorAll("[data-close]").forEach(el => {
