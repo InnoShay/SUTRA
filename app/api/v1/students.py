@@ -1,7 +1,7 @@
 import time
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Body
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +22,8 @@ from app.schemas.ml import (
     MLEvidenceCard,
     MLPredictRequest,
     MLPredictResponse,
+    WhatIfScenarioRequest,
+    WhatIfScenarioResponse,
 )
 from app.schemas.student import (
     FeatureReadinessItem,
@@ -654,4 +656,57 @@ async def get_student_evidence_summary(
         user_id=membership.user.id,
         student_id=student.id,
     )
+
+
+@router.post("/{student_id}/simulate-scenario", response_model=WhatIfScenarioResponse)
+async def simulate_student_scenario(
+    student_id: str = Path(..., description="Student UUID or external reference"),
+    payload: WhatIfScenarioRequest = Body(...),
+    membership: CampusMembershipContext = Depends(get_campus_membership),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Executes an in-memory What-If scenario simulation for an authorized student.
+    Uses student's authenticated observations / telemetry baseline as base features.
+    Applies validated hypothetical modifications in memory.
+    Never updates official student records, telemetry ledger, signals, cases, or ml_inference_logs.
+    """
+    check_leadership_access(membership)
+    if not any(r in ("faculty", "hod", "mentor", "institution_admin", "counsellor", "leadership") for r in membership.roles):
+        raise PermissionDeniedError(
+            "Simulating student early-warning ML scenarios requires an authorized educator or advisor role",
+            code="ML_SCENARIO_ROLE_FORBIDDEN",
+        )
+
+    student = await _resolve_student_in_campus(student_id, membership.campus_id, db)
+
+    # 1. Gather baseline features from observations if available
+    obs_query = select(StudentObservation).where(
+        StudentObservation.institution_id == membership.campus_id,
+        StudentObservation.student_id == student.id,
+    ).order_by(StudentObservation.event_at.desc())
+    res = await db.execute(obs_query)
+    observations = res.scalars().all()
+    obs_by_key = {o.metric_key: o for o in observations}
+
+    base_features: dict = {}
+    for feat in DAY30_REQUIRED_FEATURES:
+        if feat in obs_by_key:
+            obs = obs_by_key[feat]
+            val = obs.value.get("val") if isinstance(obs.value, dict) and "val" in obs.value else (obs.value.get("value") if isinstance(obs.value, dict) and "value" in obs.value else obs.value)
+            base_features[feat] = val
+
+    # If payload provided base_features overrides or student has none, merge them
+    if payload.base_features:
+        for k, v in payload.base_features.items():
+            base_features[k] = v
+
+    # 2. Execute purely in-memory simulation (zero database writes)
+    response = ml_service.simulate_scenario(
+        base_features=base_features,
+        hypothetical_modifications=payload.hypothetical_modifications,
+        student_ref=student.external_ref,
+    )
+    return response
+
 

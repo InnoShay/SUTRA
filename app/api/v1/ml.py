@@ -20,6 +20,9 @@ from app.schemas.ml import (
     MLPredictRequest,
     MLPredictResponse,
     ModelPerformanceResponse,
+    SupportedFeatureMetaDTO,
+    WhatIfScenarioRequest,
+    WhatIfScenarioResponse,
 )
 
 router = APIRouter(prefix="/ml", tags=["ML"])
@@ -31,6 +34,35 @@ async def get_model_info(
 ):
     """Returns baseline model governance metadata and current readiness status."""
     return ml_service.get_metadata()
+
+
+@router.get("/supported-scenario-features", response_model=List[SupportedFeatureMetaDTO])
+async def get_supported_scenario_features_endpoint(
+    user: AuthenticatedUser = Depends(
+        require_role("leadership", "faculty", "hod", "mentor", "institution_admin", "counsellor")
+    ),
+):
+    """Returns verified metadata and bounds for supported Day-30 what-if simulation features."""
+    return ml_service.get_supported_scenario_features()
+
+
+@router.post("/simulate-scenario", response_model=WhatIfScenarioResponse)
+async def simulate_scenario_endpoint(
+    payload: WhatIfScenarioRequest,
+    user: AuthenticatedUser = Depends(
+        require_role("leadership", "faculty", "hod", "mentor", "institution_admin", "counsellor")
+    ),
+):
+    """
+    Executes in-memory hypothetical scenario calculation.
+    Never writes back to student records, telemetry databases, or ml_inference_logs.
+    Validates features against canonical Day-30 bounds and rejects future events.
+    """
+    return ml_service.simulate_scenario(
+        base_features=payload.base_features,
+        hypothetical_modifications=payload.hypothetical_modifications,
+        student_ref=payload.external_student_ref or "SIMULATED_STUDENT",
+    )
 
 
 @router.get("/performance", response_model=ModelPerformanceResponse)
@@ -117,3 +149,4 @@ async def predict_student_alias(
     """Alias for /api/v1/students/{student_id}/predict."""
     from app.api.v1.students import predict_student_single
     return await predict_student_single(student_id=student_id, membership=membership, db=db)
+

@@ -88,6 +88,8 @@ export interface EvidenceCardItem {
   direction?: string | null;
 }
 
+export type MLAttribution = EvidenceCardItem;
+
 export interface EvidenceCardDTO {
   card_type: string;
   model_name?: string | null;
@@ -982,4 +984,67 @@ export interface HistoricalPerformanceMonitoringResponse {
   evaluation_protocol_notice: string;
   governance_disclaimers: string[];
 }
+
+// ==========================================
+// Phase 8: Governed What-If Scenario Types
+// ==========================================
+
+export interface SupportedScenarioFeature {
+  feature_name: string;
+  min_value: number;
+  max_value: number;
+  feature_type: string;
+  label: string;
+  unit: string;
+  default_value: number;
+  description: string;
+}
+
+export interface HypotheticalFeatureModification {
+  feature: string;
+  label: string;
+  original_value: number;
+  hypothetical_value: number;
+  unit: string;
+  delta: number;
+}
+
+export interface SupportPlanningGuidance {
+  title: string;
+  why_model_cannot_estimate_causal_interventions: string;
+  recommended_educator_actions: string[];
+  causal_claim_warning: string;
+}
+
+export interface WhatIfScenarioRequest {
+  external_student_ref?: string;
+  base_features?: Record<string, any>;
+  hypothetical_modifications: Record<string, number>;
+}
+
+export interface WhatIfScenarioResponse {
+  scenario_id: string;
+  student_ref: string;
+  model_name: string;
+  model_version: string;
+  prediction_cutoff: string;
+  threshold: number;
+  baseline_risk_probability: number;
+  baseline_classification: 'At_Risk' | 'On_Track';
+  baseline_top_attributions: MLAttribution[];
+  hypothetical_risk_probability: number;
+  hypothetical_classification: 'At_Risk' | 'On_Track';
+  hypothetical_top_attributions: MLAttribution[];
+  delta_probability: number;
+  delta_percentage_points: number;
+  tier_transition: string;
+  modified_features: HypotheticalFeatureModification[];
+  is_hypothetical: boolean;
+  is_official_record: boolean;
+  ephemeral_notice: string;
+  non_causal_disclaimer: string;
+  temporal_cutoff_notice: string;
+  support_planning_guidance: SupportPlanningGuidance;
+}
+
 

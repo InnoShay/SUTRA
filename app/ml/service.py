@@ -42,6 +42,12 @@ from app.schemas.ml import (
     SubgroupMetricDTO,
     ThresholdDependentMetricsDTO,
     ThresholdIndependentMetricsDTO,
+    HypotheticalFeatureModificationDTO,
+    SUPPORTED_HYPOTHETICAL_FEATURES,
+    SupportPlanningGuidanceDTO,
+    SupportedFeatureMetaDTO,
+    WhatIfScenarioRequest,
+    WhatIfScenarioResponse,
 )
 
 
@@ -829,6 +835,136 @@ class MLService:
             governance_disclaimers=disclaimers,
         )
 
+    def get_supported_scenario_features(self) -> List[SupportedFeatureMetaDTO]:
+        """Returns metadata for all supported Day-30 hypothetical simulation features."""
+        return [
+            SupportedFeatureMetaDTO(
+                feature_name=k,
+                min_value=v["min"],
+                max_value=v["max"],
+                feature_type=v["type"],
+                label=v["label"],
+                unit=v["unit"],
+                default_value=v["default"],
+                description=v["description"],
+            )
+            for k, v in SUPPORTED_HYPOTHETICAL_FEATURES.items()
+        ]
+
+    def simulate_scenario(
+        self,
+        base_features: Optional[Dict[str, Any]] = None,
+        hypothetical_modifications: Optional[Dict[str, Any]] = None,
+        student_ref: str = "STUDENT-SIMULATED-EXPLORATION",
+    ) -> WhatIfScenarioResponse:
+        """
+        Executes strictly in-memory What-If scenario simulation.
+        Does NOT write to database, does NOT audit to ml_inference_logs,
+        and does NOT trigger any automated signals or cases.
+        """
+        if not hypothetical_modifications:
+            raise UnprocessableEntityError(
+                "At least one hypothetical feature modification must be specified for scenario simulation.",
+                code="EMPTY_SCENARIO_MODIFICATIONS",
+            )
+
+        # Validate modifications with canonical schema validator
+        try:
+            validated_mods = WhatIfScenarioRequest.validate_scenario_modifications(hypothetical_modifications)
+        except ValueError as err:
+            raise UnprocessableEntityError(str(err), code="INVALID_HYPOTHETICAL_MODIFICATIONS")
+
+        # Synthesize complete base 25 Day-30 features if some are omitted
+        full_base: Dict[str, Any] = {}
+        default_means = getattr(self.model, "means", {}) if self.model else {}
+        for feat in DAY30_REQUIRED_FEATURES:
+            if base_features and feat in base_features:
+                full_base[feat] = base_features[feat]
+            elif feat in default_means:
+                full_base[feat] = default_means[feat]
+            elif feat in ("gender", "region", "highest_education", "imd_band", "age_band", "disability"):
+                full_base[feat] = "N" if feat == "disability" else "Standard"
+            else:
+                full_base[feat] = 0.0
+
+        # Execute baseline prediction (in memory)
+        base_req = MLPredictRequest(
+            external_student_ref=student_ref,
+            cutoff_days=30,
+            features=full_base,
+        )
+        base_resp = self.predict_single(base_req)
+
+        # Build hypothetical feature vector
+        hypo_features = dict(full_base)
+        for feat, val in validated_mods.items():
+            hypo_features[feat] = val
+
+        # Ensure coupled binary flags are logically consistent
+        if hypo_features.get("vle_active_days_d30", 0) > 0 or hypo_features.get("vle_total_clicks_d30", 0) > 0:
+            hypo_features["has_vle_activity_d30"] = 1.0
+        if hypo_features.get("assessments_submitted_d30", 0) > 0:
+            hypo_features["has_early_assessment_submission_d30"] = 1.0
+
+        # Execute hypothetical prediction (in memory)
+        hypo_req = MLPredictRequest(
+            external_student_ref=student_ref,
+            cutoff_days=30,
+            features=hypo_features,
+        )
+        hypo_resp = self.predict_single(hypo_req)
+
+        delta_prob = round(hypo_resp.risk_probability - base_resp.risk_probability, 4)
+        delta_pct = round(delta_prob * 100.0, 2)
+
+        if base_resp.classification == "At_Risk" and hypo_resp.classification == "On_Track":
+            tier_transition = "CROSSES_BELOW_THRESHOLD_TO_ON_TRACK"
+        elif base_resp.classification == "On_Track" and hypo_resp.classification == "At_Risk":
+            tier_transition = "CROSSES_ABOVE_THRESHOLD_TO_AT_RISK"
+        elif base_resp.classification == "At_Risk" and hypo_resp.classification == "At_Risk":
+            tier_transition = "REMAINS_AT_RISK"
+        else:
+            tier_transition = "REMAINS_ON_TRACK"
+
+        modified_dtos = []
+        for feat, hypo_val in validated_mods.items():
+            orig_val = float(full_base.get(feat, 0.0))
+            meta = SUPPORTED_HYPOTHETICAL_FEATURES.get(feat, {})
+            modified_dtos.append(
+                HypotheticalFeatureModificationDTO(
+                    feature=feat,
+                    label=meta.get("label", feat),
+                    original_value=round(orig_val, 2),
+                    hypothetical_value=round(float(hypo_val), 2),
+                    unit=meta.get("unit", ""),
+                    delta=round(float(hypo_val) - orig_val, 2),
+                )
+            )
+
+        guidance = SupportPlanningGuidanceDTO()
+
+        return WhatIfScenarioResponse(
+            scenario_id=str(uuid.uuid4()),
+            student_ref=student_ref,
+            model_name=self._model_name,
+            model_version=f"v{self._model_version}" if not self._model_version.startswith("v") else self._model_version,
+            prediction_cutoff=f"Day {self._cutoff_days}",
+            threshold=self._threshold,
+            baseline_risk_probability=base_resp.risk_probability,
+            baseline_classification=base_resp.classification,
+            baseline_top_attributions=base_resp.evidence_card.top_attributions,
+            hypothetical_risk_probability=hypo_resp.risk_probability,
+            hypothetical_classification=hypo_resp.classification,
+            hypothetical_top_attributions=hypo_resp.evidence_card.top_attributions,
+            delta_probability=delta_prob,
+            delta_percentage_points=delta_pct,
+            tier_transition=tier_transition,
+            modified_features=modified_dtos,
+            is_hypothetical=True,
+            is_official_record=False,
+            support_planning_guidance=guidance,
+        )
 
 
 ml_service = MLService()
+
