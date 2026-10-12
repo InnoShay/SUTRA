@@ -185,6 +185,35 @@ function LoginContent() {
                   <span>Start Onboarding</span>
                 </button>
               </div>
+
+              <div className="pt-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-2 text-center">
+                  Instant Role Workspaces
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/dashboard?role=faculty")}
+                    className="p-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/70 rounded-xl text-[11px] font-medium text-neutral-800 text-center transition-all cursor-pointer"
+                  >
+                    Faculty
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/dashboard?role=counselor&walkthrough=counselor")}
+                    className="p-2 bg-neutral-900 text-white hover:bg-neutral-800 border border-neutral-900 rounded-xl text-[11px] font-semibold text-center transition-all cursor-pointer shadow-2xs"
+                  >
+                    Counselor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/dashboard?walkthrough=student")}
+                    className="p-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/70 rounded-xl text-[11px] font-medium text-neutral-800 text-center transition-all cursor-pointer"
+                  >
+                    Student
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

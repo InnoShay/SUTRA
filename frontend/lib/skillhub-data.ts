@@ -9,6 +9,13 @@ import {
   EscalationRecordDTO,
   CounselorCallRequestDTO,
   CounselorCalendarEvent,
+  HappinessIndexAggregateResponse,
+  HappinessTrendResponse,
+  PointsWalletDTO,
+  PointsTransactionDTO,
+  LeaderboardResponseDTO,
+  StudentPrivateRankDTO,
+  RedemptionRecordDTO,
 } from "./types";
 import { DEMO_CAMPUS_ID } from "./demo-auth";
 
@@ -1187,5 +1194,233 @@ export const INITIAL_CALENDAR_EVENTS: CounselorCalendarEvent[] = [
     notes: "Re-engagement debrief, stress coping mechanisms, and weekend routine check.",
   },
 ];
+
+// ============================================================================
+// SUTRA Happiness Index Demonstration Fixtures (Strictly Demo Mode Gated)
+// ============================================================================
+
+export const DEMO_HAPPINESS_AGGREGATE: HappinessIndexAggregateResponse = {
+  reporting_period: "Week 6 (Fall 2026)",
+  calculation_version: "v1.0-weekly",
+  happiness_index: 74.5,
+  previous_index: 71.8,
+  change_points: 2.7,
+  response_count: 48,
+  eligible_students_count: 64,
+  participation_rate: 75.0,
+  data_sufficiency_status: "sufficient",
+  last_refreshed_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  is_demo_data: true,
+  dimension_scores: {
+    emotional_wellbeing: {
+      dimension_key: "emotional_wellbeing",
+      dimension_name: "Emotional Wellbeing",
+      score: 72.0,
+      previous_score: 68.5,
+      change_points: 3.5,
+      response_count: 48,
+      sufficiency_status: "sufficient",
+    },
+    belonging_community: {
+      dimension_key: "belonging_community",
+      dimension_name: "Belonging & Community",
+      score: 78.5,
+      previous_score: 76.0,
+      change_points: 2.5,
+      response_count: 48,
+      sufficiency_status: "sufficient",
+    },
+    academic_experience: {
+      dimension_key: "academic_experience",
+      dimension_name: "Academic Experience",
+      score: 66.0,
+      previous_score: 64.0,
+      change_points: 2.0,
+      response_count: 48,
+      sufficiency_status: "sufficient",
+    },
+    support_trust: {
+      dimension_key: "support_trust",
+      dimension_name: "Support & Trust",
+      score: 81.0,
+      previous_score: 77.5,
+      change_points: 3.5,
+      response_count: 48,
+      sufficiency_status: "sufficient",
+    },
+    safety_respect: {
+      dimension_key: "safety_respect",
+      dimension_name: "Safety & Respect",
+      score: 82.5,
+      previous_score: 80.0,
+      change_points: 2.5,
+      response_count: 48,
+      sufficiency_status: "sufficient",
+    },
+    growth_confidence: {
+      dimension_key: "growth_confidence",
+      dimension_name: "Growth & Future Confidence",
+      score: 67.0,
+      previous_score: 65.0,
+      change_points: 2.0,
+      response_count: 48,
+      sufficiency_status: "sufficient",
+    },
+  },
+};
+
+export const DEMO_HAPPINESS_TRENDS: HappinessTrendResponse = {
+  is_demo_data: true,
+  periods: [
+    { period_id: "w1", period_label: "Week 1", happiness_index: 68.2, response_count: 38 },
+    { period_id: "w2", period_label: "Week 2", happiness_index: 69.5, response_count: 42 },
+    { period_id: "w3", period_label: "Week 3", happiness_index: 71.0, response_count: 40 },
+    { period_id: "w4", period_label: "Week 4", happiness_index: 70.4, response_count: 45 },
+    { period_id: "w5", period_label: "Week 5", happiness_index: 71.8, response_count: 44 },
+    { period_id: "w6", period_label: "Week 6", happiness_index: 74.5, response_count: 48 },
+  ],
+};
+
+export const DEMO_POINTS_WALLET: PointsWalletDTO = {
+  student_id: "SYN-1007",
+  available_balance: 385,
+  total_earned: 485,
+  total_redeemed: 100,
+  points_this_week: 35,
+  points_this_month: 115,
+  next_reward_title: "College Merchandise T-Shirt",
+  next_reward_cost: 500,
+  next_reward_points_needed: 115,
+  updated_at: new Date().toISOString(),
+  is_demo_data: true,
+};
+
+export const DEMO_POINTS_TRANSACTIONS: PointsTransactionDTO[] = [
+  {
+    id: "tx-101",
+    student_id: "SYN-1007",
+    activity_or_reward_id: "weekly_pulse",
+    points: 10,
+    status: "credited",
+    description: "Completed Weekly Happiness Pulse check-in",
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "tx-102",
+    student_id: "SYN-1007",
+    activity_or_reward_id: "approved_workshop",
+    points: 15,
+    status: "credited",
+    description: "Participated in Study Skills Workshop",
+    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "tx-103",
+    student_id: "SYN-1007",
+    activity_or_reward_id: "daily_micro_challenge",
+    points: 5,
+    status: "credited",
+    description: "Completed Daily Focus Micro-Challenge",
+    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "tx-104",
+    student_id: "SYN-1007",
+    activity_or_reward_id: "rew-101",
+    points: -100,
+    status: "debited",
+    description: "Redeemed Digital Achievement Badge",
+    created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
+export const DEMO_MY_PRIVATE_RANK_WEEKLY: StudentPrivateRankDTO = {
+  student_id: "SYN-1007",
+  period: "weekly",
+  cycle_label: "Current Week (Oct 7 – Oct 13, 2026)",
+  current_rank: 12,
+  period_points: 85,
+  total_lifetime_points: 385,
+  previous_rank: 14,
+  rank_change: 2,
+  next_reward_name: "College Merchandise T-Shirt",
+  points_to_next_reward: 115,
+  next_reward_target_points: 500,
+  total_participants_in_period: 64,
+  as_of: "2026-10-13T00:00:00Z",
+  is_demo_data: true,
+};
+
+export const DEMO_MY_PRIVATE_RANK_MONTHLY: StudentPrivateRankDTO = {
+  student_id: "SYN-1007",
+  period: "monthly",
+  cycle_label: "October 2026 Engagement Cycle",
+  current_rank: 8,
+  period_points: 210,
+  total_lifetime_points: 385,
+  previous_rank: 10,
+  rank_change: 2,
+  next_reward_name: "College Merchandise T-Shirt",
+  points_to_next_reward: 115,
+  next_reward_target_points: 500,
+  total_participants_in_period: 112,
+  as_of: "2026-10-13T00:00:00Z",
+  is_demo_data: true,
+};
+
+export const DEMO_LEADERBOARD_WEEKLY: LeaderboardResponseDTO = {
+  period: "weekly",
+  cycle_label: "Current Week (Oct 7 – Oct 13, 2026)",
+  total_participants: 64,
+  last_updated_at: new Date().toISOString(),
+  is_demo_data: true,
+  entries: [
+    { rank: 12, display_name: "You (Private Standing)", avatar: "ME", points_in_period: 85, activities_count: 5, is_current_user: true },
+  ],
+  current_user_entry: {
+    rank: 12,
+    display_name: "You (Private Standing)",
+    avatar: "ME",
+    points_in_period: 85,
+    activities_count: 5,
+    is_current_user: true,
+  },
+};
+
+export const DEMO_LEADERBOARD_MONTHLY: LeaderboardResponseDTO = {
+  period: "monthly",
+  cycle_label: "October 2026 Engagement Cycle",
+  total_participants: 112,
+  last_updated_at: new Date().toISOString(),
+  is_demo_data: true,
+  entries: [
+    { rank: 8, display_name: "You (Private Standing)", avatar: "ME", points_in_period: 210, activities_count: 14, is_current_user: true },
+  ],
+  current_user_entry: {
+    rank: 8,
+    display_name: "You (Private Standing)",
+    avatar: "ME",
+    points_in_period: 210,
+    activities_count: 14,
+    is_current_user: true,
+  },
+};
+
+export const DEMO_REDEMPTIONS: RedemptionRecordDTO[] = [
+  {
+    id: "red-001",
+    reward_id: "rew-101",
+    reward_title: "Digital Achievement Badge",
+    reward_category: "digital",
+    points_spent: 100,
+    is_digital: true,
+    student_id: "SYN-1007",
+    student_display_name: "Asha K.",
+    status: "collected",
+    redeemed_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    notes: "Badge verified and attached to profile.",
+  },
+];
+
 
 

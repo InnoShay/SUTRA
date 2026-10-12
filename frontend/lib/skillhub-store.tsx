@@ -18,6 +18,15 @@ import {
   INITIAL_CALL_REQUESTS,
   INITIAL_ESCALATIONS,
   INITIAL_CALENDAR_EVENTS,
+  DEMO_HAPPINESS_AGGREGATE,
+  DEMO_HAPPINESS_TRENDS,
+  DEMO_POINTS_WALLET,
+  DEMO_POINTS_TRANSACTIONS,
+  DEMO_LEADERBOARD_WEEKLY,
+  DEMO_LEADERBOARD_MONTHLY,
+  DEMO_MY_PRIVATE_RANK_WEEKLY,
+  DEMO_MY_PRIVATE_RANK_MONTHLY,
+  DEMO_REDEMPTIONS,
 } from "./skillhub-data";
 import {
   UserRole,
@@ -44,7 +53,30 @@ import {
   EscalationRecordDTO,
   CounselorCallRequestDTO,
   CreateCallRequestInput,
+  HappinessPulseSubmissionRequest,
+  HappinessPulseSubmissionResponse,
+  HappinessIndexAggregateResponse,
+  HappinessTrendResponse,
+  PointsWalletDTO,
+  PointsTransactionDTO,
+  EligibleActivityDTO,
+  LeaderboardResponseDTO,
+  LeaderboardPeriod,
+  StudentPrivateRankDTO,
+  RewardItemDTO,
+  RedemptionRecordDTO,
+  RedemptionStatus,
+  ClaimActivityResponseDTO,
+  RedeemRewardResponseDTO,
 } from "./types";
+import {
+  ELIGIBLE_ACTIVITIES,
+  PUBLISHED_REWARDS_CATALOG,
+  validateRedemptionEligibility,
+  computeRewardProgress,
+  resolveNextRewardTarget,
+  formatPrivacySafeDisplayName,
+} from "./rewardsScoring";
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
 import { api, isDemoMode } from "./api";
 import { supabase, supabaseAuth, SupabaseUser, SupabaseSession } from "./supabase";
@@ -175,6 +207,34 @@ interface SkillHubContextType {
   updateCalendarEvent: (id: string, updates: Partial<CounselorCalendarEvent>) => void;
   deleteCalendarEvent: (id: string) => void;
 
+  // Happiness Index Subsystem (Phase 9)
+  happinessAggregate: HappinessIndexAggregateResponse | null;
+  happinessTrends: HappinessTrendResponse | null;
+  studentPulseSubmitted: boolean;
+  isSubmittingPulse: boolean;
+  pulseSubmitError: string | null;
+  submitStudentHappinessPulse: (req: HappinessPulseSubmissionRequest) => Promise<HappinessPulseSubmissionResponse>;
+  refreshHappinessData: () => Promise<void>;
+
+  // Leaderboard & Rewards Subsystem (Module B)
+  pointsWallet: PointsWalletDTO | null;
+  pointsTransactions: PointsTransactionDTO[];
+  eligibleActivities: EligibleActivityDTO[];
+  leaderboardWeekly: LeaderboardResponseDTO | null;
+  leaderboardMonthly: LeaderboardResponseDTO | null;
+  myPrivateRankWeekly: StudentPrivateRankDTO | null;
+  myPrivateRankMonthly: StudentPrivateRankDTO | null;
+  rewardsCatalog: RewardItemDTO[];
+  myRedemptions: RedemptionRecordDTO[];
+  allRedemptions: RedemptionRecordDTO[];
+  isLoadingRewards: boolean;
+  rewardsError: string | null;
+  refreshRewardsData: () => Promise<void>;
+  refreshMyRankData: () => Promise<void>;
+  claimEligibleActivity: (activityKey: string) => Promise<ClaimActivityResponseDTO>;
+  redeemStoreReward: (rewardId: string, notes?: string) => Promise<RedeemRewardResponseDTO>;
+  updateAdminRedemptionStatus: (redemptionId: string, status: RedemptionStatus, notes?: string) => Promise<RedemptionRecordDTO>;
+
   // Existing UI compatibility state
   user: typeof CURRENT_USER;
   updateUser: (data: Partial<typeof CURRENT_USER>) => void;
@@ -261,6 +321,47 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [escalations, setEscalations] = useState<EscalationRecordDTO[]>(INITIAL_ESCALATIONS);
   const [callRequests, setCallRequests] = useState<CounselorCallRequestDTO[]>(INITIAL_CALL_REQUESTS);
   const [calendarEvents, setCalendarEvents] = useState<CounselorCalendarEvent[]>(demoActive ? INITIAL_CALENDAR_EVENTS : []);
+
+  // Happiness Index Subsystem State (Phase 9)
+  const [happinessAggregate, setHappinessAggregate] = useState<HappinessIndexAggregateResponse | null>(
+    demoActive ? DEMO_HAPPINESS_AGGREGATE : null
+  );
+  const [happinessTrends, setHappinessTrends] = useState<HappinessTrendResponse | null>(
+    demoActive ? DEMO_HAPPINESS_TRENDS : null
+  );
+  const [studentPulseSubmitted, setStudentPulseSubmitted] = useState<boolean>(false);
+  const [isSubmittingPulse, setIsSubmittingPulse] = useState<boolean>(false);
+  const [pulseSubmitError, setPulseSubmitError] = useState<string | null>(null);
+
+  // Leaderboard & Rewards Subsystem State (Module B)
+  const [pointsWallet, setPointsWallet] = useState<PointsWalletDTO | null>(
+    demoActive ? DEMO_POINTS_WALLET : null
+  );
+  const [pointsTransactions, setPointsTransactions] = useState<PointsTransactionDTO[]>(
+    demoActive ? DEMO_POINTS_TRANSACTIONS : []
+  );
+  const [eligibleActivities, setEligibleActivities] = useState<EligibleActivityDTO[]>(ELIGIBLE_ACTIVITIES);
+  const [leaderboardWeekly, setLeaderboardWeekly] = useState<LeaderboardResponseDTO | null>(
+    demoActive ? DEMO_LEADERBOARD_WEEKLY : null
+  );
+  const [leaderboardMonthly, setLeaderboardMonthly] = useState<LeaderboardResponseDTO | null>(
+    demoActive ? DEMO_LEADERBOARD_MONTHLY : null
+  );
+  const [myPrivateRankWeekly, setMyPrivateRankWeekly] = useState<StudentPrivateRankDTO | null>(
+    demoActive ? DEMO_MY_PRIVATE_RANK_WEEKLY : null
+  );
+  const [myPrivateRankMonthly, setMyPrivateRankMonthly] = useState<StudentPrivateRankDTO | null>(
+    demoActive ? DEMO_MY_PRIVATE_RANK_MONTHLY : null
+  );
+  const [rewardsCatalog, setRewardsCatalog] = useState<RewardItemDTO[]>(PUBLISHED_REWARDS_CATALOG);
+  const [myRedemptions, setMyRedemptions] = useState<RedemptionRecordDTO[]>(
+    demoActive ? DEMO_REDEMPTIONS : []
+  );
+  const [allRedemptions, setAllRedemptions] = useState<RedemptionRecordDTO[]>(
+    demoActive ? DEMO_REDEMPTIONS : []
+  );
+  const [isLoadingRewards, setIsLoadingRewards] = useState<boolean>(false);
+  const [rewardsError, setRewardsError] = useState<string | null>(null);
 
   // UI state initialized with canonical synthetic fixtures
   const [user, setUser] = useState({
@@ -676,6 +777,70 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+
+    // Check for explicit demo walkthrough activation in URL
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const roleParam = params.get("role") as UserRole | null;
+        const walkthroughParam = params.get("walkthrough");
+        const demoParam = params.get("demo") === "true";
+
+        const targetRole: UserRole | null =
+          roleParam ||
+          (walkthroughParam === "counselor"
+            ? "counselor"
+            : walkthroughParam === "faculty"
+            ? "faculty"
+            : walkthroughParam === "admin"
+            ? "admin"
+            : walkthroughParam === "student"
+            ? "student"
+            : demoParam
+            ? "student"
+            : null);
+
+        if (targetRole && (roleParam || walkthroughParam || demoParam)) {
+          localStorage.setItem("sutra_demo_mode", "true");
+          setActiveRoleState(targetRole);
+          const persona = DEMO_PERSONAS[targetRole] || DEMO_PERSONAS.faculty;
+          api.setToken(persona.token);
+          api.setCampusId(DEMO_CAMPUS_ID);
+          setUser({
+            ...CURRENT_USER,
+            name: persona.name.split(" ")[0],
+            fullName: persona.name,
+            role: persona.title,
+            avatar: persona.avatar,
+          });
+          setCases(DEMO_CASES);
+          setSignals(DEMO_SIGNALS);
+          setInterventions(DEMO_INTERVENTIONS);
+          setMlModelInfo(DEMO_ML_MODEL_INFO);
+          setHappinessAggregate(DEMO_HAPPINESS_AGGREGATE);
+          setHappinessTrends(DEMO_HAPPINESS_TRENDS);
+          setPointsWallet(DEMO_POINTS_WALLET);
+          setPointsTransactions(DEMO_POINTS_TRANSACTIONS);
+          setLeaderboardWeekly(DEMO_LEADERBOARD_WEEKLY);
+          setLeaderboardMonthly(DEMO_LEADERBOARD_MONTHLY);
+          setMyPrivateRankWeekly(DEMO_MY_PRIVATE_RANK_WEEKLY);
+          setMyPrivateRankMonthly(DEMO_MY_PRIVATE_RANK_MONTHLY);
+          setMyRedemptions(DEMO_REDEMPTIONS);
+          setAllRedemptions(DEMO_REDEMPTIONS);
+          setIsLoadingBackend(false);
+        }
+
+        try {
+          if (localStorage.getItem("sutra_pulse_submitted_v1") === "true") {
+            setStudentPulseSubmitted(true);
+          }
+        } catch {
+          // ignore
+        }
+      } catch (e) {
+        console.warn("Could not parse walkthrough URL parameters:", e);
+      }
+    }
 
     // Register automatic session refresh handler with API client
     api.setTokenRefreshHandler(async () => {
@@ -1140,6 +1305,382 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
   };
 
+  // Happiness Index Subsystem Methods (Phase 9)
+  const submitStudentHappinessPulse = async (
+    req: HappinessPulseSubmissionRequest
+  ): Promise<HappinessPulseSubmissionResponse> => {
+    setIsSubmittingPulse(true);
+    setPulseSubmitError(null);
+    try {
+      if (demoActive) {
+        // Local pitch demonstration acknowledgement
+        const res: HappinessPulseSubmissionResponse = {
+          submission_id: `pulse-syn-${Date.now().toString(36)}`,
+          status: "accepted",
+          period_id: "w6",
+          timestamp: new Date().toISOString(),
+        };
+        setStudentPulseSubmitted(true);
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem("sutra_pulse_submitted_v1", "true");
+          } catch {}
+        }
+
+        // Module B Coupling Guard: Flat participation points (10 pts) for check-in
+        const alreadyClaimed = pointsTransactions.some((t) => t.activity_or_reward_id === "weekly_pulse");
+        if (!alreadyClaimed) {
+          const studentId = currentPersona?.userId || "SYN-1007";
+          const pulseTx: PointsTransactionDTO = {
+            id: `tx-pulse-${Date.now()}`,
+            student_id: studentId,
+            activity_or_reward_id: "weekly_pulse",
+            points: 10,
+            status: "credited",
+            description: "Completed Weekly Happiness Pulse check-in",
+            created_at: new Date().toISOString(),
+          };
+          setPointsTransactions((prev) => [pulseTx, ...prev]);
+          setPointsWallet((prev) => {
+            if (!prev) return prev;
+            const newBal = prev.available_balance + 10;
+            const nextTarget = resolveNextRewardTarget(newBal, rewardsCatalog);
+            const { pointsNeeded } = computeRewardProgress(newBal, nextTarget.points_cost);
+            return {
+              ...prev,
+              available_balance: newBal,
+              total_earned: prev.total_earned + 10,
+              points_this_week: prev.points_this_week + 10,
+              points_this_month: prev.points_this_month + 10,
+              next_reward_title: nextTarget.title,
+              next_reward_cost: nextTarget.points_cost,
+              next_reward_points_needed: pointsNeeded,
+              updated_at: new Date().toISOString(),
+            };
+          });
+          setLeaderboardWeekly((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              entries: prev.entries.map((e) =>
+                e.is_current_user
+                  ? { ...e, points_in_period: e.points_in_period + 10, activities_count: (e.activities_count || 0) + 1 }
+                  : e
+              ),
+            };
+          });
+        }
+
+        return res;
+      } else {
+        const res = await api.proposed.submitHappinessPulse(req);
+        setStudentPulseSubmitted(true);
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem("sutra_pulse_submitted_v1", "true");
+          } catch {}
+        }
+        return res;
+      }
+    } catch (err: any) {
+      const msg = err?.message || "Failed to submit weekly pulse. Please try again.";
+      setPulseSubmitError(msg);
+      throw err;
+    } finally {
+      setIsSubmittingPulse(false);
+    }
+  };
+
+  const refreshHappinessData = async (): Promise<void> => {
+    if (demoActive) {
+      setHappinessAggregate(DEMO_HAPPINESS_AGGREGATE);
+      setHappinessTrends(DEMO_HAPPINESS_TRENDS);
+      return;
+    }
+    try {
+      const [aggRes, trendsRes] = await Promise.allSettled([
+        api.proposed.getHappinessAggregate(),
+        api.proposed.getHappinessTrends(),
+      ]);
+      if (aggRes.status === "fulfilled") {
+        setHappinessAggregate(aggRes.value);
+      }
+      if (trendsRes.status === "fulfilled") {
+        setHappinessTrends(trendsRes.value);
+      }
+    } catch (err) {
+      console.warn("Could not refresh live happiness data:", err);
+    }
+  };
+
+  // Leaderboard & Rewards Subsystem Methods (Module B)
+  const refreshRewardsData = async (): Promise<void> => {
+    setIsLoadingRewards(true);
+    setRewardsError(null);
+    if (demoActive) {
+      setPointsWallet(DEMO_POINTS_WALLET);
+      setPointsTransactions(DEMO_POINTS_TRANSACTIONS);
+      setEligibleActivities(ELIGIBLE_ACTIVITIES);
+      setLeaderboardWeekly(DEMO_LEADERBOARD_WEEKLY);
+      setLeaderboardMonthly(DEMO_LEADERBOARD_MONTHLY);
+      setMyPrivateRankWeekly(DEMO_MY_PRIVATE_RANK_WEEKLY);
+      setMyPrivateRankMonthly(DEMO_MY_PRIVATE_RANK_MONTHLY);
+      setRewardsCatalog(PUBLISHED_REWARDS_CATALOG);
+      setMyRedemptions(DEMO_REDEMPTIONS);
+      setAllRedemptions(DEMO_REDEMPTIONS);
+      setIsLoadingRewards(false);
+      return;
+    }
+
+    try {
+      const [walletRes, txsRes, actRes, weeklyRes, monthlyRes, catRes, myRedRes, myRankWeeklyRes, myRankMonthlyRes] =
+        await Promise.allSettled([
+          api.proposed.getMyWallet(),
+          api.proposed.getMyTransactions(),
+          api.proposed.getEligibleActivities(),
+          api.proposed.getLeaderboard("weekly"),
+          api.proposed.getLeaderboard("monthly"),
+          api.proposed.getRewardsCatalog(),
+          api.proposed.getMyRedemptions(),
+          api.proposed.getMyPrivateRank("weekly"),
+          api.proposed.getMyPrivateRank("monthly"),
+        ]);
+
+      if (walletRes.status === "fulfilled") setPointsWallet(walletRes.value);
+      if (txsRes.status === "fulfilled") setPointsTransactions(txsRes.value || []);
+      if (actRes.status === "fulfilled") setEligibleActivities(actRes.value || []);
+      if (weeklyRes.status === "fulfilled") setLeaderboardWeekly(weeklyRes.value);
+      if (monthlyRes.status === "fulfilled") setLeaderboardMonthly(monthlyRes.value);
+      if (catRes.status === "fulfilled") setRewardsCatalog(catRes.value || []);
+      if (myRedRes.status === "fulfilled") setMyRedemptions(myRedRes.value || []);
+      if (myRankWeeklyRes.status === "fulfilled") setMyPrivateRankWeekly(myRankWeeklyRes.value);
+      if (myRankMonthlyRes.status === "fulfilled") setMyPrivateRankMonthly(myRankMonthlyRes.value);
+
+      if (activeRole === "admin" || activeRole === "superadmin") {
+        try {
+          const allReds = await api.proposed.getAllRedemptions();
+          setAllRedemptions(allReds || []);
+        } catch {}
+      }
+    } catch (err: any) {
+      console.warn("Could not refresh live rewards data:", err);
+      setRewardsError(err?.message || "Failed to load live rewards data.");
+    } finally {
+      setIsLoadingRewards(false);
+    }
+  };
+
+  const claimEligibleActivity = async (activityKey: string): Promise<ClaimActivityResponseDTO> => {
+    const act = eligibleActivities.find((a) => a.key === activityKey) ||
+      ELIGIBLE_ACTIVITIES.find((a) => a.key === activityKey);
+    if (!act) {
+      throw new Error(`Activity '${activityKey}' is not recognized in the eligible activities catalogue.`);
+    }
+
+    if (demoActive) {
+      const studentId = currentPersona?.userId || "SYN-1007";
+      const tx: PointsTransactionDTO = {
+        id: `tx-${Date.now()}`,
+        student_id: studentId,
+        activity_or_reward_id: activityKey,
+        points: act.points,
+        status: "credited",
+        description: `Completed: ${act.title}`,
+        created_at: new Date().toISOString(),
+      };
+
+      setPointsTransactions((prev) => [tx, ...prev]);
+      setPointsWallet((prev) => {
+        const curBal = prev?.available_balance ?? 385;
+        const curEarned = prev?.total_earned ?? 485;
+        const curThisWeek = prev?.points_this_week ?? 35;
+        const curThisMonth = prev?.points_this_month ?? 115;
+        const nextBal = curBal + act.points;
+        const nextTarget = resolveNextRewardTarget(nextBal, rewardsCatalog);
+        const { pointsNeeded } = computeRewardProgress(nextBal, nextTarget.points_cost);
+
+        return {
+          student_id: studentId,
+          available_balance: nextBal,
+          total_earned: curEarned + act.points,
+          total_redeemed: prev?.total_redeemed ?? 100,
+          points_this_week: curThisWeek + act.points,
+          points_this_month: curThisMonth + act.points,
+          next_reward_title: nextTarget.title,
+          next_reward_cost: nextTarget.points_cost,
+          next_reward_points_needed: pointsNeeded,
+          updated_at: new Date().toISOString(),
+          is_demo_data: true,
+        };
+      });
+
+      // Update weekly & monthly leaderboard for current student in demo
+      setLeaderboardWeekly((prev) => {
+        if (!prev) return prev;
+        const updatedEntries = prev.entries.map((e) =>
+          e.is_current_user
+            ? { ...e, points_in_period: e.points_in_period + act.points, activities_count: (e.activities_count || 0) + 1 }
+            : e
+        );
+        return { ...prev, entries: updatedEntries };
+      });
+
+      return {
+        success: true,
+        transaction: tx,
+        new_balance: (pointsWallet?.available_balance ?? 385) + act.points,
+        message: `Successfully verified participation! +${act.points} points credited to your wallet.`,
+      };
+    }
+
+    // Normal mode: Authoritative backend call
+    const res = await api.proposed.claimActivity({ activity_key: activityKey });
+    if (res.success && res.transaction) {
+      setPointsTransactions((prev) => [res.transaction, ...prev]);
+      setPointsWallet((prev) =>
+        prev
+          ? {
+              ...prev,
+              available_balance: res.new_balance,
+              total_earned: prev.total_earned + res.transaction.points,
+            }
+          : null
+      );
+    }
+    return res;
+  };
+
+  const redeemStoreReward = async (rewardId: string, notes?: string): Promise<RedeemRewardResponseDTO> => {
+    const reward = rewardsCatalog.find((r) => r.id === rewardId) ||
+      PUBLISHED_REWARDS_CATALOG.find((r) => r.id === rewardId);
+    if (!reward) {
+      throw new Error("Reward item not found in catalogue.");
+    }
+
+    const currentBalance = pointsWallet?.available_balance ?? 0;
+    const check = validateRedemptionEligibility(currentBalance, reward);
+    if (!check.eligible) {
+      throw new Error(check.reason || "Eligibility check failed.");
+    }
+
+    if (demoActive) {
+      const studentId = currentPersona?.userId || "SYN-1007";
+      const newBal = currentBalance - reward.points_cost;
+
+      const tx: PointsTransactionDTO = {
+        id: `tx-red-${Date.now()}`,
+        student_id: studentId,
+        activity_or_reward_id: reward.id,
+        points: -reward.points_cost,
+        status: "debited",
+        description: `Redeemed: ${reward.title}`,
+        created_at: new Date().toISOString(),
+      };
+
+      const redemption: RedemptionRecordDTO = {
+        id: `red-${Date.now()}`,
+        reward_id: reward.id,
+        reward_title: reward.title,
+        reward_category: reward.category,
+        points_spent: reward.points_cost,
+        is_digital: reward.is_digital,
+        student_id: studentId,
+        student_display_name: formatPrivacySafeDisplayName(user.name),
+        status: reward.is_digital ? "collected" : "requested",
+        collection_location: reward.is_digital ? "Digital Voucher" : "Student Services Center (Room 102)",
+        redeemed_at: new Date().toISOString(),
+        notes: notes || (reward.is_digital ? "Digital delivery confirmed." : "Awaiting collection approval."),
+      };
+
+      setPointsTransactions((prev) => [tx, ...prev]);
+      setMyRedemptions((prev) => [redemption, ...prev]);
+      setAllRedemptions((prev) => [redemption, ...prev]);
+
+      // Decrement local stock
+      setRewardsCatalog((prev) =>
+        prev.map((r) =>
+          r.id === reward.id ? { ...r, stock: Math.max(0, r.stock - 1) } : r
+        )
+      );
+
+      // Update wallet
+      setPointsWallet((prev) => {
+        const curEarned = prev?.total_earned ?? 485;
+        const curRedeemed = (prev?.total_redeemed ?? 0) + reward.points_cost;
+        const nextTarget = resolveNextRewardTarget(newBal, rewardsCatalog);
+        const { pointsNeeded } = computeRewardProgress(newBal, nextTarget.points_cost);
+
+        return {
+          student_id: studentId,
+          available_balance: newBal,
+          total_earned: curEarned,
+          total_redeemed: curRedeemed,
+          points_this_week: prev?.points_this_week ?? 0,
+          points_this_month: prev?.points_this_month ?? 0,
+          next_reward_title: nextTarget.title,
+          next_reward_cost: nextTarget.points_cost,
+          next_reward_points_needed: pointsNeeded,
+          updated_at: new Date().toISOString(),
+          is_demo_data: true,
+        };
+      });
+
+      return {
+        success: true,
+        redemption,
+        transaction: tx,
+        new_balance: newBal,
+        message: reward.is_digital
+          ? `Successfully redeemed ${reward.title}! Digital access is now available.`
+          : `Redemption requested for ${reward.title}. You can track fulfilment status in your wallet.`,
+      };
+    }
+
+    // Normal mode: Authoritative backend call
+    const res = await api.proposed.redeemReward({ reward_id: rewardId, notes });
+    if (res.success) {
+      if (res.transaction) setPointsTransactions((prev) => [res.transaction, ...prev]);
+      if (res.redemption) setMyRedemptions((prev) => [res.redemption, ...prev]);
+      setPointsWallet((prev) =>
+        prev
+          ? {
+              ...prev,
+              available_balance: res.new_balance,
+              total_redeemed: prev.total_redeemed + (res.transaction ? Math.abs(res.transaction.points) : 0),
+            }
+          : null
+      );
+    }
+    return res;
+  };
+
+  const updateAdminRedemptionStatus = async (
+    redemptionId: string,
+    status: RedemptionStatus,
+    notes?: string
+  ): Promise<RedemptionRecordDTO> => {
+    if (demoActive) {
+      const updated = allRedemptions.find((r) => r.id === redemptionId);
+      if (!updated) {
+        throw new Error("Redemption record not found.");
+      }
+      const newRec: RedemptionRecordDTO = {
+        ...updated,
+        status,
+        notes: notes || updated.notes,
+        updated_at: new Date().toISOString(),
+      };
+      setAllRedemptions((prev) => prev.map((r) => (r.id === redemptionId ? newRec : r)));
+      setMyRedemptions((prev) => prev.map((r) => (r.id === redemptionId ? newRec : r)));
+      return newRec;
+    }
+
+    const rec = await api.proposed.updateRedemptionStatus(redemptionId, { status, notes });
+    setAllRedemptions((prev) => prev.map((r) => (r.id === redemptionId ? rec : r)));
+    setMyRedemptions((prev) => prev.map((r) => (r.id === redemptionId ? rec : r)));
+    return rec;
+  };
+
   const updateUser = (data: Partial<typeof CURRENT_USER>) => {
     setUser((prev) => ({
       ...prev,
@@ -1329,6 +1870,47 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         addCalendarEvent,
         updateCalendarEvent,
         deleteCalendarEvent,
+        happinessAggregate,
+        happinessTrends,
+        studentPulseSubmitted,
+        isSubmittingPulse,
+        pulseSubmitError,
+        submitStudentHappinessPulse,
+        refreshHappinessData,
+        pointsWallet,
+        pointsTransactions,
+        eligibleActivities,
+        leaderboardWeekly,
+        leaderboardMonthly,
+        myPrivateRankWeekly,
+        myPrivateRankMonthly,
+        refreshMyRankData: async () => {
+          try {
+            const [w, m] = await Promise.all([
+              api.proposed.getMyPrivateRank("weekly"),
+              api.proposed.getMyPrivateRank("monthly"),
+            ]);
+            setMyPrivateRankWeekly(w);
+            setMyPrivateRankMonthly(m);
+          } catch {
+            if (isDemoMode()) {
+              setMyPrivateRankWeekly(DEMO_MY_PRIVATE_RANK_WEEKLY);
+              setMyPrivateRankMonthly(DEMO_MY_PRIVATE_RANK_MONTHLY);
+            } else {
+              setMyPrivateRankWeekly(null);
+              setMyPrivateRankMonthly(null);
+            }
+          }
+        },
+        rewardsCatalog,
+        myRedemptions,
+        allRedemptions,
+        isLoadingRewards,
+        rewardsError,
+        refreshRewardsData,
+        claimEligibleActivity,
+        redeemStoreReward,
+        updateAdminRedemptionStatus,
         user,
         updateUser,
         courses,

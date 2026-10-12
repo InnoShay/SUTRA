@@ -347,9 +347,9 @@ export default function OnboardingPage() {
       });
 
       if (formData.accountLevel === "student") {
-        setActiveRole("faculty");
+        setActiveRole("student");
       } else if (formData.accountLevel === "admin") {
-        setActiveRole("dean");
+        setActiveRole("admin");
       } else if (formData.accountLevel === "counselor") {
         setActiveRole("counselor");
       } else {

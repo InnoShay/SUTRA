@@ -111,7 +111,7 @@ export function GuidanceReportView({
 
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[11px] font-bold text-neutral-700 bg-white px-3 py-1.5 rounded-xl border border-neutral-200 shadow-2xs">
-              Stored In-Session Only
+              Browser-Local Storage (Persisted In-Session)
             </span>
           </div>
         </div>

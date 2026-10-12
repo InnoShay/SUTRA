@@ -18,6 +18,8 @@ import {
   Activity,
   Layers,
   Clock,
+  Heart,
+  Gift,
 } from "lucide-react";
 
 export function AdminDashboardView() {
@@ -30,6 +32,8 @@ export function AdminDashboardView() {
     transitionCase,
     activeCampusName,
     refreshBackendData,
+    happinessAggregate,
+    allRedemptions,
   } = useSkillHub();
 
   const [selectedSignalForReview, setSelectedSignalForReview] =
@@ -185,6 +189,77 @@ export function AdminDashboardView() {
             Closed-loop terminal resolution
           </p>
         </div>
+      </div>
+
+      {/* Happiness Index Institutional Telemetry Overview Banner */}
+      {happinessAggregate && (
+        <div className="p-5 sm:p-6 bg-gradient-to-r from-rose-50/70 via-white to-white rounded-3xl border border-rose-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="p-3 bg-rose-600 text-white rounded-2xl shadow-sm shrink-0">
+              <Heart className="w-5 h-5 fill-rose-100 text-rose-100" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full border border-rose-200">
+                  Campus Happiness Index
+                </span>
+                <span className="text-xs text-neutral-500">
+                  {happinessAggregate.reporting_period} • {happinessAggregate.response_count} Responses
+                </span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-neutral-900 font-heading mt-1">
+                Current Index: {happinessAggregate.happiness_index?.toFixed(1) ?? "—"} / 100
+                {happinessAggregate.change_points !== null && (
+                  <span className={`ml-2 text-xs font-semibold ${happinessAggregate.change_points >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                    ({happinessAggregate.change_points >= 0 ? "+" : ""}{happinessAggregate.change_points.toFixed(1)} pts)
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-neutral-600 mt-0.5">
+                Aggregate weekly student pulse across 6 dimensions to support institutional planning.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/analytics?tab=happiness"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all shrink-0 active:scale-[0.98]"
+          >
+            <span>View Happiness Analytics</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
+
+      {/* Rewards Fulfilment Desk Quick Action Banner */}
+      <div className="p-5 sm:p-6 bg-gradient-to-r from-amber-50/70 via-white to-white rounded-3xl border border-amber-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-3 bg-amber-600 text-white rounded-2xl shadow-sm shrink-0">
+            <Gift className="w-5 h-5 text-amber-100" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300">
+                Fulfilment Desk
+              </span>
+              <span className="text-xs text-neutral-500">
+                {allRedemptions.length} Total Student Redemptions
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-bold text-neutral-900 font-heading mt-1">
+              Campus Rewards &amp; Merchandise Administration
+            </h3>
+            <p className="text-xs text-neutral-600 mt-0.5">
+              Review and update merchandise fulfilment status, manage published rewards stock, and verify student collections.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/rewards?tab=admin"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all shrink-0 active:scale-[0.98]"
+        >
+          <span>Open Fulfilment Desk</span>
+          <ArrowUpRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* 3. SECTION B: MAIN GRID (8 Cols Left, 4 Cols Right) */}

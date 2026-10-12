@@ -65,6 +65,24 @@ import {
   CaseMessageDTO,
   SendCaseMessageRequest,
   CaseMessagesListResponse,
+  HappinessPulseSubmissionRequest,
+  HappinessPulseSubmissionResponse,
+  HappinessPulseStatusResponse,
+  HappinessIndexAggregateResponse,
+  HappinessTrendResponse,
+  PointsWalletDTO,
+  PointsTransactionDTO,
+  EligibleActivityDTO,
+  LeaderboardResponseDTO,
+  LeaderboardPeriod,
+  StudentPrivateRankDTO,
+  RewardItemDTO,
+  RedemptionRecordDTO,
+  ClaimActivityRequestDTO,
+  ClaimActivityResponseDTO,
+  RedeemRewardRequestDTO,
+  RedeemRewardResponseDTO,
+  UpdateRedemptionStatusRequestDTO,
 } from './types';
 import {
   DEMO_SIGNALS,
@@ -82,6 +100,25 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export function isDemoMode(): boolean {
+  if (typeof window !== 'undefined') {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (
+        urlParams.get('walkthrough') === 'student' ||
+        urlParams.get('walkthrough') === 'true' ||
+        urlParams.get('demo') === 'true' ||
+        urlParams.get('demo') === '1'
+      ) {
+        return true;
+      }
+      const localVal = window.localStorage.getItem('sutra_demo_mode');
+      if (localVal === 'true' || localVal === '1') {
+        return true;
+      }
+    } catch {
+      // Fall through to environment variable check
+    }
+  }
   if (typeof process !== 'undefined' && process.env) {
     const val = process.env.NEXT_PUBLIC_SUTRA_DEMO_MODE;
     return val === 'true' || val === '1';
@@ -1729,6 +1766,64 @@ class ApiClient {
     sendCaseMessage: (caseId: string, payload: SendCaseMessageRequest) =>
       this.request<CaseMessageDTO>(`/cases/${caseId}/messages`, {
         method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    // --- Happiness Index / Weekly Pulse (Phase 9 / Master Contract) ---
+    submitHappinessPulse: (payload: HappinessPulseSubmissionRequest) =>
+      this.request<HappinessPulseSubmissionResponse>('/happiness/submissions', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    getHappinessStatus: () =>
+      this.request<HappinessPulseStatusResponse>('/happiness/my-status'),
+    getHappinessAggregate: (params?: { cohort?: string; period_id?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.cohort) q.append('cohort', params.cohort);
+      if (params?.period_id) q.append('period_id', params.period_id);
+      const qs = q.toString();
+      return this.request<HappinessIndexAggregateResponse>(
+        `/happiness/aggregate${qs ? `?${qs}` : ''}`
+      );
+    },
+    getHappinessTrends: (params?: { cohort?: string; weeks?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.cohort) q.append('cohort', params.cohort);
+      if (params?.weeks) q.append('weeks', params.weeks.toString());
+      const qs = q.toString();
+      return this.request<HappinessTrendResponse>(
+        `/happiness/trends${qs ? `?${qs}` : ''}`
+      );
+    },
+    // --- Leaderboard & Rewards (Master Contract) ---
+    getMyWallet: () =>
+      this.request<PointsWalletDTO>('/rewards/wallet'),
+    getMyTransactions: () =>
+      this.request<PointsTransactionDTO[]>('/rewards/transactions'),
+    getEligibleActivities: () =>
+      this.request<EligibleActivityDTO[]>('/rewards/activities'),
+    claimActivity: (payload: ClaimActivityRequestDTO) =>
+      this.request<ClaimActivityResponseDTO>('/rewards/activities/claim', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    getMyPrivateRank: (period: LeaderboardPeriod = 'weekly') =>
+      this.request<StudentPrivateRankDTO>(`/rewards/my-rank?period=${period}`),
+    getLeaderboard: (period: LeaderboardPeriod = 'weekly') =>
+      this.request<LeaderboardResponseDTO>(`/rewards/leaderboard?period=${period}`),
+    getRewardsCatalog: () =>
+      this.request<RewardItemDTO[]>('/rewards/catalog'),
+    redeemReward: (payload: RedeemRewardRequestDTO) =>
+      this.request<RedeemRewardResponseDTO>('/rewards/redeem', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    getMyRedemptions: () =>
+      this.request<RedemptionRecordDTO[]>('/rewards/my-redemptions'),
+    getAllRedemptions: () =>
+      this.request<RedemptionRecordDTO[]>('/rewards/admin/redemptions'),
+    updateRedemptionStatus: (redemptionId: string, payload: UpdateRedemptionStatusRequestDTO) =>
+      this.request<RedemptionRecordDTO>(`/rewards/admin/redemptions/${redemptionId}/status`, {
+        method: 'PATCH',
         body: JSON.stringify(payload),
       }),
   };

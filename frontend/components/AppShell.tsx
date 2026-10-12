@@ -38,6 +38,7 @@ import {
   Calendar,
   Sparkles,
   ShieldCheck,
+  Gift,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -78,6 +79,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
   const [userSettingsTab, setUserSettingsTab] = useState<SettingsTabId>("profile");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const personaList: {
     role: UserRole;
@@ -110,9 +116,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     },
     {
       role: "admin",
-      displayLabel: "Admin",
-      fullName: "Admin",
-      title: "System Admin",
+      displayLabel: "Administrator",
+      fullName: "Administrator",
+      title: DEMO_PERSONAS.admin.title,
       avatar: DEMO_PERSONAS.admin.avatar,
     },
   ];
@@ -176,6 +182,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       shortName: t("nav.messages_short", "Messages"),
       href: "/messages",
       icon: MessageCircle,
+    },
+    {
+      name: "Leaderboard & Rewards",
+      shortName: "Rewards",
+      href: "/rewards",
+      icon: Gift,
     },
   ];
 
@@ -312,6 +324,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       href: "/documents",
       icon: ShieldCheck,
     },
+    {
+      name: "Rewards Fulfilment",
+      shortName: "Rewards",
+      href: "/rewards?tab=admin",
+      icon: Gift,
+    },
   ];
 
   const mainNavItems = isStudent
@@ -328,7 +346,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-3 py-2 bg-[#ECEFF3]/95 backdrop-blur-md border-b border-neutral-200/50">
         <div className="flex items-center gap-2">
           <SkillHubLogo />
-          {isDemoMode() && (
+          {mounted && isDemoMode() && (
             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
               Demo
             </span>
@@ -540,7 +558,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* Actions: Demo Mode Badge + Indic Language (Sarvam AI) + Persona Switcher + Messages + Notifications + Profile Avatar */}
             <div className="flex items-center gap-2.5">
-              {isDemoMode() && (
+              {mounted && isDemoMode() && (
                 <span className="text-[11px] font-mono text-amber-700 font-semibold tracking-wide uppercase">
                   Demo Mode
                 </span>
@@ -584,12 +602,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     />
 
                     {/* Apple / iOS-style Floating Glass Menu */}
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 backdrop-blur-xl border border-neutral-200/80 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                      {/* Clean Group Header */}
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-white/95 backdrop-blur-xl border border-neutral-200/80 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      {/* iOS Group Header */}
                       <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
                           {supabaseSession ? "Active Account" : "Active Persona"}
                         </span>
+                        <span className="text-[10px] font-medium text-neutral-600 flex items-center gap-1.5">
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              supabaseSession ? "bg-emerald-500" : "bg-neutral-400"
+                            }`}
+                          />
+                          {supabaseSession ? "Google SSO Active" : "Local Campus Session"}
+                        </span>
+                      </div>
+
+                      {/* User Card if Authenticated or Active */}
+                      <div className="mx-1 my-1.5 p-2.5 bg-neutral-50/90 rounded-xl border border-neutral-100 flex items-center gap-2.5">
+                        <UserAvatar
+                          src={user.avatar || currentPersonaOption.avatar}
+                          name={user.fullName || user.name || currentPersonaOption.fullName}
+                          className="w-8 h-8 ring-2 ring-emerald-400/60 shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-neutral-900 truncate">
+                            {user.fullName || user.name || currentPersonaOption.fullName}
+                          </div>
+                          <div className="text-[10px] text-neutral-500 truncate">
+                            {user.email || (supabaseSession ? "Google Workspace" : "faculty@sutra.edu")}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Header for Roles / Personas */}
+                      <div className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-t border-neutral-100/80 mt-1">
+                        Switch Role View
                       </div>
 
                       {/* Options List */}
@@ -774,6 +822,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Mobile Role Switcher */}
+            <div className="pt-2 pb-2 border-b border-neutral-100">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-2 px-1">
+                Active Role Workspace
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {personaList.map((p) => {
+                  const isSelected = activeRole === p.role;
+                  return (
+                    <button
+                      key={p.role}
+                      type="button"
+                      onClick={() => {
+                        handleRoleSelect(p.role);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-2 p-2 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                        isSelected
+                          ? "bg-neutral-900 text-white shadow-xs"
+                          : "bg-neutral-100/80 hover:bg-neutral-200/60 text-neutral-800"
+                      }`}
+                    >
+                      <UserAvatar src={p.avatar} name={p.fullName} className="w-6 h-6 shrink-0" />
+                      <div className="min-w-0 flex-1 truncate">
+                        <div className="truncate text-[11px] font-medium">
+                          {p.role === "counselor"
+                            ? "Counselor"
+                            : p.role === "faculty"
+                            ? "Faculty"
+                            : p.role === "student"
+                            ? "Student"
+                            : "Admin"}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Secondary Navigation Links */}
             <div className="space-y-1.5 pt-1">
               <button

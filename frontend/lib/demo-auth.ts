@@ -45,7 +45,7 @@ export const DEMO_PERSONAS: Record<UserRole, DemoPersona> = {
     title: 'Senior Student Counselor & Wellbeing Specialist',
     email: 'counselor@sutra.edu',
     userId: '22222222-2222-2222-2222-222222222222',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
     badge: 'Student Counselor',
     token:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMjIyMjIyMi0yMjIyLTIyMjItMjIyMi0yMjIyMjIyMjIyMjIiLCJlbWFpbCI6ImNvdW5zZWxvckBzdXRyYS5lZHUiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJleHAiOjI1MDAwMDAwMDB9.ZkJQyMTibGkpqHRYDyzK5UY4aDDgZR-yVK6UMeXSa8g',

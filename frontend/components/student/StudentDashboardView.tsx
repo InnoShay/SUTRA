@@ -12,9 +12,16 @@ import {
   HeartHandshake,
   ArrowUpRight,
   AlertCircle,
+  Sparkles,
+  Heart,
+  Coins,
+  Gift,
+  Trophy,
 } from "lucide-react";
 import { StudentCaseSummaryDTO } from "@/lib/types";
 import { api, isDemoMode } from "@/lib/api";
+import { DEMO_CASES } from "@/lib/skillhub-data";
+import { HappinessPulseModal } from "./HappinessPulseModal";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -43,13 +50,26 @@ function formatDateTime(dateStr?: string): string {
 }
 
 export function StudentDashboardView() {
-  const { user, currentPersona, cases, activeCampusName, backendError, refreshBackendData } = useSkillHub();
+  const {
+    user,
+    currentPersona,
+    cases,
+    activeCampusName,
+    backendError,
+    refreshBackendData,
+    studentPulseSubmitted,
+    pointsWallet,
+    leaderboardWeekly,
+    myPrivateRankWeekly,
+  } = useSkillHub();
   const [mounted, setMounted] = React.useState(false);
+  const [isPulseModalOpen, setIsPulseModalOpen] = React.useState(false);
 
   // Authenticated student-scoped case state
   const [studentCases, setStudentCases] = React.useState<StudentCaseSummaryDTO[]>([]);
   const [isLoadingCases, setIsLoadingCases] = React.useState(true);
   const [casesError, setCasesError] = React.useState<string | null>(null);
+  const [isDemoPreview, setIsDemoPreview] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
@@ -61,16 +81,22 @@ export function StudentDashboardView() {
   const fetchStudentCases = React.useCallback(async () => {
     setIsLoadingCases(true);
     setCasesError(null);
+    setIsDemoPreview(false);
     try {
       const response = await api.proposed.getMyCases();
       setStudentCases(response.items || []);
     } catch (err: any) {
       if (isDemoMode()) {
         const demoFiltered = cases.filter(
-          (c) => c.student_id === studentId || c.external_student_ref === studentId
+          (c) =>
+            c.student_id === studentId ||
+            c.external_student_ref === studentId ||
+            c.student_id === "SYN-1007" ||
+            c.external_student_ref === "SYN-1007"
         );
+        const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
         setStudentCases(
-          demoFiltered.map((c) => ({
+          resolvedList.map((c) => ({
             id: c.id,
             institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
             student_id: c.student_id,
@@ -106,6 +132,7 @@ export function StudentDashboardView() {
     let active = true;
     setIsLoadingCases(true);
     setCasesError(null);
+    setIsDemoPreview(false);
     setStudentCases([]);
 
     api.proposed
@@ -119,10 +146,15 @@ export function StudentDashboardView() {
         if (!active) return;
         if (isDemoMode()) {
           const demoFiltered = cases.filter(
-            (c) => c.student_id === studentId || c.external_student_ref === studentId
+            (c) =>
+              c.student_id === studentId ||
+              c.external_student_ref === studentId ||
+              c.student_id === "SYN-1007" ||
+              c.external_student_ref === "SYN-1007"
           );
+          const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
           setStudentCases(
-            demoFiltered.map((c) => ({
+            resolvedList.map((c) => ({
               id: c.id,
               institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
               student_id: c.student_id,
@@ -252,13 +284,132 @@ export function StudentDashboardView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Link
+            href="/assessment"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 border border-neutral-200/80 rounded-xl text-xs font-semibold shadow-2xs transition-all min-h-[42px]"
+          >
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            <span>Self-Reflection Assessment</span>
+          </Link>
           <Link
             href="/request-support"
             className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all min-h-[42px]"
           >
             <HeartHandshake className="w-4 h-4 text-emerald-400" />
             <span>Request Support</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Assessment Interactive Callout Banner */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white border border-purple-200/70 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-3 bg-purple-700 text-white rounded-2xl shadow-sm shrink-0">
+            <Sparkles className="w-5 h-5 text-purple-200" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full border border-purple-200">
+                Student Self-Reflection
+              </span>
+              <span className="text-xs text-neutral-500">18 Questions · 3–4 Minutes · Confidential</span>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
+              Explore Your Learning Strengths &amp; Support Priorities
+            </h3>
+            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
+              Confidential, non-evaluative guidance assessment across 6 dimensions to prepare for your next mentor check-in.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/assessment"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all shrink-0 active:scale-[0.98]"
+        >
+          <span>Take Assessment</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+
+      {/* Weekly Happiness Pulse Compact Card */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-50/80 via-orange-50/30 to-white border border-rose-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-3 bg-rose-600 text-white rounded-2xl shadow-sm shrink-0">
+            <Heart className="w-5 h-5 fill-rose-100 text-rose-100" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full border border-rose-200">
+                Weekly Pulse
+              </span>
+              <span className="text-xs text-neutral-500">About 1–2 minutes • Confidential</span>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
+              Your Weekly Happiness Pulse
+            </h3>
+            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
+              A quick check-in to help us improve your college experience. Six lightweight questions across wellbeing, community, and support.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {mounted && studentPulseSubmitted ? (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Check-in Complete</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsPulseModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <Heart className="w-3.5 h-3.5 fill-white" />
+              <span>Start check-in</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Voluntary Student Engagement & Rewards Summary Card */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-50/70 via-orange-50/30 to-white border border-amber-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-3 bg-amber-600 text-white rounded-2xl shadow-sm shrink-0">
+            <Coins className="w-5 h-5 text-amber-100" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300">
+                Points &amp; Rewards
+              </span>
+              <span suppressHydrationWarning className="text-xs text-neutral-500">
+                {pointsWallet?.points_this_week ?? 85} pts this week • Rank #{myPrivateRankWeekly?.current_rank ?? 12} (Private)
+              </span>
+            </div>
+            <h3 suppressHydrationWarning className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
+              Your SUTRA Points: {(pointsWallet?.available_balance ?? 385).toLocaleString()} Available
+            </h3>
+            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
+              Earned through voluntary participation in pulses, workshops, and campus initiatives. Keep your position private.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <Link
+            href="/rewards?tab=store"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+          >
+            <Gift className="w-3.5 h-3.5 text-amber-300" />
+            <span>Rewards Store</span>
+          </Link>
+          <Link
+            href="/rewards?tab=leaderboard"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 border border-neutral-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+            <span>My Progress</span>
           </Link>
         </div>
       </div>
@@ -287,6 +438,25 @@ export function StudentDashboardView() {
               </Link>
             </div>
 
+            {/* Demonstration Preview Badge */}
+            {isDemoPreview && (
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/80 text-[11px] text-amber-900 flex items-center justify-between gap-2">
+                <span>
+                  <strong>Demonstration Preview:</strong> Viewing synthetic student case (CASE-SYN-1007) for evaluation.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDemoPreview(false);
+                    fetchStudentCases();
+                  }}
+                  className="text-amber-800 hover:text-amber-950 font-bold underline shrink-0 cursor-pointer"
+                >
+                  Clear Preview
+                </button>
+              </div>
+            )}
+
             {isLoadingCases ? (
               <div className="p-4 space-y-3">
                 <div className="h-14 bg-neutral-100 rounded-2xl animate-pulse" />
@@ -301,12 +471,57 @@ export function StudentDashboardView() {
                     <p className="text-neutral-600 mt-0.5">{casesError}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => fetchStudentCases()}
-                  className="px-3.5 py-1.5 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl text-xs font-semibold border border-amber-300 transition-colors shrink-0 self-start sm:self-auto shadow-2xs"
-                >
-                  Retry Connection
-                </button>
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const demoTarget =
+                        cases.find(
+                          (c) =>
+                            c.student_id === "SYN-1007" ||
+                            c.external_student_ref === "SYN-1007"
+                        ) || DEMO_CASES[0];
+                      setStudentCases([
+                        {
+                          id: demoTarget.id,
+                          institution_id:
+                            demoTarget.institution_id ||
+                            "00000000-0000-0000-0000-000000000001",
+                          student_id: demoTarget.student_id,
+                          title: demoTarget.selected_intervention_key
+                            ? demoTarget.selected_intervention_key.replace(/_/g, " ")
+                            : "Support Plan",
+                          state: demoTarget.state,
+                          selected_intervention_key:
+                            demoTarget.selected_intervention_key,
+                          primary_owner_name:
+                            demoTarget.primary_owner_user_id || "Faculty Mentor",
+                          tasks_count: demoTarget.tasks?.length || 0,
+                          open_tasks_count:
+                            demoTarget.tasks?.filter(
+                              (t) => t.state !== "DONE" && t.state !== "COMPLETED"
+                            ).length || 0,
+                          created_at: demoTarget.created_at,
+                          updated_at: demoTarget.updated_at,
+                          tasks: demoTarget.tasks,
+                          events: demoTarget.events,
+                        } as any,
+                      ]);
+                      setIsDemoPreview(true);
+                      setCasesError(null);
+                    }}
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                  >
+                    Preview Demo Case Record
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fetchStudentCases()}
+                    className="px-3.5 py-1.5 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl text-xs font-semibold border border-amber-300 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    Retry Connection
+                  </button>
+                </div>
               </div>
             ) : studentCases.length === 0 ? (
               <div className="p-8 text-center bg-neutral-50 rounded-2xl border border-neutral-100">
@@ -497,6 +712,12 @@ export function StudentDashboardView() {
           </div>
         </div>
       </div>
+
+      {/* Weekly Happiness Pulse Modal Dialog */}
+      <HappinessPulseModal
+        isOpen={isPulseModalOpen}
+        onClose={() => setIsPulseModalOpen(false)}
+      />
     </div>
   );
 }

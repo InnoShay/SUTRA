@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { StudentCaseSummaryDTO } from "@/lib/types";
 import { api, isDemoMode } from "@/lib/api";
+import { DEMO_CASES } from "@/lib/skillhub-data";
 
 export default function CasesPage() {
   const { user, currentPersona, cases, activeRole, backendError, refreshBackendData } = useSkillHub();
@@ -29,21 +30,28 @@ export default function CasesPage() {
   const [studentCases, setStudentCases] = useState<StudentCaseSummaryDTO[]>([]);
   const [isLoadingStudentCases, setIsLoadingStudentCases] = useState(isStudent);
   const [studentCasesError, setStudentCasesError] = useState<string | null>(null);
+  const [isDemoPreview, setIsDemoPreview] = useState(false);
 
   const fetchStudentCases = React.useCallback(async () => {
     if (!isStudent) return;
     setIsLoadingStudentCases(true);
     setStudentCasesError(null);
+    setIsDemoPreview(false);
     try {
       const response = await api.proposed.getMyCases();
       setStudentCases(response.items || []);
     } catch (err: any) {
       if (isDemoMode()) {
         const demoFiltered = cases.filter(
-          (c) => c.student_id === studentId || c.external_student_ref === studentId
+          (c) =>
+            c.student_id === studentId ||
+            c.external_student_ref === studentId ||
+            c.student_id === "SYN-1007" ||
+            c.external_student_ref === "SYN-1007"
         );
+        const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
         setStudentCases(
-          demoFiltered.map((c) => ({
+          resolvedList.map((c) => ({
             id: c.id,
             institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
             student_id: c.student_id,
@@ -82,6 +90,7 @@ export default function CasesPage() {
     let active = true;
     setIsLoadingStudentCases(true);
     setStudentCasesError(null);
+    setIsDemoPreview(false);
     setStudentCases([]);
 
     api.proposed
@@ -95,10 +104,15 @@ export default function CasesPage() {
         if (!active) return;
         if (isDemoMode()) {
           const demoFiltered = cases.filter(
-            (c) => c.student_id === studentId || c.external_student_ref === studentId
+            (c) =>
+              c.student_id === studentId ||
+              c.external_student_ref === studentId ||
+              c.student_id === "SYN-1007" ||
+              c.external_student_ref === "SYN-1007"
           );
+          const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
           setStudentCases(
-            demoFiltered.map((c) => ({
+            resolvedList.map((c) => ({
               id: c.id,
               institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
               student_id: c.student_id,
@@ -262,12 +276,55 @@ export default function CasesPage() {
                 <p className="text-neutral-600 mt-0.5">{studentCasesError}</p>
               </div>
             </div>
-            <button
-              onClick={() => fetchStudentCases()}
-              className="px-3.5 py-1.5 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl text-xs font-semibold border border-amber-300 transition-colors shrink-0 self-start sm:self-auto shadow-2xs"
-            >
-              Retry Connection
-            </button>
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  const demoTarget =
+                    cases.find(
+                      (c) =>
+                        c.student_id === "SYN-1007" ||
+                        c.external_student_ref === "SYN-1007"
+                    ) || DEMO_CASES[0];
+                  setStudentCases([
+                    {
+                      id: demoTarget.id,
+                      institution_id:
+                        demoTarget.institution_id ||
+                        "00000000-0000-0000-0000-000000000001",
+                      student_id: demoTarget.student_id,
+                      title: demoTarget.selected_intervention_key
+                        ? demoTarget.selected_intervention_key.replace(/_/g, " ")
+                        : "Support Plan",
+                      state: demoTarget.state,
+                      selected_intervention_key:
+                        demoTarget.selected_intervention_key,
+                      primary_owner_name:
+                        demoTarget.primary_owner_user_id || "Faculty Mentor",
+                      tasks_count: demoTarget.tasks?.length || 0,
+                      open_tasks_count:
+                        demoTarget.tasks?.filter(
+                          (t) => t.state !== "DONE" && t.state !== "COMPLETED"
+                        ).length || 0,
+                      created_at: demoTarget.created_at,
+                      updated_at: demoTarget.updated_at,
+                    },
+                  ]);
+                  setIsDemoPreview(true);
+                  setStudentCasesError(null);
+                }}
+                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+              >
+                Preview Demo Case Record
+              </button>
+              <button
+                type="button"
+                onClick={() => fetchStudentCases()}
+                className="px-3.5 py-1.5 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl text-xs font-semibold border border-amber-300 transition-colors shrink-0 shadow-2xs cursor-pointer"
+              >
+                Retry Connection
+              </button>
+            </div>
           </div>
         ) : filteredCases.length === 0 ? (
           <div className="p-12 text-center bg-neutral-50 rounded-2xl border border-neutral-100">

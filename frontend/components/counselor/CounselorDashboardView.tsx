@@ -7,6 +7,8 @@ import { CounselorStatusBadge } from "./CounselorStatusBadge";
 import { ContactAuthorityModal } from "./ContactAuthorityModal";
 import { CounselorOnboardingModal } from "./CounselorOnboardingModal";
 import { CounselorCallRequestDTO, CaseDetailDTO } from "@/lib/types";
+import { Heart } from "lucide-react";
+import { HappinessAnalyticsView } from "@/components/happiness/HappinessAnalyticsView";
 
 export function CounselorDashboardView() {
   const {
@@ -20,10 +22,11 @@ export function CounselorDashboardView() {
     updateCallRequestStatus,
     transitionCase,
     recordCaseFollowUp,
+    happinessAggregate,
   } = useSkillHub();
 
   const [activeTab, setActiveTab] = useState<
-    "call-requests" | "active-cases" | "follow-ups" | "escalations"
+    "call-requests" | "active-cases" | "follow-ups" | "escalations" | "happiness-index"
   >("call-requests");
 
   const [availability, setAvailability] = useState<"available" | "in_session" | "away">(
@@ -99,6 +102,9 @@ export function CounselorDashboardView() {
             <CounselorStatusBadge
               status={counselorProfile?.onboarding_status || "APPROVED"}
             />
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-neutral-100 text-neutral-700 border border-neutral-300">
+              PR #7 • Authored by Aryan
+            </span>
           </div>
           <p className="text-xs text-neutral-500 mt-1 flex flex-wrap items-center gap-2">
             <span className="font-medium text-neutral-700">
@@ -291,6 +297,23 @@ export function CounselorDashboardView() {
             <span className="text-[11px] font-mono px-1.5 py-0.2 bg-neutral-100 text-neutral-800 rounded">
               {escalations.length}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("happiness-index")}
+            className={`pb-3 text-xs font-medium transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "happiness-index"
+                ? "border-neutral-900 text-neutral-900 font-semibold"
+                : "border-transparent text-neutral-500 hover:text-neutral-900"
+            }`}
+          >
+            <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+            <span>Happiness Index</span>
+            {happinessAggregate && (
+              <span className="text-[11px] font-mono px-1.5 py-0.2 bg-rose-50 text-rose-800 rounded font-bold">
+                {happinessAggregate.happiness_index?.toFixed(1) ?? "—"}
+              </span>
+            )}
           </button>
         </div>
 
@@ -617,7 +640,14 @@ export function CounselorDashboardView() {
         </div>
       )}
 
-      {/* 8. MODALS: Escalation & Onboarding */}
+      {/* 8. TAB CONTENT: HAPPINESS INDEX */}
+      {activeTab === "happiness-index" && (
+        <div className="space-y-4">
+          <HappinessAnalyticsView roleScope="counselor" />
+        </div>
+      )}
+
+      {/* 9. MODALS: Escalation & Onboarding */}
       <ContactAuthorityModal
         isOpen={isAuthorityModalOpen}
         onClose={() => {
