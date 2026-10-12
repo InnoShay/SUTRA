@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSkillHub } from "@/lib/store";
+import { isDemoMode } from "@/lib/api";
 import { SkillHubLogo, SkillHubLogoIcon } from "./SkillHubLogo";
 import { NewCourseModal } from "./NewCourseModal";
 import { CreatePostModal } from "./CreatePostModal";
@@ -298,6 +299,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-3 py-2 bg-[#ECEFF3]/95 backdrop-blur-md border-b border-neutral-200/50">
         <div className="flex items-center gap-2">
           <SkillHubLogo />
+          {isDemoMode() && (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+              Demo
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -503,8 +509,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
             </div>
 
-            {/* Actions: Indic Language (Sarvam AI) + Persona Switcher + Messages + Notifications + Profile Avatar */}
+            {/* Actions: Demo Mode Badge + Indic Language (Sarvam AI) + Persona Switcher + Messages + Notifications + Profile Avatar */}
             <div className="flex items-center gap-2.5">
+              {isDemoMode() && (
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                  Demo Mode
+                </span>
+              )}
               {/* Indic Regional Language Selector (Powered by Sarvam AI) */}
               <LanguageSelector />
 

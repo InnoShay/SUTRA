@@ -50,7 +50,7 @@ export function GuidanceReportView({
           </div>
 
           <span className="text-[11px] font-medium text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/80">
-            In-Session Preview (Not Persisted)
+            Stored Locally in Browser (Not Database-Persisted)
           </span>
         </div>
 

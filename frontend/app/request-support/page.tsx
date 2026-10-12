@@ -23,11 +23,12 @@ export default function RequestSupportPage() {
   const { user, currentPersona, cases, callRequests, requestCounselorCall } = useSkillHub();
 
   const [subject, setSubject] = useState("");
-  const [category, setCategory] = useState("academic_mentorship");
+  const [category, setCategory] = useState("wellbeing_counseling");
   const [description, setDescription] = useState("");
   const [preferredContact, setPreferredContact] = useState<"phone" | "in_person" | "video">("in_person");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedCaseRef, setSubmittedCaseRef] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
 
   const studentId = currentPersona?.userId || "SYN-1007";
@@ -42,52 +43,76 @@ export default function RequestSupportPage() {
 
   const categories = [
     {
+      id: "wellbeing_counseling",
+      label: "Student Wellbeing & Counseling",
+      desc: "Stress, personal circumstances, or mental wellness consultation (Active Backend Route).",
+      available: true,
+      limitation: null,
+    },
+    {
       id: "academic_mentorship",
       label: "Academic Tutoring & Mentorship",
       desc: "Coursework difficulties, exam preparation, and subject guidance.",
+      available: false,
+      limitation: "Direct academic ticket dispatch endpoint is pending backend integration. Please request a counselor consultation for immediate triage.",
     },
     {
       id: "attendance_support",
       label: "Attendance & Schedule Support",
       desc: "Transit delays, medical absences, or scheduling conflicts.",
+      available: false,
+      limitation: "Direct attendance ticket dispatch endpoint is pending backend integration. Contact your faculty mentor directly.",
     },
     {
       id: "learning_resources",
       label: "Learning Materials & Resource Grant",
       desc: "Textbooks, lab software access, or hardware requirements.",
-    },
-    {
-      id: "wellbeing_counseling",
-      label: "Student Wellbeing & Counseling",
-      desc: "Stress, personal circumstances, or mental wellness consultation.",
+      available: false,
+      limitation: "Direct resource grant routing endpoint is pending backend integration.",
     },
     {
       id: "administrative_guidance",
       label: "General Student Support",
       desc: "Enrollment questions, documentation, or institutional guidance.",
+      available: false,
+      limitation: "General administrative ticket dispatch endpoint is pending backend integration.",
     },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject.trim() || !description.trim()) return;
+    setFormError(null);
+
+    if (subject.trim().length < 5) {
+      setFormError("Subject must be at least 5 characters.");
+      return;
+    }
+    if (description.trim().length < 10) {
+      setFormError("Description must be at least 10 characters.");
+      return;
+    }
+
+    const selectedCat = categories.find((c) => c.id === category);
+    if (!selectedCat?.available) {
+      setFormError(
+        selectedCat?.limitation ||
+          "Direct automated dispatch for this category is awaiting backend API implementation. Please choose Student Wellbeing & Counseling or use Request a Counselor Call."
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      // Create request in the store / backend
-      const ref = `REQ-${Date.now().toString().slice(-4)}`;
-      if (category === "wellbeing_counseling") {
-        await requestCounselorCall({
-          student_id: currentPersona?.userId || "SYN-1007",
-          student_notes: `${subject}: ${description}`,
-          preferred_contact_method: preferredContact,
-          preferred_time_slot: "afternoon",
-        });
-      }
-      setSubmittedCaseRef(ref);
+      const res = await requestCounselorCall({
+        student_id: currentPersona?.userId || "SYN-1007",
+        student_notes: `[${selectedCat.label}] ${subject.trim()}: ${description.trim()}`,
+        preferred_contact_method: preferredContact,
+        preferred_time_slot: "afternoon",
+      });
+      setSubmittedCaseRef(res.id);
     } catch (err: any) {
       console.warn("Error submitting request:", err);
-      setSubmittedCaseRef(`REQ-${Date.now().toString().slice(-4)}`);
+      setFormError(err.message || "Failed to submit request to backend. Please verify backend connectivity.");
     } finally {
       setIsSubmitting(false);
     }
@@ -217,6 +242,14 @@ export default function RequestSupportPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Form Error Banner */}
+            {formError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                <span className="leading-relaxed">{formError}</span>
+              </div>
+            )}
+
             {/* Category selection */}
             <div>
               <label className="text-xs font-bold text-neutral-800 block mb-2">
@@ -227,14 +260,28 @@ export default function RequestSupportPage() {
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => setCategory(cat.id)}
+                    onClick={() => {
+                      setCategory(cat.id);
+                      setFormError(null);
+                    }}
                     className={`p-3.5 rounded-2xl text-left border transition-all ${
                       category === cat.id
                         ? "bg-neutral-900 text-white border-neutral-900 shadow-2xs"
                         : "bg-neutral-50/70 hover:bg-neutral-50 border-neutral-200/70 text-neutral-800"
                     }`}
                   >
-                    <span className="font-bold text-xs block">{cat.label}</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-bold text-xs block">{cat.label}</span>
+                      {!cat.available && (
+                        <span
+                          className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                            category === cat.id ? "bg-amber-900 text-amber-200" : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          Pending API
+                        </span>
+                      )}
+                    </div>
                     <span
                       className={`text-[11px] block mt-0.5 leading-snug ${
                         category === cat.id ? "text-neutral-300" : "text-neutral-500"
@@ -245,6 +292,19 @@ export default function RequestSupportPage() {
                   </button>
                 ))}
               </div>
+
+              {/* Category limitation notice */}
+              {categories.find((c) => c.id === category)?.limitation && (
+                <div className="mt-2.5 p-3 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <span className="font-semibold block">Endpoint Pending Backend Integration</span>
+                    <span className="text-[11px] text-amber-700 leading-relaxed block">
+                      {categories.find((c) => c.id === category)?.limitation}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Subject */}

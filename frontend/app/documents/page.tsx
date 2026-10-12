@@ -471,6 +471,23 @@ export default function DocumentsPage() {
             <RefreshCw className="w-6 h-6 text-neutral-400 animate-spin mx-auto" />
             <p className="text-xs text-neutral-500 font-medium">Loading document integrity records...</p>
           </div>
+        ) : errorMsg ? (
+          <div className="py-16 text-center space-y-3 px-4">
+            <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
+            <h3 className="text-sm font-bold text-neutral-800">Failed to load document records</h3>
+            <p className="text-xs text-neutral-500 max-w-md mx-auto">
+              {errorMsg}
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={fetchDocuments}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Retry Connection
+              </button>
+            </div>
+          </div>
         ) : filteredDocuments.length === 0 ? (
           <div className="py-16 text-center space-y-3 px-4">
             <FileText className="w-10 h-10 text-neutral-300 mx-auto" />

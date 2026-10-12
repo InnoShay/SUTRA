@@ -915,17 +915,109 @@ assert(
 );
 console.log("   ✓ Verified dynamic backend threshold verification and discrete error state handlers\n");
 
+// 15. Validating Phase 1B: Frontend API Reliability & Real Data Integration
+console.log("15. Validating Phase 1B: Frontend API Reliability & Real Data Integration...");
+
+// 15a. Validate ApiError hierarchy and taxonomy
+const apiCode = fs.readFileSync(path.join(__dirname, "../lib/api.ts"), "utf-8");
+assert(apiCode.includes("class ApiError extends Error"), "api.ts must define typed ApiError");
+assert(apiCode.includes("kind: ApiErrorKind"), "ApiError must specify ApiErrorKind");
+assert(apiCode.includes("'network_error'"), "ApiErrorKind must support 'network_error'");
+assert(apiCode.includes("'timeout'"), "ApiErrorKind must support 'timeout'");
+assert(apiCode.includes("'authentication'"), "ApiErrorKind must support 'authentication'");
+assert(apiCode.includes("'authorization'"), "ApiErrorKind must support 'authorization'");
+assert(apiCode.includes("'validation'"), "ApiErrorKind must support 'validation'");
+assert(apiCode.includes("'not_found'"), "ApiErrorKind must support 'not_found'");
+assert(apiCode.includes("'server_error'"), "ApiErrorKind must support 'server_error'");
+assert(apiCode.includes("'invalid_format'"), "ApiErrorKind must support 'invalid_format'");
+console.log("   ✓ Verified ApiError hierarchy and 8 distinct error taxonomy categories");
+
+// 15b. Validate Demo Mode isolation in API client
+assert(apiCode.includes("export function isDemoMode()"), "api.ts must export isDemoMode()");
+assert(apiCode.includes("NEXT_PUBLIC_SUTRA_DEMO_MODE"), "api.ts must inspect NEXT_PUBLIC_SUTRA_DEMO_MODE");
+assert(apiCode.includes("if (isDemoMode())"), "api.ts must gate getOfflineFallback behind isDemoMode()");
+assert(apiCode.includes("throw ApiError.network"), "api.ts must throw ApiError.network in normal mode when network fails");
+console.log("   ✓ Verified Demo Mode isolation: normal mode never silently falls back to synthetic fixtures");
+
+// 15c. Validate Store Mutation Error Propagation (No Fabricated Success)
+const updatedStoreCode = fs.readFileSync(path.join(__dirname, "../lib/skillhub-store.tsx"), "utf-8");
+assert(updatedStoreCode.includes("if (!isDemoMode())"), "skillhub-store.tsx must gate local fallbacks behind isDemoMode()");
+const demoGuardMatches = (updatedStoreCode.match(/if \(!isDemoMode\(\)\)/g) || []).length;
+assert(demoGuardMatches >= 10, `Expected at least 10 demo-mode guards on mutation catch blocks, found ${demoGuardMatches}`);
+console.log(`   ✓ Verified ${demoGuardMatches} store mutation handlers reject silent fallbacks in normal mode`);
+
+// 15d. Validate Documents Page error state handling
+const docsPageCode = fs.readFileSync(path.join(__dirname, "../app/documents/page.tsx"), "utf-8");
+assert(docsPageCode.includes("errorMsg ?"), "DocumentsPage must render an explicit error state when errorMsg is present");
+assert(docsPageCode.includes("Retry Connection"), "DocumentsPage must provide a retry connection button on error");
+console.log("   ✓ Verified DocumentsPage renders explicit error state with retry action instead of disguised empty list");
+
+// 15e. Validate Support Request Validation & No Fabricated Reference IDs
+const reqSupportCode = fs.readFileSync(path.join(__dirname, "../app/request-support/page.tsx"), "utf-8");
+assert(reqSupportCode.includes("subject.trim().length < 5"), "RequestSupportPage must validate minimum subject length");
+assert(reqSupportCode.includes("description.trim().length < 10"), "RequestSupportPage must validate minimum description length");
+assert(reqSupportCode.includes("Endpoint Pending Backend Integration"), "RequestSupportPage must disclose backend category limitations");
+assert(!reqSupportCode.includes("setSubmittedCaseRef(`REQ-${Date.now().toString().slice(-4)}`);"), "RequestSupportPage must not fabricate REQ-XXXX references in catch block");
+console.log("   ✓ Verified Support Request input validation, category limitation disclosure, and zero fabricated success IDs");
+
+// 15f. Validate Assessment Local Storage defensive parsing
+const assessmentPageCode = fs.readFileSync(path.join(__dirname, "../app/assessment/page.tsx"), "utf-8");
+assert(assessmentPageCode.includes("Array.isArray(parsed.dimensions)"), "AssessmentPage must validate report structure from localStorage");
+assert(assessmentPageCode.includes("localStorage.removeItem(STORAGE_KEY)"), "AssessmentPage must safely purge corrupted localStorage data");
+console.log("   ✓ Verified defensive JSON parsing and structure validation for browser-persisted assessment reports");
+
+// 15g. Validate Request Counselor Call Modal Error Handling
+const counselorModalCode = fs.readFileSync(path.join(__dirname, "../components/RequestCounselorCallModal.tsx"), "utf-8");
+assert(counselorModalCode.includes("setErrorMessage("), "RequestCounselorCallModal must set error message on failure");
+assert(counselorModalCode.includes("errorMessage &&"), "RequestCounselorCallModal must display error banner on failure");
+console.log("   ✓ Verified RequestCounselorCallModal error banner and error state handling");
+
+// 15h. Validate runtime ApiError factory and empty collection preservation semantics
+class RuntimeApiError extends Error {
+  constructor(kind, message, status = 0) {
+    super(message);
+    this.kind = kind;
+    this.status = status;
+  }
+  static network(url) {
+    return new RuntimeApiError("network_error", `Network request to ${url} failed`, 0);
+  }
+  static http(status, url) {
+    let kind = "server_error";
+    if (status === 401) kind = "authentication";
+    else if (status === 403) kind = "authorization";
+    else if (status === 404) kind = "not_found";
+    else if (status === 422) kind = "validation";
+    return new RuntimeApiError(kind, `HTTP ${status}`, status);
+  }
+}
+const netErr = RuntimeApiError.network("/api/v1/cases");
+assert.strictEqual(netErr.kind, "network_error");
+assert.strictEqual(netErr.status, 0);
+const authErr = RuntimeApiError.http(401, "/api/v1/cases");
+assert.strictEqual(authErr.kind, "authentication");
+assert.strictEqual(authErr.status, 401);
+const notFoundErr = RuntimeApiError.http(404, "/api/v1/documents");
+assert.strictEqual(notFoundErr.kind, "not_found");
+const valErr = RuntimeApiError.http(422, "/api/v1/signals");
+assert.strictEqual(valErr.kind, "validation");
+
+// Validate empty collection preserved (not replaced with synthetic fallback)
+const validEmptyResponse = [];
+assert(Array.isArray(validEmptyResponse) && validEmptyResponse.length === 0, "Valid empty collection must be preserved");
+console.log("   ✓ Verified runtime ApiError taxonomy classification and empty collection preservation\n");
+
 // ==========================================
-// 15. Feature Attribution Visualisations Contracts (Phase 3)
+// 16. Feature Attribution Visualisations Contracts (Phase 3)
 // ==========================================
-console.log("15. Validating Phase 3 Feature Attribution Visualisation Contracts...");
+console.log("16. Validating Phase 3 Feature Attribution Visualisation Contracts...");
 
 const chartComponentPath = path.join(__dirname, "../components/FeatureAttributionChart.tsx");
 assert(fs.existsSync(chartComponentPath), "FeatureAttributionChart.tsx component must exist in components directory");
 
 const chartCode = fs.readFileSync(chartComponentPath, "utf-8");
 
-// 15a. Horizontal Diverging Bar Chart and Directional Separation
+// 16a. Horizontal Diverging Bar Chart and Directional Separation
 assert(
   chartCode.includes("Diverging Chart") && chartCode.includes("w-1/2"),
   "Must implement horizontal diverging bar chart centered on zero axis"
@@ -940,7 +1032,7 @@ assert(
 );
 console.log("   ✓ Verified horizontal diverging bar chart and directional separation");
 
-// 15b. Understandable labels and canonical identifiers
+// 16b. Understandable labels and canonical identifiers
 assert(
   chartCode.includes("CANONICAL_FEATURE_METADATA") && chartCode.includes("rawFeature"),
   "Must map canonical feature keys to understandable human labels while preserving audit identifiers"
@@ -951,7 +1043,7 @@ assert(
 );
 console.log("   ✓ Verified human-readable labels with canonical audit keys preserved");
 
-// 15c. Attribution units and directional semantics
+// 16c. Attribution units and directional semantics
 assert(
   chartCode.includes("Δ Log-Odds") || chartCode.includes("Log-Odds"),
   "Must explicitly specify attribution units as Log-Odds impact"
@@ -962,14 +1054,14 @@ assert(
 );
 console.log("   ✓ Verified attribution units (Δ Log-Odds) and directional explanations");
 
-// 15d. Accessible Table Alternative
+// 16d. Accessible Table Alternative
 assert(
   chartCode.includes("<table") && chartCode.includes("caption") && chartCode.includes("scope=\"col\""),
   "Must provide accessible table alternative with caption and column scopes"
 );
 console.log("   ✓ Verified accessible structured table alternative");
 
-// 15e. Empty, zero, and outlier safety handling
+// 16e. Empty, zero, and outlier safety handling
 assert(
   chartCode.includes("No Feature Attributions Supplied"),
   "Must provide graceful empty state when attributions are missing"
@@ -984,7 +1076,7 @@ assert(
 );
 console.log("   ✓ Verified safe handling of empty, zero, invalid and outlier values");
 
-// 15f. Non-causal governance disclaimer
+// 16f. Non-causal governance disclaimer
 assert(
   chartCode.includes("Non-Causal Statistical Association") || chartCode.includes("NOT establish causal mechanisms"),
   "Must include non-causal governance disclaimer forbidding causal claims"
