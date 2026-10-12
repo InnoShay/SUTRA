@@ -1902,9 +1902,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
             }
           }
         },
-        rewardsCatalog,
-        myRedemptions,
-        allRedemptions,
+        rewardsCatalog: rewardsCatalog || [],
+        myRedemptions: myRedemptions || [],
+        allRedemptions: allRedemptions || [],
         isLoadingRewards,
         rewardsError,
         refreshRewardsData,

@@ -33,7 +33,7 @@ export function AdminDashboardView() {
     activeCampusName,
     refreshBackendData,
     happinessAggregate,
-    allRedemptions,
+    allRedemptions = [],
   } = useSkillHub();
 
   const [selectedSignalForReview, setSelectedSignalForReview] =
@@ -242,7 +242,7 @@ export function AdminDashboardView() {
                 Fulfilment Desk
               </span>
               <span className="text-xs text-neutral-500">
-                {allRedemptions.length} Total Student Redemptions
+                {(allRedemptions?.length ?? 0)} Total Student Redemptions
               </span>
             </div>
             <h3 className="text-base sm:text-lg font-bold text-neutral-900 font-heading mt-1">
