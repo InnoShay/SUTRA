@@ -84,6 +84,7 @@ import {
   RedeemRewardResponseDTO,
   UpdateRedemptionStatusRequestDTO,
 } from './types';
+import { StudentIdentityDTO, AvatarConfigDTO } from './avatar-catalog';
 import {
   DEMO_SIGNALS,
   DEMO_CASES,
@@ -96,8 +97,17 @@ import {
   INITIAL_ESCALATIONS,
 } from './skillhub-data';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined' && window.location) {
+    const host = window.location.hostname;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:8000/api/v1`;
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export function isDemoMode(): boolean {
   if (typeof window !== 'undefined') {
@@ -1259,41 +1269,8 @@ class ApiClient {
       } as unknown as T;
     }
 
-    // Document Subsystem Offline Fallback (Demo Mode only)
-    if (cleanEndpoint.endsWith('/documents')) {
-      return {
-        documents: [],
-        total: 0,
-        network: 'Base Sepolia (Chain ID 84532)',
-      } as unknown as T;
-    }
-
-    if (cleanEndpoint.includes('/documents/generate') && options.method?.toUpperCase() === 'POST') {
-      let bodyData: any = {};
-      try {
-        if (typeof options.body === 'string') bodyData = JSON.parse(options.body);
-      } catch {
-        // ignore
-      }
-      return {
-        id: `00000000-0000-0000-0000-${Date.now().toString().slice(-12).padStart(12, '0')}`,
-        institution_id: '00000000-0000-0000-0000-000000000001',
-        document_ref: `DOC-DEMO-${Date.now().toString().slice(-4)}`,
-        title: bodyData.title || 'Intervention Agreement',
-        doc_type: bodyData.doc_type || 'intervention_plan',
-        file_name: 'intervention_agreement.pdf',
-        file_size_bytes: 1024,
-        mime_type: 'application/pdf',
-        sha256_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        status: 'draft',
-        student_ref: bodyData.student_ref || 'SYN-1007',
-        student_name: bodyData.student_name || 'Asha',
-        chain_id: 84532,
-        anchoring_mode: 'simulated',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as unknown as T;
-    }
+    // Document integrity is never mocked: network failures remain visible to the user.
+    if (cleanEndpoint.includes('/documents')) return undefined;
 
     // Mutations: /review, /transition, /assign, /accept, /tasks, /follow-ups, /outcome (Demo Mode only)
     if (options.method && options.method.toUpperCase() === 'POST') {
@@ -1319,7 +1296,8 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    const baseUrl = getApiBaseUrl();
+    const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
     const headers: Record<string, string> = {
       Accept: 'application/json',
       ...(options.headers as Record<string, string>),
@@ -1668,13 +1646,23 @@ class ApiClient {
           body: JSON.stringify(payload),
         }
       ),
+    upload: (file: File, title?: string) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (title?.trim()) formData.append('title', title.trim());
+      return this.request<DocumentDTO>('/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+    },
     finalize: (id: string) =>
       this.request<DocumentFinalizeResponse>(`/documents/${id}/finalize`, {
         method: 'POST',
       }),
-    anchor: (id: string) =>
+    anchor: (id: string, txHash: string) =>
       this.request<DocumentAnchorResponse>(`/documents/${id}/anchor`, {
         method: 'POST',
+        body: JSON.stringify({ tx_hash: txHash }),
       }),
     verify: (id: string, file: File) => {
       const formData = new FormData();
@@ -1684,7 +1672,7 @@ class ApiClient {
         body: formData,
       });
     },
-    getDownloadUrl: (id: string) => `${API_BASE_URL}/documents/${id}/download`,
+    getDownloadUrl: (id: string) => `${getApiBaseUrl()}/documents/${id}/download`,
   };
 
   // --- SBI Digital Rupee (e₹ / CBDC) Incentive Subsystem ---
@@ -1733,11 +1721,11 @@ class ApiClient {
   // --- Health & Governance ---
   public health = {
     check: () => {
-      const rootUrl = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+      const rootUrl = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
       return this.request<HealthResponse>(`${rootUrl}/health`);
     },
     ready: () => {
-      const rootUrl = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+      const rootUrl = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
       return this.request<ReadinessResponse>(`${rootUrl}/ready`);
     },
   };
@@ -1826,6 +1814,28 @@ class ApiClient {
         method: 'PATCH',
         body: JSON.stringify(payload),
       }),
+  };
+
+  // --- SUTRA Identity & Avatar Studio Subsystem ---
+  public identity = {
+    getMyIdentity: () =>
+      this.request<StudentIdentityDTO>('/identity/me'),
+    provisionIdentity: () =>
+      this.request<StudentIdentityDTO>('/identity/provision', {
+        method: 'POST',
+      }),
+    updateAvatar: (payload: { display_name?: string; avatar_config?: AvatarConfigDTO; avatar_url?: string }) =>
+      this.request<StudentIdentityDTO>('/identity/avatar', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }),
+    mintNFT: (payload: { wallet_address?: string }) =>
+      this.request<StudentIdentityDTO>('/identity/mint', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    getMetadata: (sutraId: string) =>
+      this.request<any>(`/identity/metadata/${sutraId}`),
   };
 }
 

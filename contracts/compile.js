@@ -2,19 +2,24 @@ const fs = require('fs');
 const path = require('path');
 const solc = require('solc');
 
-const CONTRACT_PATH = path.join(__dirname, 'SutraDocumentRegistry.sol');
-const ARTIFACT_PATH = path.join(__dirname, 'SutraDocumentRegistry.json');
+console.log('Compiling SUTRA contracts with solc', solc.version(), '...');
 
-console.log('Compiling SutraDocumentRegistry.sol with solc', solc.version(), '...');
+const contractsToCompile = [
+  { file: 'SutraDocumentRegistry.sol', name: 'SutraDocumentRegistry', artifact: 'SutraDocumentRegistry.json' },
+  { file: 'SutraStudentIdentityNFT.sol', name: 'SutraStudentIdentityNFT', artifact: 'SutraStudentIdentityNFT.json' },
+];
 
-const source = fs.readFileSync(CONTRACT_PATH, 'utf8');
+const sources = {};
+for (const c of contractsToCompile) {
+  const filePath = path.join(__dirname, c.file);
+  if (fs.existsSync(filePath)) {
+    sources[c.file] = { content: fs.readFileSync(filePath, 'utf8') };
+  }
+}
+
 const input = {
   language: 'Solidity',
-  sources: {
-    'SutraDocumentRegistry.sol': {
-      content: source,
-    },
-  },
+  sources: sources,
   settings: {
     optimizer: {
       enabled: true,
@@ -44,15 +49,24 @@ if (output.errors) {
   }
 }
 
-const contract = output.contracts['SutraDocumentRegistry.sol']['SutraDocumentRegistry'];
-const artifact = {
-  contractName: 'SutraDocumentRegistry',
-  abi: contract.abi,
-  bytecode: contract.evm.bytecode.object,
-};
+for (const c of contractsToCompile) {
+  if (output.contracts && output.contracts[c.file] && output.contracts[c.file][c.name]) {
+    const contract = output.contracts[c.file][c.name];
+    const artifact = {
+      contractName: c.name,
+      abi: contract.abi,
+      bytecode: contract.evm.bytecode.object,
+    };
+    const artifactPath = path.join(__dirname, c.artifact);
+    fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2), 'utf8');
+    console.log(`✓ Compiled ${c.name} -> ${c.artifact} (ABI items: ${artifact.abi.length}, bytecode: ${artifact.bytecode.length} chars)`);
+    if (c.name === 'SutraDocumentRegistry') {
+      const publicContractsDir = path.join(__dirname, '..', 'frontend', 'public', 'contracts');
+      fs.mkdirSync(publicContractsDir, { recursive: true });
+      fs.writeFileSync(path.join(publicContractsDir, c.artifact), JSON.stringify(artifact, null, 2), 'utf8');
+      console.log(`✓ Published public deployment artifact -> frontend/public/contracts/${c.artifact}`);
+    }
+  }
+}
 
-fs.writeFileSync(ARTIFACT_PATH, JSON.stringify(artifact, null, 2), 'utf8');
-
-console.log('Compilation succeeded! Artifact written to SutraDocumentRegistry.json');
-console.log('ABI items:', artifact.abi.length);
-console.log('Bytecode length:', artifact.bytecode.length, 'hex chars');
+console.log('\nCompilation completed successfully for all contracts.');

@@ -601,7 +601,7 @@ export interface DocumentDTO {
   tx_hash?: string | null;
   block_number?: number | null;
   anchored_at?: string | null;
-  anchoring_mode: 'simulated' | 'onchain';
+  anchoring_mode: 'unavailable' | 'onchain';
   last_verified_at?: string | null;
   verification_status?: 'verified_match' | 'mismatch' | 'unverified' | null;
   explorer_url?: string | null;
@@ -637,7 +637,7 @@ export interface DocumentAnchorResponse {
   contract_address?: string | null;
   tx_hash?: string | null;
   explorer_url?: string | null;
-  anchoring_mode: 'simulated' | 'onchain';
+  anchoring_mode: 'onchain';
   anchored_at: string;
   message: string;
 }
@@ -662,6 +662,9 @@ export interface DocumentListResponse {
   documents: DocumentDTO[];
   total: number;
   network: string;
+  chain_id: number;
+  contract_address?: string | null;
+  onchain_ready: boolean;
 }
 
 // --- SBI Digital Rupee (e₹ / CBDC) Incentive Subsystem ---
@@ -1378,4 +1381,7 @@ export interface UpdateRedemptionStatusRequestDTO {
   status: RedemptionStatus;
   notes?: string;
 }
+
+// --- 5. SUTRA Identity & Avatar Studio Contract ---
+export type { AvatarConfigDTO, StudentIdentityDTO } from './avatar-catalog';
 

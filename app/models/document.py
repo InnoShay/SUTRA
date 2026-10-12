@@ -59,8 +59,8 @@ class DocumentRecord(Base):
     block_number: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     anchored_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     anchoring_mode: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="simulated"
-    )  # simulated, onchain
+        String(32), nullable=False, default="unavailable"
+    )  # unavailable, onchain
 
     # Verification status
     last_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

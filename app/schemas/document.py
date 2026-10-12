@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Literal, Optional
+from pydantic import BaseModel, Field, field_validator
 
 
 class DocumentCreateRequest(BaseModel):
@@ -38,7 +38,7 @@ class DocumentDTO(BaseModel):
     tx_hash: Optional[str] = None
     block_number: Optional[int] = None
     anchored_at: Optional[datetime] = None
-    anchoring_mode: str = "simulated"
+    anchoring_mode: Literal["onchain", "unavailable"] = "unavailable"
     last_verified_at: Optional[datetime] = None
     verification_status: Optional[str] = None
     explorer_url: Optional[str] = None
@@ -65,9 +65,21 @@ class DocumentAnchorResponse(BaseModel):
     contract_address: Optional[str] = None
     tx_hash: Optional[str] = None
     explorer_url: Optional[str] = None
-    anchoring_mode: str
+    anchoring_mode: Literal["onchain"]
     anchored_at: datetime
     message: str
+
+
+class DocumentAnchorConfirmRequest(BaseModel):
+    tx_hash: str = Field(..., min_length=66, max_length=66)
+
+    @field_validator("tx_hash")
+    @classmethod
+    def validate_tx_hash(cls, value: str) -> str:
+        normalized = value if value.startswith("0x") else f"0x{value}"
+        if len(normalized) != 66 or any(char not in "0123456789abcdefABCDEF" for char in normalized[2:]):
+            raise ValueError("Transaction hash must be a 32-byte 0x-prefixed hex value.")
+        return normalized
 
 
 class DocumentVerifyResponse(BaseModel):
@@ -93,3 +105,6 @@ class DocumentListResponse(BaseModel):
     documents: List[DocumentDTO]
     total: int
     network: str = "Base Sepolia (Chain ID 84532)"
+    chain_id: int = 84532
+    contract_address: Optional[str] = None
+    onchain_ready: bool = False

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
-import { DocumentDTO, CBDCVoucherRecord } from "@/lib/types";
+import { DocumentDTO, DocumentAnchorResponse, CBDCVoucherRecord } from "@/lib/types";
 import { useSkillHub } from "@/lib/store";
 import { WalletConnectButton } from "@/components/WalletConnectButton";
 import {
@@ -25,11 +26,18 @@ import {
   Filter,
 } from "lucide-react";
 
+type Eip1193Window = Window & {
+  ethereum?: {
+    request: (args: { method: string; params?: unknown[] }) => Promise<any>;
+  };
+};
+
 export default function DocumentsPage() {
   const { currentPersona } = useSkillHub();
 
   const [documents, setDocuments] = useState<DocumentDTO[]>([]);
-  const [contractAddress, setContractAddress] = useState<string>("0x3565eDb6aEc447CaeB73F719574828135cfB9705");
+  const [contractAddress, setContractAddress] = useState<string | null>(null);
+  const [onchainReady, setOnchainReady] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -41,13 +49,18 @@ export default function DocumentsPage() {
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   const [genTitle, setGenTitle] = useState("");
   const [genDocType, setGenDocType] = useState("intervention_plan");
-  const [genStudentRef, setGenStudentRef] = useState("SYN-1007");
-  const [genStudentName, setGenStudentName] = useState("Asha (synthetic)");
-  const [genContentText, setGenContentText] = useState(
-    "Agreed to 14-day peer tutoring, lab recovery check-ins, and weekly progress milestones."
-  );
+  const [genStudentRef, setGenStudentRef] = useState("");
+  const [genStudentName, setGenStudentName] = useState("");
+  const [genContentText, setGenContentText] = useState("");
   const [genFinalizeImmediately, setGenFinalizeImmediately] = useState(false);
   const [isSubmittingGen, setIsSubmittingGen] = useState(false);
+
+  // Upload any exact file bytes for integrity tracking.
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   // Verify Modal State
   const [verifyDocTarget, setVerifyDocTarget] = useState<DocumentDTO | null>(null);
@@ -86,10 +99,8 @@ export default function DocumentsPage() {
       }
       const res = await api.documents.list();
       setDocuments(res.documents || []);
-      const anchoredWithContract = res.documents.find((d) => d.contract_address);
-      if (anchoredWithContract?.contract_address) {
-        setContractAddress(anchoredWithContract.contract_address);
-      }
+      setContractAddress(res.contract_address || null);
+      setOnchainReady(Boolean(res.onchain_ready));
     } catch (err: any) {
       console.warn("Failed to fetch documents:", err);
       setErrorMsg(err?.message || "Failed to load document records. Ensure backend service is reachable.");
@@ -139,6 +150,28 @@ export default function DocumentsPage() {
     }
   };
 
+  const handleUploadDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile) return;
+    if (uploadFile.size > 25 * 1024 * 1024) {
+      alert("Choose a file smaller than 25 MB.");
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const created = await api.documents.upload(uploadFile, uploadTitle || uploadFile.name);
+      setDocuments((prev) => [created, ...prev]);
+      setIsUploadOpen(false);
+      setUploadFile(null);
+      setUploadTitle("");
+      if (uploadInputRef.current) uploadInputRef.current.value = "";
+    } catch (err: any) {
+      alert("Upload failed: " + (err.message || "Unknown error"));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Finalize Document
   const handleFinalize = async (doc: DocumentDTO) => {
     setProcessingDocId(doc.id);
@@ -167,7 +200,55 @@ export default function DocumentsPage() {
   const handleAnchor = async (doc: DocumentDTO) => {
     setProcessingDocId(doc.id);
     try {
-      const res = await api.documents.anchor(doc.id);
+      if (!onchainReady || !contractAddress) {
+        throw new Error("The Base Sepolia registry is not configured or deployed yet.");
+      }
+      const ethereum = (window as Eip1193Window).ethereum;
+      if (!ethereum) throw new Error("Install or enable MetaMask in this browser to anchor files.");
+
+      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+      const walletAddress = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
+      if (!walletAddress) throw new Error("Connect a wallet to submit the Base Sepolia transaction.");
+
+      let chainId = String(await ethereum.request({ method: "eth_chainId" })).toLowerCase();
+      if (chainId !== "0x14a34") {
+        try {
+          await ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x14a34" }] });
+        } catch (switchError: any) {
+          if (switchError?.code !== 4902) throw switchError;
+          await ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: "0x14a34",
+              chainName: "Base Sepolia",
+              nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+              rpcUrls: ["https://sepolia.base.org"],
+              blockExplorerUrls: ["https://sepolia.basescan.org"],
+            }],
+          });
+        }
+        chainId = String(await ethereum.request({ method: "eth_chainId" })).toLowerCase();
+      }
+      if (chainId !== "0x14a34") throw new Error("Switch your wallet to Base Sepolia (Chain ID 84532).");
+
+      const refHashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(doc.document_ref));
+      const refHash = Array.from(new Uint8Array(refHashBuffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      const data = `0xba5674c8${refHash}${doc.sha256_hash.toLowerCase()}`;
+      const txHash = await ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{ from: walletAddress, to: contractAddress, data }],
+      });
+
+      let receipt: any = null;
+      for (let attempt = 0; attempt < 90; attempt += 1) {
+        receipt = await ethereum.request({ method: "eth_getTransactionReceipt", params: [txHash] });
+        if (receipt) break;
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      }
+      if (!receipt) throw new Error(`Transaction ${txHash} is still pending. Refresh and retry confirmation after it appears on BaseScan.`);
+      if (String(receipt.status).toLowerCase() !== "0x1") throw new Error("The Base Sepolia anchor transaction reverted.");
+
+      const res: DocumentAnchorResponse = await api.documents.anchor(doc.id, txHash);
       setDocuments((prev) =>
         prev.map((d) =>
           d.id === doc.id
@@ -184,9 +265,7 @@ export default function DocumentsPage() {
             : d
         )
       );
-      if (res.contract_address) {
-        setContractAddress(res.contract_address);
-      }
+      if (res.contract_address) setContractAddress(res.contract_address);
     } catch (err: any) {
       alert("Anchoring failed: " + (err.message || "Unknown error"));
     } finally {
@@ -309,7 +388,7 @@ export default function DocumentsPage() {
     return doc.status.toUpperCase() === statusFilter.toUpperCase();
   });
 
-  const anchoredCount = documents.filter((d) => d.status === "anchored").length;
+  const anchoredCount = documents.filter((d) => d.status === "anchored" && d.anchoring_mode === "onchain" && d.tx_hash).length;
   const verifiedMatchCount = documents.filter((d) => d.verification_status === "verified_match").length;
 
   return (
@@ -321,13 +400,13 @@ export default function DocumentsPage() {
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
               Document Integrity
             </h1>
-            <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-600 font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Base Sepolia (84532)
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${onchainReady ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-800 border-amber-200"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${onchainReady ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+              {onchainReady ? "Base Sepolia live" : "Registry deployment required"}
             </span>
           </div>
           <p className="text-xs text-neutral-500 mt-1">
-            Byte-level cryptographic SHA-256 anchoring and tamper verification for student agreements. Zero PII on-chain.
+            Upload any file up to 25 MB, preserve its exact bytes, and verify its SHA-256 against the Base Sepolia registry.
           </p>
         </div>
 
@@ -342,6 +421,13 @@ export default function DocumentsPage() {
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           </button>
           <button
+            onClick={() => setIsUploadOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-700 shadow-2xs transition-all cursor-pointer"
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span>Upload file</span>
+          </button>
+          <button
             onClick={() => setIsGenerateOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer"
           >
@@ -352,11 +438,22 @@ export default function DocumentsPage() {
       </div>
 
       {/* 2. SECURITY & GUARANTEE CALLOUT */}
+      {!onchainReady && (
+        <div role="status" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0">
+          <p>
+            Files can be uploaded and fingerprinted now. On-chain anchoring is available after the real Base Sepolia registry is deployed and configured. Each anchor is submitted by your connected wallet; no simulated anchor is recorded.
+          </p>
+          <Link href="/documents/deploy" className="mt-2 inline-flex font-semibold underline underline-offset-2">Deploy the registry with MetaMask</Link>
+          </div>
+        </div>
+      )}
       <div className="px-4 py-3 rounded-2xl bg-neutral-100/70 border border-neutral-200/80 flex items-center justify-between gap-3 text-xs text-neutral-600">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>
-            <strong className="text-neutral-800">Immutable Integrity Guarantee:</strong> Document hashes are anchored to Base Sepolia smart contract registry. Student personal data is kept strictly private off-chain.
+            <strong className="text-neutral-800">Exact-byte integrity:</strong> Uploaded files are hashed without conversion. Blockchain proof becomes available after the Base Sepolia registry is configured; this page never treats a local preview as an anchor.
           </span>
         </div>
         <span className="text-[11px] font-mono text-neutral-400 shrink-0 hidden sm:inline">
@@ -385,7 +482,7 @@ export default function DocumentsPage() {
           <div className="text-2xl font-bold text-neutral-900 font-heading">
             {anchoredCount}
           </div>
-          <p className="text-[11px] text-neutral-400">Base Sepolia records</p>
+          <p className="text-[11px] text-neutral-400">Confirmed transactions only</p>
         </div>
 
         <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-1">
@@ -403,17 +500,18 @@ export default function DocumentsPage() {
           <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
             <span>Registry Contract</span>
             <button
-              onClick={() => copyToClipboard(contractAddress, "contract")}
+              onClick={() => contractAddress && copyToClipboard(contractAddress, "contract")}
+              disabled={!contractAddress}
               className="text-[11px] text-neutral-500 hover:text-neutral-900 font-medium flex items-center gap-1 cursor-pointer"
             >
               {copiedKey === "contract" ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
               <span>{copiedKey === "contract" ? "Copied" : "Copy"}</span>
             </button>
           </div>
-          <div className="font-mono text-sm font-bold text-neutral-800 truncate" title={contractAddress}>
-            {contractAddress ? `${contractAddress.slice(0, 8)}...${contractAddress.slice(-6)}` : "Pending"}
+          <div className="font-mono text-sm font-bold text-neutral-800 truncate" title={contractAddress || undefined}>
+            {contractAddress ? `${contractAddress.slice(0, 8)}...${contractAddress.slice(-6)}` : "Not deployed"}
           </div>
-          <p className="text-[11px] text-neutral-400">Chain ID 84532</p>
+          <p className="text-[11px] text-neutral-400">Base Sepolia · 84532</p>
         </div>
       </div>
 
@@ -475,13 +573,13 @@ export default function DocumentsPage() {
           <div className="py-14 text-center space-y-2 px-4">
             <FileText className="w-8 h-8 text-neutral-300 mx-auto" />
             <p className="text-sm font-semibold text-neutral-800">No documents found</p>
-            <p className="text-xs text-neutral-400">Generate an agreement to start anchoring records on-chain.</p>
+            <p className="text-xs text-neutral-400">Upload a file to calculate its exact-byte SHA-256 fingerprint.</p>
             <button
-              onClick={() => setIsGenerateOpen(true)}
+              onClick={() => setIsUploadOpen(true)}
               className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-neutral-900 text-white text-xs font-semibold cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Create Agreement</span>
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>Upload file</span>
             </button>
           </div>
         ) : (
@@ -587,8 +685,9 @@ export default function DocumentsPage() {
                       {isFinalized && (
                         <button
                           onClick={() => handleAnchor(doc)}
-                          disabled={processingDocId === doc.id}
-                          className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                          disabled={processingDocId === doc.id || !onchainReady}
+                          title={!onchainReady ? "The Base Sepolia registry is not configured yet" : "Anchor exact file hash on Base Sepolia with your connected wallet"}
+                          className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-2xs"
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                           <span>{processingDocId === doc.id ? "Anchoring..." : "Anchor"}</span>
@@ -610,7 +709,7 @@ export default function DocumentsPage() {
                       <button
                         onClick={() => handleDownload(doc)}
                         className="p-2 rounded-xl border border-neutral-200 text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 text-xs cursor-pointer transition-colors"
-                        title="Download PDF"
+                        title="Download file"
                       >
                         <Download className="w-3.5 h-3.5 text-neutral-500" />
                       </button>
@@ -622,7 +721,9 @@ export default function DocumentsPage() {
                           setCandidateHash(null);
                           setVerificationResult(null);
                         }}
-                        className="px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                        disabled={doc.anchoring_mode !== "onchain" || !doc.tx_hash}
+                        title={doc.tx_hash ? "Verify file against the on-chain registry" : "Anchor this file on-chain before blockchain verification"}
+                        className="px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-2xs"
                       >
                         <UploadCloud className="w-3.5 h-3.5 text-neutral-500" />
                         <span>Verify</span>
@@ -636,7 +737,59 @@ export default function DocumentsPage() {
         )}
       </div>
 
-      {/* 6. VERIFY MODAL */}
+      {/* 6. UPLOAD MODAL */}
+      {isUploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <form onSubmit={handleUploadDocument} className="w-full max-w-lg space-y-4 rounded-3xl border border-neutral-200 bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-neutral-900">Upload a file</h3>
+                <p className="mt-1 text-xs text-neutral-500">Any file type, up to 25 MB. Original bytes are kept unchanged.</p>
+              </div>
+              <button type="button" onClick={() => setIsUploadOpen(false)} className="p-1 text-neutral-400 hover:text-neutral-700" aria-label="Close upload dialog">
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-6 text-center hover:border-neutral-400">
+              <UploadCloud className="mx-auto h-7 w-7 text-neutral-400" />
+              <span className="mt-2 block text-xs font-semibold text-neutral-800">{uploadFile?.name || "Choose any file"}</span>
+              <span className="mt-1 block text-[11px] text-neutral-500">{uploadFile ? `${(uploadFile.size / (1024 * 1024)).toFixed(2)} MB` : "PDF, image, document, archive, or other file"}</span>
+              <input
+                ref={uploadInputRef}
+                type="file"
+                className="sr-only"
+                onChange={(event) => {
+                  const selected = event.target.files?.[0] || null;
+                  setUploadFile(selected);
+                  setUploadTitle(selected?.name || "");
+                }}
+              />
+            </label>
+
+            <div>
+              <label htmlFor="uploaded-file-title" className="mb-1 block text-xs font-semibold text-neutral-700">Record title</label>
+              <input
+                id="uploaded-file-title"
+                value={uploadTitle}
+                onChange={(event) => setUploadTitle(event.target.value)}
+                maxLength={255}
+                placeholder="Defaults to the file name"
+                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-neutral-100 pt-3">
+              <button type="button" onClick={() => setIsUploadOpen(false)} className="rounded-xl border border-neutral-200 px-3.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-50">Cancel</button>
+              <button type="submit" disabled={!uploadFile || isUploading || uploadFile.size > 25 * 1024 * 1024} className="rounded-xl bg-neutral-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-neutral-800 disabled:opacity-50">
+                {isUploading ? "Uploading…" : "Upload & fingerprint"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* 7. VERIFY MODAL */}
       {verifyDocTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4 animate-in fade-in zoom-in-95 duration-100">
@@ -670,15 +823,14 @@ export default function DocumentsPage() {
             >
               <UploadCloud className="w-7 h-7 text-neutral-400 mx-auto" />
               <p className="text-xs font-semibold text-neutral-700">
-                {candidateFile ? candidateFile.name : "Select or drop candidate PDF to verify"}
+                {candidateFile ? candidateFile.name : "Select or drop the file to verify"}
               </p>
               <p className="text-[11px] text-neutral-400">
-                Calculates raw byte SHA-256 and compares against anchored registry.
+                Accepts any file type. Calculates raw-byte SHA-256 and compares it with Base Sepolia.
               </p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf"
                 className="hidden"
                 onChange={(e) => {
                   if (e.target.files?.[0]) handleFileChange(e.target.files[0]);
@@ -750,7 +902,7 @@ export default function DocumentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-neutral-900">New Student Agreement</h3>
-                <p className="text-xs text-neutral-400">Generates PDF &amp; SHA-256 fingerprint</p>
+                <p className="text-xs text-neutral-400">Title required · student details and terms are optional</p>
               </div>
               <button
                 onClick={() => setIsGenerateOpen(false)}
@@ -762,7 +914,7 @@ export default function DocumentsPage() {
 
             <form onSubmit={handleGenerateDocument} className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Title</label>
+                  <label className="block font-semibold text-neutral-700 mb-1">Title <span className="text-rose-500">*</span></label>
                 <input
                   type="text"
                   required
@@ -793,29 +945,30 @@ export default function DocumentsPage() {
                     type="text"
                     value={genStudentRef}
                     onChange={(e) => setGenStudentRef(e.target.value)}
-                    placeholder="e.g. SYN-1007"
+                    placeholder="Optional reference"
                     className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:bg-white focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Student Display Name (PDF Only)</label>
+                    <label className="block font-semibold text-neutral-700 mb-1">Student name <span className="font-normal text-neutral-400">· PDF only</span></label>
                 <input
                   type="text"
                   value={genStudentName}
                   onChange={(e) => setGenStudentName(e.target.value)}
-                  placeholder="e.g. Asha (synthetic)"
+                    placeholder="Optional name"
                   className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:bg-white focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Intervention Terms</label>
+                  <label className="block font-semibold text-neutral-700 mb-1">Agreement terms <span className="font-normal text-neutral-400">· optional</span></label>
                 <textarea
                   rows={2}
                   value={genContentText}
                   onChange={(e) => setGenContentText(e.target.value)}
+                  placeholder="What has been agreed?"
                   className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:bg-white focus:outline-none"
                 />
               </div>

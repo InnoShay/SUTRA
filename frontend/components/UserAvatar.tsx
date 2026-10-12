@@ -41,7 +41,8 @@ export function UserAvatar({
   className = "",
 }: UserAvatarProps) {
   const [failed, setFailed] = useState(false);
-  const effectiveSrc = src ?? avatarUrl;
+  const requestedSrc = src ?? avatarUrl;
+  const effectiveSrc = requestedSrc === "sutra-custom-avatar" ? "/avatars/male/avatar-001.png" : requestedSrc;
 
   // Reset failure state whenever src changes
   useEffect(() => {

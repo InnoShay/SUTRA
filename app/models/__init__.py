@@ -18,12 +18,14 @@ from app.models.counselor import (
     CounselorCallRequest,
 )
 from app.models.document import DocumentRecord
+from app.models.student_identity import StudentIdentity
 
 __all__ = [
     "Base",
     "Institution",
     "InstitutionMembership",
     "Student",
+    "StudentIdentity",
     "ProcessingAuthorization",
     "SourceImport",
     "StudentObservation",

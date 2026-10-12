@@ -1,0 +1,158 @@
+{
+  "contractName": "SutraDocumentRegistry",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "originalTimestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "AlreadyAnchored",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidHash",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "documentHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "anchoredBy",
+          "type": "address"
+        }
+      ],
+      "name": "DocumentAnchored",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "documentHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "anchorDocument",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getDocumentAnchor",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "documentHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "anchoredAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "anchoredBy",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "isAnchored",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalAnchored",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "candidateHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "verifyDocument",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "isMatch",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "anchoredAt",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "608060405234801561000f575f80fd5b5061039c8061001d5f395ff3fe608060405234801561000f575f80fd5b506004361061004a575f3560e01c80638e68d7b01461004e5780638fa9a8ce146100ee578063a212e36f14610118578063ba5674c81461012f575b5f80fd5b6100b461005c36600461032f565b5f90815260208181526040918290208251608081018452815480825260018301549382018490526002909201546001600160a01b038116948201859052600160a01b900460ff16151560609091018190529093919291565b6040516100e5949392919093845260208401929092526001600160a01b031660408301521515606082015260800190565b60405180910390f35b6101016100fc366004610346565b610152565b6040805192151583526020830191909152016100e5565b61012160015481565b6040519081526020016100e5565b61014261013d366004610346565b6101ca565b60405190151581526020016100e5565b5f82815260208181526040808320815160808101835281548152600182015493810193909352600201546001600160a01b03811691830191909152600160a01b900460ff161515606082018190528291906101b3575f8092509250506101c3565b8051602090910151908414925090505b9250929050565b5f8215806101d6575081155b156101f3576040516257c03760e51b815260040160405180910390fd5b5f83815260208190526040902060020154600160a01b900460ff161561026f575f8381526020819052604090205482900361023057506001610329565b5f838152602081905260409081902060010154905163197052c760e31b8152610266918591600401918252602082015260400190565b60405180910390fd5b60408051608081018252838152426020808301828152338486018181526001606087018181525f8c8152958690529488902096518755925186840155516002909501805493511515600160a01b026001600160a81b03199094166001600160a01b039690961695909517929092179093558254830190925591519091849186917fca7c5cbb5eeeb12fd5dc86c03891041147e2439f77f9edd4a0256d830f2d6f599161031d91815260200190565b60405180910390a45060015b92915050565b5f6020828403121561033f575f80fd5b5035919050565b5f8060408385031215610357575f80fd5b5050803592602090910135915056fea26469706673582212200621eabbf56698e3360ff415f02dd7098b08bb806e270cc08ea67cc6e941422e64736f6c63430008140033"
+}

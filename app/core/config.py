@@ -101,8 +101,12 @@ class Settings(BaseSettings):
     BASE_SEPOLIA_CHAIN_ID: int = 84532
     BASE_SEPOLIA_RPC_URL: str = "https://sepolia.base.org"
     BASE_SEPOLIA_CONTRACT_ADDRESS: Optional[str] = None
+    BASE_SEPOLIA_NFT_CONTRACT_ADDRESS: Optional[str] = None
     BASE_SEPOLIA_PRIVATE_KEY: Optional[str] = None
+    PINATA_JWT: Optional[str] = None
+    PINATA_API_URL: str = "https://api.pinata.cloud"
     ANCHOR_MODE: str = "simulated"  # "onchain" | "simulated"
+    PUBLIC_APP_URL: Optional[str] = None
     DOCUMENTS_STORAGE_DIR: str = "storage/documents"
 
     # SBI Digital Rupee (e₹) CBDC Integration Boundary (ADR / Future Readiness)

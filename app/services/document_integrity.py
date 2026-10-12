@@ -2,6 +2,7 @@ import hashlib
 import io
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -28,8 +29,12 @@ def get_document_storage_path(document_id: str, file_name: str) -> Path:
     """Returns local storage path for document raw bytes."""
     storage_dir = PROJECT_ROOT / settings.DOCUMENTS_STORAGE_DIR
     storage_dir.mkdir(parents=True, exist_ok=True)
-    safe_name = f"{document_id}_{file_name}"
-    return storage_dir / safe_name
+    basename = Path(file_name.replace("\\", "/")).name
+    basename = re.sub(r"[^A-Za-z0-9._() -]", "_", basename).strip(" .") or "upload"
+    target = (storage_dir / f"{document_id}_{basename[:200]}").resolve()
+    if target.parent != storage_dir.resolve():
+        raise ValueError("Document storage path escaped the configured storage directory")
+    return target
 
 
 def save_document_bytes(document_id: str, file_name: str, raw_bytes: bytes) -> str:
@@ -226,10 +231,10 @@ def generate_intervention_pdf(
     story.append(Paragraph("3. CRYPTOGRAPHIC INTEGRITY & ON-CHAIN ANCHORING", ParagraphStyle("H2", parent=styles["Heading2"], fontSize=12, textColor=colors.HexColor("#0F172A"), fontName="Helvetica-Bold")))
     story.append(Spacer(1, 6))
     integrity_text = (
-        "<b>Notice of Cryptographic Verification:</b> The exact binary bytes of this finalized document are hashed "
-        "via SHA-256 and anchored to the Base Sepolia blockchain under smart contract "
-        "<code>SutraDocumentRegistry</code>. Any subsequent modification of characters, metadata, or layout "
-        "permanently breaks the cryptographic digest. Verification proves content fidelity against the finalized record."
+        "<b>Document integrity:</b> SUTRA computes a SHA-256 fingerprint from this PDF's exact binary bytes. "
+        "After the document is finalized, an authorized wallet may anchor that fingerprint to Base Sepolia "
+        "through the <code>SutraDocumentRegistry</code>. The document record shows whether an anchor was "
+        "actually confirmed. Verification compares a candidate file with the fingerprint stored on-chain."
     )
     story.append(Paragraph(integrity_text, callout_style))
     story.append(Spacer(1, 24))
@@ -253,7 +258,7 @@ def generate_intervention_pdf(
     story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#CBD5E1"), spaceAfter=8))
     footer_text = (
         "SUTRA Document Integrity Ledger • Confidential Institutional Document • "
-        "Byte-level SHA-256 Anchored to Base Sepolia (Chain ID 84532) • Governed by FERPA/ADR-003 Privacy Boundaries"
+        "Byte-level SHA-256 Fingerprint • Base Sepolia anchor status is recorded separately in SUTRA • Governed by FERPA/ADR-003 Privacy Boundaries"
     )
     story.append(Paragraph(footer_text, ParagraphStyle("Footer", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#94A3B8"), alignment=1)))
 

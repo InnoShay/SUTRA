@@ -54,6 +54,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 class SupabaseAuthClient {
   public client = supabase;
 
+  /** Persist non-sensitive display profile fields in the signed-in user's metadata. */
+  async updateUserMetadata(metadata: Record<string, unknown>): Promise<void> {
+    const { error } = await supabase.auth.updateUser({ data: metadata });
+    if (error) throw new Error(error.message);
+  }
+
   /**
    * Initiates Google OAuth authentication via Supabase Auth
    */

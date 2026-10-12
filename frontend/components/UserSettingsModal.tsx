@@ -4,6 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSkillHub } from "@/lib/store";
 import { useLanguage } from "@/lib/language-context";
 import { UserAvatar } from "./UserAvatar";
+import { AvatarPicker } from "@/components/avatar/AvatarPicker";
+import { IdentityNFTCard } from "@/components/IdentityNFTCard";
+import { supabaseAuth } from "@/lib/supabase";
+import { api } from "@/lib/api";
 import {
   User,
   Languages,
@@ -13,7 +17,6 @@ import {
   LogOut,
   X,
   Check,
-  Mail,
   Send,
   Loader2,
   ExternalLink,
@@ -43,6 +46,7 @@ export function UserSettingsModal({
   const {
     user,
     updateUser,
+    setSutraIdentity,
     activeRole,
     activeCampusName,
     supabaseSession,
@@ -59,12 +63,10 @@ export function UserSettingsModal({
   // Profile Form States
   const [fullName, setFullName] = useState(user.fullName || user.name || "Prof. Ananya Sharma");
   const [email, setEmail] = useState(user.email || "faculty@sutra.edu");
-  const [department, setDepartment] = useState("School of Engineering & Computer Science");
-  const [title, setTitle] = useState("Associate Professor & Faculty Advisor");
-  const [bio, setBio] = useState(
-    "Dedicated to student persistence, early intervention orchestration, and empathetic academic guidance."
-  );
+  const [avatar, setAvatar] = useState(user.avatar || "/avatars/male/avatar-001.png");
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
 
   // Notification / Alert Toggles
   const [notifSlaAlerts, setNotifSlaAlerts] = useState(true);
@@ -96,6 +98,9 @@ export function UserSettingsModal({
     if (user.email) {
       setEmail(user.email);
     }
+    if (user.avatar) {
+      setAvatar(user.avatar);
+    }
   }, [user]);
 
   // Escape key handler
@@ -113,11 +118,29 @@ export function UserSettingsModal({
 
   if (!isOpen) return null;
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateUser({ fullName, email });
-    setProfileSaved(true);
-    setTimeout(() => setProfileSaved(false), 2200);
+    setProfileSaving(true);
+    setProfileSaveError(null);
+    try {
+      if (supabaseSession) {
+        await supabaseAuth.updateUserMetadata({ full_name: fullName, sutra_avatar: avatar });
+      }
+      updateUser({ fullName, email, avatar });
+      if (supabaseSession) {
+        try {
+          setSutraIdentity(await api.identity.updateAvatar({ avatar_url: avatar }));
+        } catch (err) {
+          console.warn("Profile avatar saved; identity collectible metadata sync will retry later:", err);
+        }
+      }
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2200);
+    } catch (err) {
+      setProfileSaveError(err instanceof Error ? err.message : "Couldn't save your profile. Please try again.");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const handleSaveAlerts = (e: React.FormEvent) => {
@@ -190,9 +213,6 @@ export function UserSettingsModal({
                   <h3 className="text-xs font-bold text-neutral-900 truncate">
                     {fullName || "Prof. Ananya Sharma"}
                   </h3>
-                  <p className="text-[11px] text-neutral-400 truncate">
-                    Course Instructor &amp; Faculty Mentor ...
-                  </p>
                 </div>
               </div>
 
@@ -272,9 +292,6 @@ export function UserSettingsModal({
                 {activeTab === "security" && "Security & Tenancy"}
                 {activeTab === "help" && "Help & Knowledge"}
               </h2>
-              <p className="text-[11px] text-neutral-400">
-                Institutional configuration and educator preferences
-              </p>
             </div>
             <button
               type="button"
@@ -292,102 +309,42 @@ export function UserSettingsModal({
             
             {/* 1. PROFILE & ACCOUNT TAB (Matched to user screenshot!) */}
             {activeTab === "profile" && (
-              <form onSubmit={handleSaveProfile} className="space-y-6 max-w-2xl">
-                {/* Profile Avatar Card */}
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-neutral-50/80 border border-neutral-100">
-                  <UserAvatar
-                    src={user.avatar}
-                    name={fullName}
-                    size="lg"
-                    className="w-14 h-14 ring-4 ring-white shadow-xs shrink-0"
+              <form onSubmit={handleSaveProfile} className="space-y-4 max-w-2xl">
+                <AvatarPicker value={avatar} onChange={setAvatar} />
+                <IdentityNFTCard />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    aria-label="Full name"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
+                    placeholder="Full name"
+                    required
                   />
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-bold text-neutral-900">{fullName}</h4>
-                    <p className="text-xs text-neutral-500 mt-0.5">{email}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-neutral-500 font-medium">
-                      <span>Faculty Mentor</span>
-                      <span className="text-neutral-300">•</span>
-                      <span className="inline-flex items-center gap-1 text-emerald-700">
-                        <Check className="w-3 h-3" />
-                        <span>SSO Verified</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Form Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-neutral-700">Full Name</label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
-                      placeholder="Your full name"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-neutral-700">Email Address</label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
-                        placeholder="faculty@sutra.edu"
-                        required
-                      />
-                      <Mail className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-3.5" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-semibold text-neutral-700">Academic Department</label>
-                    <input
-                      type="text"
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
-                      placeholder="School of Engineering & Computer Science"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-semibold text-neutral-700">Academic Title</label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
-                      placeholder="Associate Professor & Faculty Advisor"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-semibold text-neutral-700">Advisor Notes &amp; Bio</label>
-                    <textarea
-                      rows={3}
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white resize-none leading-relaxed"
-                      placeholder="Dedicated to student persistence, early intervention orchestration, and empathetic academic guidance."
-                    />
-                  </div>
+                  <input
+                    aria-label="Email address"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
+                    placeholder="Email address"
+                    required
+                  />
                 </div>
 
                 {/* Footer with Save Button */}
                 <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <span className="text-[11px] text-neutral-400">
-                    Changes take effect across case handoffs and student notes.
-                  </span>
+                  {profileSaveError && <p role="alert" className="text-[11px] text-rose-600">{profileSaveError}</p>}
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-full bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                    disabled={profileSaving}
+                    className="px-6 py-2.5 rounded-full bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-60"
                   >
-                    {profileSaved ? (
+                    {profileSaving ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Saving…</span></>
+                    ) : profileSaved ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-emerald-400" />
                         <span>Saved Successfully</span>

@@ -8,6 +8,8 @@ import { useLanguage } from "@/lib/language-context";
 import { SkillHubLogo } from "@/components/SkillHubLogo";
 import { UserAvatar } from "@/components/UserAvatar";
 import { supabaseAuth } from "@/lib/supabase";
+import { api } from "@/lib/api";
+import { AvatarPicker } from "@/components/avatar/AvatarPicker";
 
 export type AccountLevel = "student" | "faculty" | "admin" | "counselor";
 
@@ -56,14 +58,6 @@ interface OnboardingFormData {
   notifyDailyDigest: boolean;
   notifyHighRiskSound: boolean;
 }
-
-const PRESET_AVATARS = [
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
-];
 
 // ==========================================
 // BESPOKE CUSTOM SVGs (ZERO DEFAULT LUCIDE ICONS)
@@ -209,11 +203,19 @@ function CustomLoaderIcon({ className = "w-4 h-4" }: { className?: string }) {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, supabaseSession, updateUser, setActiveRole, setActiveCampusName } = useSkillHub();
+  const {
+    user,
+    supabaseSession,
+    updateUser,
+    setActiveRole,
+    setActiveCampusName,
+    fetchIdentity,
+  } = useSkillHub();
   const { languages, setLanguage } = useLanguage();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [googleAutofilled, setGoogleAutofilled] = useState(false);
 
   const [formData, setFormData] = useState<OnboardingFormData>({
@@ -222,7 +224,7 @@ export default function OnboardingPage() {
     displayName: "",
     email: "",
     phone: "",
-    avatar: PRESET_AVATARS[0],
+    avatar: "",
 
     // Student
     studentId: "2026-BCSE-042",
@@ -276,18 +278,12 @@ export default function OnboardingPage() {
           user.fullName ||
           (user.name !== "Prof. Ananya Sharma" ? user.name : "");
         const gEmail = authUser?.email || user.email || "";
-        const gAvatar =
-          meta.avatar_url ||
-          meta.picture ||
-          (user.avatar && !user.avatar.includes("placeholder") ? user.avatar : "");
-
         if (gFullName || gEmail) {
           setFormData((prev) => ({
             ...prev,
             fullName: gFullName || prev.fullName,
             displayName: gFullName ? gFullName.split(" ")[0] : prev.displayName,
             email: gEmail || prev.email,
-            avatar: gAvatar || prev.avatar,
           }));
           setGoogleAutofilled(true);
         }
@@ -298,7 +294,6 @@ export default function OnboardingPage() {
             fullName: user.fullName || user.name || prev.fullName,
             displayName: (user.fullName || user.name || "").split(" ")[0] || prev.displayName,
             email: user.email || prev.email,
-            avatar: user.avatar || prev.avatar,
           }));
         }
       }
@@ -337,8 +332,22 @@ export default function OnboardingPage() {
 
   const handleFinish = async () => {
     setIsSubmitting(true);
+    setSubmitError(null);
 
     try {
+      // Provisioning is idempotent per authenticated user; minting returns that user's unique token.
+      await api.identity.provisionIdentity();
+      if (formData.avatar.startsWith("/avatars/")) {
+        await api.identity.updateAvatar({
+          avatar_url: formData.avatar,
+        });
+      }
+      await api.identity.mintNFT({});
+      // Do not claim a mint when Web3 is unavailable, but never prevent account
+      // creation. The profile NFT card can complete a real mint after a wallet
+      // is connected and the backend's Base Sepolia contract is ready.
+      await fetchIdentity();
+
       updateUser({
         name: formData.displayName || formData.fullName.split(" ")[0] || "User",
         fullName: formData.fullName,
@@ -374,8 +383,9 @@ export default function OnboardingPage() {
 
       await new Promise((resolve) => setTimeout(resolve, 500));
       router.push("/dashboard");
-    } catch {
-      router.push("/dashboard");
+    } catch (err) {
+      console.error("Could not finish signup with identity NFT:", err);
+      setSubmitError(err instanceof Error ? err.message : "We couldn't mint your identity NFT. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -597,56 +607,7 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* Avatar Selector */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50/80 border border-neutral-200/70 space-y-3">
-                <label className="text-xs font-semibold text-neutral-800 block">
-                  Select Profile Avatar
-                </label>
-                <div className="flex items-center gap-3 overflow-x-auto pb-1">
-                  {formData.avatar && !PRESET_AVATARS.includes(formData.avatar) && (
-                    <button
-                      type="button"
-                      onClick={() => updateField("avatar", formData.avatar)}
-                      className="relative rounded-full ring-3 ring-neutral-900 scale-105 shrink-0"
-                    >
-                      <UserAvatar
-                        src={formData.avatar}
-                        name={formData.fullName}
-                        size="md"
-                        className="w-12 h-12"
-                      />
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px]">
-                        <CustomCheckIcon className="w-2.5 h-2.5" />
-                      </div>
-                    </button>
-                  )}
-
-                  {PRESET_AVATARS.map((url, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => updateField("avatar", url)}
-                      className={`relative rounded-full transition-transform cursor-pointer shrink-0 ${
-                        formData.avatar === url
-                          ? "ring-3 ring-neutral-900 scale-105"
-                          : "opacity-50 hover:opacity-100 hover:scale-100"
-                      }`}
-                    >
-                      <UserAvatar
-                        src={url}
-                        name={`Avatar ${i + 1}`}
-                        size="md"
-                        className="w-12 h-12"
-                      />
-                      {formData.avatar === url && (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px]">
-                          <CustomCheckIcon className="w-2.5 h-2.5" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <AvatarPicker value={formData.avatar} onChange={(avatar) => updateField("avatar", avatar)} />
 
               {/* FORM INPUTS: BALANCED 2x2 GRID WITH EQUAL HEIGHT LABELS & ICONS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1168,7 +1129,13 @@ export default function OnboardingPage() {
         </div>
 
         {/* BOTTOM ACTION BUTTONS: CLEAN PURE BLACK & WHITE AESTHETIC */}
-        <div className="px-6 sm:px-10 py-5 bg-[#FAFAFA] border-t border-neutral-100 flex items-center justify-between">
+        <div className="border-t border-neutral-100 bg-[#FAFAFA] px-6 py-5 sm:px-10">
+          {submitError && (
+            <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
+              {submitError}
+            </p>
+          )}
+          <div className="flex items-center justify-between">
           {currentStep > 1 ? (
             <button
               type="button"
@@ -1217,6 +1184,7 @@ export default function OnboardingPage() {
               )}
             </button>
           )}
+          </div>
         </div>
       </main>
 

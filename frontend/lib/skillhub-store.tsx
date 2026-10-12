@@ -80,6 +80,7 @@ import {
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
 import { api, isDemoMode } from "./api";
 import { supabase, supabaseAuth, SupabaseUser, SupabaseSession } from "./supabase";
+import { StudentIdentityDTO } from "./avatar-catalog";
 
 export interface NotificationItem {
   id: string;
@@ -283,6 +284,10 @@ interface SkillHubContextType {
   setGrowthTimeframe: (tf: TimeframeOption) => void;
   analyticsTimeframe: TimeframeOption;
   setAnalyticsTimeframe: (tf: TimeframeOption) => void;
+  sutraIdentity: StudentIdentityDTO | null;
+  setSutraIdentity: React.Dispatch<React.SetStateAction<StudentIdentityDTO | null>>;
+  mintIdentityNFT: (walletAddress?: string) => Promise<StudentIdentityDTO>;
+  fetchIdentity: () => Promise<void>;
 }
 
 const SkillHubContext = createContext<SkillHubContextType | undefined>(undefined);
@@ -360,8 +365,24 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [allRedemptions, setAllRedemptions] = useState<RedemptionRecordDTO[]>(
     demoActive ? DEMO_REDEMPTIONS : []
   );
-  const [isLoadingRewards, setIsLoadingRewards] = useState<boolean>(false);
-  const [rewardsError, setRewardsError] = useState<string | null>(null);
+  // SUTRA Identity & Avatar Studio State
+  const [sutraIdentity, setSutraIdentity] = useState<StudentIdentityDTO | null>(null);
+
+  const fetchIdentity = async () => {
+    try {
+      const idRes = await api.identity.getMyIdentity();
+      setSutraIdentity(idRes);
+    } catch {
+      // Keep the profile honest when identity data is unavailable; never invent a minted token.
+      setSutraIdentity(null);
+    }
+  };
+
+  const mintIdentityNFT = async (walletAddress?: string) => {
+    const res = await api.identity.mintNFT({ wallet_address: walletAddress });
+    setSutraIdentity(res);
+    return res;
+  };
 
   // UI state initialized with canonical synthetic fixtures
   const [user, setUser] = useState({
@@ -463,7 +484,17 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       session.user?.email?.split("@")[0] ||
       "Educator";
     const firstName = fullName.split(" ")[0];
+    let savedProfile: Partial<typeof CURRENT_USER> = {};
+    if (typeof window !== "undefined") {
+      try {
+        savedProfile = JSON.parse(localStorage.getItem("sutra_user_profile") || "{}");
+      } catch {
+        savedProfile = {};
+      }
+    }
     const avatar =
+      session.user?.user_metadata?.sutra_avatar ||
+      savedProfile.avatar ||
       session.user?.user_metadata?.avatar_url ||
       session.user?.user_metadata?.picture ||
       "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80";
@@ -502,11 +533,17 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       setAuthorizedRoles(["faculty", "counselor", "student", "admin"]);
     }
 
+    try {
+      await fetchIdentity();
+    } catch {
+      // Identity non-blocking
+    }
+
     setUser((prev) => ({
       ...prev,
-      name: firstName,
-      fullName: fullName,
-      email: session.user?.email || prev.email,
+      name: savedProfile.fullName ? savedProfile.fullName.split(" ")[0] : firstName,
+      fullName: savedProfile.fullName || fullName,
+      email: savedProfile.email || session.user?.email || prev.email,
       avatar: avatar,
       role: "Faculty Lead & Mentor",
     }));
@@ -839,6 +876,21 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.warn("Could not parse walkthrough URL parameters:", e);
+      }
+
+      try {
+        const savedProfile = JSON.parse(localStorage.getItem("sutra_user_profile") || "{}");
+        if (savedProfile && typeof savedProfile === "object") {
+          setUser((prev) => ({
+            ...prev,
+            ...(typeof savedProfile.fullName === "string" ? { fullName: savedProfile.fullName } : {}),
+            ...(typeof savedProfile.email === "string" ? { email: savedProfile.email } : {}),
+            ...(typeof savedProfile.avatar === "string" ? { avatar: savedProfile.avatar } : {}),
+            ...(typeof savedProfile.fullName === "string" ? { name: savedProfile.fullName.split(" ")[0] } : {}),
+          }));
+        }
+      } catch {
+        // Ignore stale or malformed local profile data and continue with auth defaults.
       }
     }
 
@@ -1682,11 +1734,19 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateUser = (data: Partial<typeof CURRENT_USER>) => {
-    setUser((prev) => ({
-      ...prev,
+    const nextUser = {
+      ...user,
       ...data,
-      name: data.fullName ? data.fullName.split(" ")[0] : prev.name,
-    }));
+      name: data.fullName ? data.fullName.split(" ")[0] : user.name,
+    };
+    setUser(nextUser);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sutra_user_profile", JSON.stringify({
+        fullName: nextUser.fullName,
+        email: nextUser.email,
+        avatar: nextUser.avatar,
+      }));
+    }
   };
 
   const addCourse = (newCourse: Omit<Course, "id">) => {
@@ -1958,6 +2018,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         setGrowthTimeframe,
         analyticsTimeframe,
         setAnalyticsTimeframe,
+        sutraIdentity,
+        setSutraIdentity,
+        mintIdentityNFT,
+        fetchIdentity,
       }}
     >
       {children}

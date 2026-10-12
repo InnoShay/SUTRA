@@ -1,4 +1,6 @@
 import io
+import mimetypes
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -14,6 +16,7 @@ from app.core.security import CampusMembershipContext, get_campus_membership
 from app.models.document import DocumentRecord
 from app.schemas.document import (
     DocumentAnchorResponse,
+    DocumentAnchorConfirmRequest,
     DocumentCreateRequest,
     DocumentDTO,
     DocumentFinalizeResponse,
@@ -93,6 +96,38 @@ def _build_dto(doc: DocumentRecord) -> DocumentDTO:
     )
 
 
+def _safe_uploaded_filename(value: Optional[str]) -> str:
+    """Keep a useful basename while preventing path traversal and header injection."""
+    name = (value or "upload").replace("\\", "/").split("/")[-1]
+    name = re.sub(r"[^A-Za-z0-9._() -]", "_", name).strip(" .")
+    return (name or "upload")[:200]
+
+
+async def _read_upload(file: UploadFile) -> bytes:
+    raw_bytes = await file.read(25 * 1024 * 1024 + 1)
+    if not raw_bytes:
+        raise UnprocessableEntityError("Uploaded file cannot be empty")
+    if len(raw_bytes) > 25 * 1024 * 1024:
+        raise UnprocessableEntityError("File exceeds the 25 MB upload limit")
+    return raw_bytes
+
+
+def _read_integrity_checked_bytes(doc: DocumentRecord) -> bytes:
+    """Read stored file bytes and ensure storage still matches the recorded digest."""
+    if not doc.file_path:
+        raise HTTPException(status_code=409, detail="The document file is missing from storage.")
+    try:
+        raw_bytes = read_document_bytes(doc.file_path)
+    except (FileNotFoundError, OSError) as exc:
+        raise HTTPException(status_code=409, detail="The document file is missing or unreadable in storage.") from exc
+    if compute_exact_bytes_sha256(raw_bytes).lower() != doc.sha256_hash.lower():
+        raise HTTPException(
+            status_code=409,
+            detail="Stored file bytes no longer match the recorded SHA-256 fingerprint. The file was not finalized, downloaded, or anchored.",
+        )
+    return raw_bytes
+
+
 @router.get("", response_model=DocumentListResponse)
 async def list_documents(
     status_filter: Optional[str] = Query(None, description="Optional status filter"),
@@ -124,9 +159,13 @@ async def list_documents(
     res = await db.execute(query)
     docs = res.scalars().all()
 
+    registry_ready = base_sepolia_service.registry_anchor_ready()
     return DocumentListResponse(
         documents=[_build_dto(d) for d in docs],
         total=total,
+        chain_id=settings.BASE_SEPOLIA_CHAIN_ID,
+        contract_address=settings.BASE_SEPOLIA_CONTRACT_ADDRESS if registry_ready else None,
+        onchain_ready=registry_ready,
     )
 
 
@@ -144,8 +183,8 @@ async def generate_document(
     check_document_access(membership)
 
     doc_id = uuid.uuid4()
-    student_ref = payload.student_ref or "SYN-1007"
-    student_name = payload.student_name or "Asha (synthetic)"
+    student_ref = payload.student_ref or "UNASSIGNED"
+    student_name = payload.student_name or "Not specified"
     short_hash = uuid.uuid4().hex[:6].upper()
     document_ref = f"DOC-2026-{student_ref.replace('-', '')}-{short_hash}"
     file_name = f"{document_ref.lower()}.pdf"
@@ -185,8 +224,8 @@ async def generate_document(
         finalized_by=finalized_by,
         finalized_at=finalized_at,
         chain_id=settings.BASE_SEPOLIA_CHAIN_ID,
-        contract_address=settings.BASE_SEPOLIA_CONTRACT_ADDRESS,
-        anchoring_mode=settings.ANCHOR_MODE,
+        contract_address=None,
+        anchoring_mode="unavailable",
         metadata_payload=payload.metadata_payload,
         created_at=now_utc,
         updated_at=now_utc,
@@ -201,29 +240,26 @@ async def generate_document(
 @router.post("/upload", response_model=DocumentDTO)
 async def upload_document(
     file: UploadFile = File(...),
-    title: str = Form(...),
+    title: Optional[str] = Form(None),
     doc_type: str = Form("uploaded_proof"),
     student_ref: Optional[str] = Form(None),
     membership: CampusMembershipContext = Depends(get_campus_membership),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Uploads an arbitrary PDF document, validates size and MIME type, computes exact
-    byte SHA-256 fingerprint, and creates an immutable draft/finalized version record.
+    Uploads any file up to 25 MB, preserves its exact bytes, computes SHA-256, and
+    creates a draft record. Type labels are metadata only; no file is re-rendered.
     """
     check_document_access(membership)
 
-    raw_bytes = await file.read()
-    if len(raw_bytes) == 0:
-        raise UnprocessableEntityError("Uploaded file cannot be empty")
-    if len(raw_bytes) > 25 * 1024 * 1024:  # 25 MB limit
-        raise UnprocessableEntityError("File exceeds 25 MB size limit")
+    raw_bytes = await _read_upload(file)
 
     doc_id = uuid.uuid4()
     short_hash = uuid.uuid4().hex[:6].upper()
     prefix = student_ref.replace("-", "") if student_ref else "EXT"
     document_ref = f"DOC-2026-{prefix}-{short_hash}"
-    safe_filename = file.filename or f"{document_ref.lower()}.pdf"
+    safe_filename = _safe_uploaded_filename(file.filename)
+    document_title = (title or safe_filename).strip()[:255] or safe_filename
 
     sha256_hash = compute_exact_bytes_sha256(raw_bytes)
     file_path = save_document_bytes(str(doc_id), safe_filename, raw_bytes)
@@ -233,18 +269,18 @@ async def upload_document(
         id=doc_id,
         institution_id=membership.campus_id,
         document_ref=document_ref,
-        title=title,
+        title=document_title,
         doc_type=doc_type,
         file_name=safe_filename,
         file_path=file_path,
         file_size_bytes=len(raw_bytes),
-        mime_type=file.content_type or "application/pdf",
+        mime_type=mimetypes.guess_type(safe_filename)[0] or "application/octet-stream",
         sha256_hash=sha256_hash,
         status="draft",
         created_by=membership.user.id,
         chain_id=settings.BASE_SEPOLIA_CHAIN_ID,
-        contract_address=settings.BASE_SEPOLIA_CONTRACT_ADDRESS,
-        anchoring_mode=settings.ANCHOR_MODE,
+        contract_address=None,
+        anchoring_mode="unavailable",
         metadata_payload={"student_ref": student_ref} if student_ref else {},
         created_at=now_utc,
         updated_at=now_utc,
@@ -281,6 +317,8 @@ async def finalize_document(
     check_document_access(membership)
     doc = await _resolve_document_in_campus(document_id, membership.campus_id, db)
 
+    _read_integrity_checked_bytes(doc)
+
     if doc.status in ("finalized", "anchored", "anchor_pending"):
         return DocumentFinalizeResponse(
             id=doc.id,
@@ -310,13 +348,15 @@ async def finalize_document(
 
 @router.post("/{document_id}/anchor", response_model=DocumentAnchorResponse)
 async def anchor_document_on_chain(
+    payload: DocumentAnchorConfirmRequest,
     document_id: uuid.UUID = Path(...),
     membership: CampusMembershipContext = Depends(get_campus_membership),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Submits the finalized document's exact SHA-256 hash to Base Sepolia (Chain ID 84532).
-    Verifies receipt and confirmation before recording transaction state in PostgreSQL.
+    Confirms a wallet-broadcast Base Sepolia transaction against the deployed registry.
+    The server verifies the receipt, exact transaction calldata, and on-chain storage before
+    recording the anchor. It never creates simulated anchor records.
     """
     check_document_access(membership)
     doc = await _resolve_document_in_campus(document_id, membership.campus_id, db)
@@ -326,6 +366,14 @@ async def anchor_document_on_chain(
             "Document cannot be anchored while in 'draft' status. You must finalize the document first.",
             code="DOCUMENT_NOT_FINALIZED",
         )
+
+    if not base_sepolia_service.registry_anchor_ready():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The Base Sepolia registry is not configured or deployed. The document remains finalized and was not anchored.",
+        )
+
+    _read_integrity_checked_bytes(doc)
 
     if doc.status == "anchored" and doc.anchoring_mode == "onchain" and doc.tx_hash:
         return DocumentAnchorResponse(
@@ -342,14 +390,11 @@ async def anchor_document_on_chain(
             message="Document is already permanently anchored on Base Sepolia.",
         )
 
-    # Set pending status
-    doc.status = "anchor_pending"
-    await db.commit()
-
     try:
-        res = await base_sepolia_service.anchor_document(
+        res = base_sepolia_service.confirm_anchor_transaction(
             doc_ref=doc.document_ref,
-            sha256_hash=doc.sha256_hash,
+            document_hash=doc.sha256_hash,
+            tx_hash=payload.tx_hash,
         )
 
         doc.status = "anchored"
@@ -384,31 +429,55 @@ async def anchor_document_on_chain(
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Base Sepolia anchoring failed: {str(exc)}",
+            detail=f"Base Sepolia transaction confirmation failed: {str(exc)}",
         )
 
 
 @router.post("/{document_id}/verify", response_model=DocumentVerifyResponse)
 async def verify_document_integrity(
     document_id: uuid.UUID = Path(...),
-    candidate_file: UploadFile = File(..., description="Candidate PDF file to verify against anchored version"),
+    candidate_file: UploadFile = File(..., description="Candidate file to verify against the on-chain anchor"),
     membership: CampusMembershipContext = Depends(get_campus_membership),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Accepts candidate PDF bytes, computes byte-for-byte SHA-256 fingerprint, and compares
-    against the anchored version.
+    Accepts any candidate file, hashes its exact bytes, and compares against the hash
+    read directly from the deployed Base Sepolia registry.
     
     Returns MATCH (green confirmation) or MISMATCH (red tamper alert).
     """
     check_document_access(membership)
     doc = await _resolve_document_in_campus(document_id, membership.campus_id, db)
 
-    raw_bytes = await candidate_file.read()
+    if doc.anchoring_mode != "onchain" or not doc.tx_hash:
+        raise UnprocessableEntityError(
+            "This document has no confirmed on-chain anchor to verify against.",
+            code="DOCUMENT_NOT_ONCHAIN_ANCHORED",
+        )
+    if not doc.contract_address or doc.contract_address.lower() != (settings.BASE_SEPOLIA_CONTRACT_ADDRESS or "").lower():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The configured registry differs from the contract recorded for this document.",
+        )
+
+    raw_bytes = await _read_upload(candidate_file)
     candidate_hash = compute_exact_bytes_sha256(raw_bytes)
     now_utc = datetime.now(timezone.utc)
+    try:
+        anchor = base_sepolia_service.read_document_anchor(doc.document_ref)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Could not read the Base Sepolia anchor: {exc}",
+        ) from exc
+    if not anchor:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The recorded transaction has no corresponding registry anchor.",
+        )
 
-    is_match = candidate_hash.lower() == doc.sha256_hash.lower()
+    onchain_hash = anchor["document_hash"]
+    is_match = candidate_hash.lower() == onchain_hash.lower()
     verification_status = "verified_match" if is_match else "mismatch"
 
     doc.last_verified_at = now_utc
@@ -428,7 +497,7 @@ async def verify_document_integrity(
     return DocumentVerifyResponse(
         id=doc.id,
         document_ref=doc.document_ref,
-        anchored_hash=doc.sha256_hash,
+        anchored_hash=onchain_hash,
         candidate_hash=candidate_hash,
         is_match=is_match,
         verification_status=verification_status,
@@ -437,7 +506,7 @@ async def verify_document_integrity(
         contract_address=doc.contract_address,
         tx_hash=doc.tx_hash,
         explorer_url=explorer_url,
-        anchoring_mode=doc.anchoring_mode,
+        anchoring_mode="onchain",
     )
 
 
@@ -454,7 +523,7 @@ async def download_document(
     if not doc.file_path:
         raise ResourceNotFoundError("Document file path is not recorded")
 
-    raw_bytes = read_document_bytes(doc.file_path)
+    raw_bytes = _read_integrity_checked_bytes(doc)
     return Response(
         content=raw_bytes,
         media_type=doc.mime_type or "application/pdf",

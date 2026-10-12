@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "compile": "node compile.js",
-    "test": "node test_contract.js"
+    "test": "node test_contract.js && node test_identity_nft.js"
   },
   "keywords": [],
   "author": "",

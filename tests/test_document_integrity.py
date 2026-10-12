@@ -145,8 +145,8 @@ async def test_document_generation_and_draft_state(client: AsyncClient, setup_do
 @pytest.mark.asyncio
 async def test_document_finalization_and_anchoring_lifecycle(client: AsyncClient, setup_document_env):
     """
-    Verifies complete end-to-end flow:
-    Draft -> Finalize -> Anchor to Base Sepolia (simulated/on-chain) -> Verify receipt.
+    Without a deployed registry, finalization must remain usable while anchoring fails
+    explicitly instead of creating a simulated proof.
     """
     env = setup_document_env
     headers = {
@@ -169,7 +169,11 @@ async def test_document_finalization_and_anchoring_lifecycle(client: AsyncClient
     doc_id = gen_res.json()["id"]
 
     # 2. Cannot anchor a draft directly (must be finalized first)
-    pre_anchor = await client.post(f"/api/v1/documents/{doc_id}/anchor", headers=headers)
+    pre_anchor = await client.post(
+        f"/api/v1/documents/{doc_id}/anchor",
+        headers=headers,
+        json={"tx_hash": "0x" + "1" * 64},
+    )
     assert pre_anchor.status_code == 422
     err_body = pre_anchor.json()
     err_msg = (err_body.get("detail") or err_body.get("error", {}).get("message", "")).lower()
@@ -180,25 +184,28 @@ async def test_document_finalization_and_anchoring_lifecycle(client: AsyncClient
     assert fin_res.status_code == 200
     assert fin_res.json()["status"] == "finalized"
 
-    # 4. Anchor to Base Sepolia
-    anchor_res = await client.post(f"/api/v1/documents/{doc_id}/anchor", headers=headers)
-    assert anchor_res.status_code == 200
-    anchor_data = anchor_res.json()
-    assert anchor_data["status"] == "anchored"
-    assert anchor_data["chain_id"] == 84532
-    assert anchor_data["anchoring_mode"] in ("simulated", "onchain")
+    # 4. Missing transaction details cannot create an anchor.
+    missing_tx = await client.post(f"/api/v1/documents/{doc_id}/anchor", headers=headers, json={})
+    assert missing_tx.status_code == 422
 
-    # 5. Idempotent re-anchoring
-    re_anchor = await client.post(f"/api/v1/documents/{doc_id}/anchor", headers=headers)
-    assert re_anchor.status_code == 200
-    assert re_anchor.json()["status"] == "anchored"
+    # 5. No configured/deployed registry must fail visibly, with no simulated record.
+    anchor_res = await client.post(
+        f"/api/v1/documents/{doc_id}/anchor",
+        headers=headers,
+        json={"tx_hash": "0x" + "1" * 64},
+    )
+    assert anchor_res.status_code == 503
+    current = await client.get(f"/api/v1/documents/{doc_id}", headers=headers)
+    assert current.status_code == 200
+    assert current.json()["status"] == "finalized"
+    assert current.json()["anchoring_mode"] == "unavailable"
+    assert current.json()["tx_hash"] is None
 
 
 @pytest.mark.asyncio
-async def test_candidate_document_verification_match_and_mismatch(client: AsyncClient, setup_document_env):
+async def test_unanchored_document_cannot_be_claimed_verified(client: AsyncClient, setup_document_env):
     """
-    Verifies that uploading the exact file returns verified_match, while uploading an altered file
-    triggers mismatch tamper detection.
+    Verification must require a confirmed chain anchor; DB-only fingerprints are not proofs.
     """
     env = setup_document_env
     headers = {
@@ -218,38 +225,57 @@ async def test_candidate_document_verification_match_and_mismatch(client: AsyncC
     )
     doc_id = gen_res.json()["id"]
 
-    # 2. Anchor
-    await client.post(f"/api/v1/documents/{doc_id}/anchor", headers=headers)
-
-    # 3. Download the exact authentic bytes
+    # 2. Download the exact authentic bytes
     dl_res = await client.get(f"/api/v1/documents/{doc_id}/download", headers=headers)
     assert dl_res.status_code == 200
     exact_pdf_bytes = dl_res.content
 
-    # 4. Verify authentic bytes => MUST BE MATCH
+    # 3. Exact bytes still cannot be reported as verified without an on-chain anchor.
     verify_match_res = await client.post(
         f"/api/v1/documents/{doc_id}/verify",
         headers=headers,
         files={"candidate_file": ("authentic.pdf", io.BytesIO(exact_pdf_bytes), "application/pdf")},
     )
-    assert verify_match_res.status_code == 200
-    match_data = verify_match_res.json()
-    assert match_data["is_match"] is True
-    assert match_data["verification_status"] == "verified_match"
-    assert match_data["anchored_hash"] == match_data["candidate_hash"]
+    assert verify_match_res.status_code == 422
+    failure = verify_match_res.json()
+    error_message = failure.get("detail") or failure.get("error", {}).get("message", "")
+    assert "on-chain anchor" in error_message
 
-    # 5. Verify tampered bytes (alter single byte) => MUST BE MISMATCH
-    tampered_bytes = exact_pdf_bytes + b"\n% TAMPERED CONTENT"
-    verify_mismatch_res = await client.post(
-        f"/api/v1/documents/{doc_id}/verify",
+
+@pytest.mark.asyncio
+async def test_upload_accepts_arbitrary_file_and_preserves_exact_bytes(client: AsyncClient, setup_document_env, db_session: AsyncSession):
+    env = setup_document_env
+    headers = {
+        "Authorization": f"Bearer {env['faculty_token']}",
+        "X-Campus-Id": str(env["campus_a_id"]),
+    }
+    payload = b"\x00arbitrary binary proof\xff\x10"
+    response = await client.post(
+        "/api/v1/documents/upload",
         headers=headers,
-        files={"candidate_file": ("tampered.pdf", io.BytesIO(tampered_bytes), "application/pdf")},
+        files={"file": ("../proof.bin", io.BytesIO(payload), "application/octet-stream")},
     )
-    assert verify_mismatch_res.status_code == 200
-    mismatch_data = verify_mismatch_res.json()
-    assert mismatch_data["is_match"] is False
-    assert mismatch_data["verification_status"] == "mismatch"
-    assert mismatch_data["anchored_hash"] != mismatch_data["candidate_hash"]
+    assert response.status_code == 200
+    record = response.json()
+    assert record["file_name"] == "proof.bin"
+    assert record["mime_type"] == "application/octet-stream"
+    assert record["sha256_hash"] == hashlib.sha256(payload).hexdigest()
+    assert record["status"] == "draft"
+    assert record["anchoring_mode"] == "unavailable"
+
+    download = await client.get(f"/api/v1/documents/{record['id']}/download", headers=headers)
+    assert download.status_code == 200
+    assert download.content == payload
+    assert download.headers["x-document-sha256"] == hashlib.sha256(payload).hexdigest()
+
+    stored_record = await db_session.get(DocumentRecord, uuid.UUID(record["id"]))
+    assert stored_record is not None and stored_record.file_path
+    with open(stored_record.file_path, "wb") as file_obj:
+        file_obj.write(payload + b"tamper")
+    finalize = await client.post(f"/api/v1/documents/{record['id']}/finalize", headers=headers)
+    assert finalize.status_code == 409
+    corrupted_download = await client.get(f"/api/v1/documents/{record['id']}/download", headers=headers)
+    assert corrupted_download.status_code == 409
 
 
 @pytest.mark.asyncio

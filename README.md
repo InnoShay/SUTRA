@@ -178,6 +178,51 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 Interactive API documentation will be available at:
 - **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+## Document Integrity & Base Sepolia Registry
+
+The document integrity workflow accepts any non-empty file up to 25 MB. It stores the exact uploaded bytes, calculates SHA-256 over those bytes, and lets a connected MetaMask wallet submit the fingerprint to the Base Sepolia registry. The backend confirms the transaction receipt and independently reads the contract before marking a record on-chain. It never creates simulated anchors.
+
+Uploaded file bytes stay in the configured `DOCUMENTS_STORAGE_DIR`; only a SHA-256 digest and a hash of the opaque document reference are written on-chain. Files can be downloaded byte-for-byte and checked against the registry by uploading the candidate file. A document must be finalized before it can be anchored. Each document reference can be anchored once; identical repeated contract calls are idempotent, while a different digest reverts.
+
+### Registry deployment record
+
+The contract address, deployment transaction, block, deployer, gas used, and verification time below are maintained after a confirmed deployment. The current checkout has no deployment signer configured, so no deployment address is claimed here yet.
+
+<!-- BASE_SEPOLIA_REGISTRY_START -->
+
+**Status: Not deployed from this checkout yet.** Target network: Base Sepolia (Chain ID 84532). Start the frontend and open [http://localhost:3000/documents/deploy](http://localhost:3000/documents/deploy) in Brave with MetaMask enabled. The page deploys the locally compiled registry bytecode; review and approve the transaction in MetaMask. After confirmation, copy the public contract address into the backend `.env` as `BASE_SEPOLIA_CONTRACT_ADDRESS` and restart the backend. Never export a wallet private key or paste one into chat, source control, command arguments, or the README.
+
+<!-- BASE_SEPOLIA_REGISTRY_END -->
+
+After deployment, record the confirmed address and deployment receipt details in this section, set `BASE_SEPOLIA_CONTRACT_ADDRESS` in the backend `.env`, restart the backend, and connect MetaMask to Base Sepolia in the Document Integrity page. The page only reports the registry as ready after it confirms the configured address contains contract code on chain 84532. Wallet confirmation is required for deployment and each anchor transaction; Base Sepolia ETH pays the network gas fee.
+
+## SUTRA Identity NFT
+
+Each profile receives a private 256-bit artwork seed. SUTRA uses it to render a deterministic PNG abstract painting that is independent of the selected profile avatar. The public ERC-721 metadata contains only the pseudonymous SUTRA ID, art traits, and a content hash; it does not include a profile name, avatar, or academic record. The token is soulbound and reports the ERC-5192 `locked` interface.
+
+Minting is live-only: no preview token is marked minted. Before the profile card enables **Connect wallet & mint**, configure the deployed `BASE_SEPOLIA_NFT_CONTRACT_ADDRESS`, a funded backend owner/relayer key, `ANCHOR_MODE=onchain`, and a server-only `PINATA_JWT`. The backend pins the raster PNG and metadata to IPFS first, then submits the mint and records success only after Base Sepolia confirms the transaction. The student wallet is the NFT recipient; the relayer pays gas. Keep the relayer key outside source control and do not paste it into chat or README files.
+
+The identity NFT contract has **not been deployed from this checkout**. Its address and deployment transaction must be added here only after an actual Base Sepolia confirmation. Profile creation still succeeds without wallet or chain configuration; in that case the identity remains unminted and the UI says so. To complete the live flow after deployment, run migration `0009_identity_art_seed`, configure the server environment, restart the backend, and mint from the identity card.
+
+Upload and anchor flow:
+
+1. Upload any file (up to 25 MB) and review its exact-byte SHA-256 fingerprint.
+2. Finalize the record to freeze its file version.
+3. Choose **Anchor**, approve the transaction in MetaMask, and wait for BaseScan confirmation.
+4. Verify a candidate file. The API compares its hash with the registry contract state, not only the database copy.
+
+Compile and validate the contract locally:
+
+```bash
+cd contracts
+npm run compile
+node test_identity_nft.js
+```
+
+`python scripts/deploy_base_sepolia.py` is an optional server-side alternative that uses a deployer key only when it is configured in `.env`; it checks the RPC chain, wallet balance, receipt, and deployed bytecode before writing the public address and deployment proof into this README. The wallet flow in Brave does not require a backend private key to deploy or anchor documents.
 - **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 - **Liveness Probe:** [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 - **Readiness Probe:** [http://localhost:8000/api/v1/ready](http://localhost:8000/api/v1/ready)
