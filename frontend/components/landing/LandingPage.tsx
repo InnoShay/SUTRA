@@ -9,20 +9,20 @@ import Footer from "./Footer";
 
 export function LandingPage() {
   return (
-    <main className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-[#d2f831] selection:text-slate-950">
-      {/* Hero with framed rounded card, Navbar, clouds and 3D arc cards */}
+    <main className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-[#d2f831] selection:text-slate-950 scroll-smooth w-full overflow-x-hidden">
+      {/* 1. Dynamic Hero with framed card, interactive ribbon, and fluid scaling */}
       <Hero />
 
-      {/* Logo Client Strip */}
+      {/* 2. Responsive Logo Client Strip */}
       <LogoStrip />
 
-      {/* About Bento Grid */}
+      {/* 3. About SUTRA Bento Grid */}
       <AboutBento />
 
-      {/* 3D Arc Project Showcase */}
+      {/* 4. Horizontal Parallax Drag-Only Showcase */}
       <CuriousShowcase />
 
-      {/* High-end Institutional Footer */}
+      {/* 5. Institutional Footer */}
       <Footer />
     </main>
   );

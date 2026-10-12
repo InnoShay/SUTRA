@@ -58,13 +58,18 @@ export default function LogoStrip() {
   ];
 
   return (
-    <div className="w-full bg-white py-10 border-b border-slate-100">
+    <div className="w-full bg-white py-8 sm:py-10 border-b border-slate-100 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-6 sm:gap-8 opacity-60 hover:opacity-90 transition-opacity">
+        <div className="flex flex-wrap items-center justify-center sm:justify-between gap-6 sm:gap-8 transition-opacity duration-300">
           {logos.map((logo, idx) => (
-            <div key={idx} className="flex items-center gap-2 text-slate-700">
-              {logo.icon}
-              <span className="font-display font-bold text-sm tracking-tight text-slate-800">
+            <div
+              key={idx}
+              className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors duration-200 cursor-pointer group"
+            >
+              <div className="text-slate-400 group-hover:text-slate-900 transition-colors">
+                {logo.icon}
+              </div>
+              <span className="font-display font-bold text-xs sm:text-sm tracking-tight">
                 {logo.name}
               </span>
             </div>
