@@ -287,14 +287,14 @@ Output includes:
 
 ### 6.8 Dataset Provenance & Benchmarks
 ```bash
-# View dataset provenance overview, split rules, and safety disclaimers
-sutra datasets overview
+# View dataset provenance overview, split rules, and safety disclaimers (alias: overview)
+sutra datasets info
 
-# Inspect sample OULAD research benchmark record
-sutra datasets sample --type oulad
+# Inspect historical research record (OULAD)
+sutra datasets lookup --source oulad 11391 --module AAA --presentation 2013J
 
-# Inspect sample synthetic benchmark record
-sutra datasets sample --type synthetic
+# Inspect synthetic demonstration benchmark record
+sutra datasets lookup --source synthetic SYN-1007
 ```
 
 *Strict Governance Rule: Synthetic and research benchmark records are explicitly labeled and cannot be written into institutional operational tables.*
@@ -316,19 +316,20 @@ sutra predict --file cli/tests/fixtures/valid_sample.json --json
 
 | Error / Symptom | Exit Code | Cause | Resolution |
 | :--- | :---: | :--- | :--- |
-| `HTTP 401 Unauthorized` | `2` | Missing, expired, or invalid session token | Run `sutra auth login` to refresh credentials. |
-| `HTTP 403 Forbidden` / `LEADERSHIP_QUEUE_ACCESS_DENIED` | `2` | Executive leadership role attempted to access individual student queue | Leadership is restricted to cohort aggregates per ADR-004. Log in with `faculty`, `mentor`, or `hod` role. |
+| `HTTP 401 Unauthorized` | `3` | Missing, expired, or invalid session token | Run `sutra auth login` to refresh credentials. |
+| `HTTP 403 Forbidden` / `LEADERSHIP_QUEUE_ACCESS_DENIED` | `3` | Executive leadership role attempted to access individual student queue | Leadership is restricted to cohort aggregates per ADR-004. Log in with `faculty`, `mentor`, or `hod` role. |
 | `HTTP 404 Not Found` | `2` | Target student, signal, or case does not exist in active campus | Verify ID using `sutra students list`, `sutra signals list`, or `sutra cases list`. |
 | `HTTP 409 Conflict` / `Transition ... is not allowed` | `2` | Attempted illegal state transition in case lifecycle | Run `sutra cases get <CASE_ID>` to view `Canonical Next States`. |
 | `HTTP 422 Unprocessable Entity` / `Incomplete Day-30 observations` | `2` | Student lacks 25 canonical observations for ML scoring | Run `sutra students readiness <ID>` to inspect missing features. Live student scoring requires 25 canonical observations. |
+| `Anti-leakage Violation` / Forbidden features | `2` | Input vector contains forbidden target outcomes or post-cutoff features | Verify feature dictionary contains strictly the 25 allowed Day-30 inputs. |
+| `Invalid UUID` or argument validation error | `2` | Malformed CLI parameter or payload | Check argument syntax using `sutra <subcommand> --help`. |
 | `Failed to connect to backend` / `os error 61` | `1` | FastAPI server is not running on configured URL | Check `--url` parameter or verify server process status. |
-| `Invalid UUID` or argument validation error | `1` | Malformed CLI parameter or payload | Check argument syntax using `sutra <subcommand> --help`. |
 
 ### Standard Exit Codes
 * `0`: Success.
 * `1`: Operational or network failure (e.g. backend offline, I/O error).
-* `2`: Domain, authorization, or validation error (e.g. 401, 403, 404, 409, 422).
-* `3`: Safety invariant or anti-leakage rejection (e.g. attempt to inject forbidden features).
+* `2`: Domain, validation, or policy error (e.g. 400, 404, 409, 422, anti-leakage).
+* `3`: Authentication or authorization failure (e.g. 401, 403, permission denied).
 
 ---
 
