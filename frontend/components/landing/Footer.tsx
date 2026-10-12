@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 export default function Footer() {
@@ -17,13 +18,13 @@ export default function Footer() {
               Deploy SUTRA alongside Canvas, Moodle, or Blackboard in under 5 days with full FERPA &amp; DPDP compliance.
             </p>
           </div>
-          <a
-            href="/dashboard"
+          <Link
+            href="/login"
             className="px-6 py-3 rounded-full bg-[#d2f831] hover:bg-[#c4ec26] text-slate-950 font-bold text-xs uppercase tracking-wider transition-transform hover:scale-105 shadow-md flex items-center gap-2"
           >
             <span>REQUEST PILOT ACCESS</span>
             <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-          </a>
+          </Link>
         </div>
 
         {/* Directory Columns */}

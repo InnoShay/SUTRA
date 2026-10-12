@@ -102,8 +102,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const currentPersonaOption =
     personaList.find((p) => p.role === activeRole) || personaList[0];
 
-  // If on login page, render clean auth view without shell chrome
-  if (pathname === "/login") {
+  // If on landing page (/) or login page (/login), render clean full-width view without dashboard shell chrome
+  if (pathname === "/login" || pathname === "/") {
     return <>{children}</>;
   }
 

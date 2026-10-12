@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 export default function CuriousShowcase() {
@@ -76,13 +77,13 @@ export default function CuriousShowcase() {
 
           {/* Pill Button */}
           <div className="mt-6 flex justify-center">
-            <a
+            <Link
               href="/dashboard"
               className="px-5 py-2.5 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800 transition-all shadow-sm flex items-center gap-2.5 group"
             >
               <span>Explore Workflows</span>
               <span className="w-3 h-3 rounded-full bg-[#f97316] group-hover:scale-110 transition-transform" />
-            </a>
+            </Link>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, Menu, X, ArrowUpRight } from "lucide-react";
 
 export default function Navbar() {
@@ -59,15 +60,19 @@ export default function Navbar() {
         </div>
 
         {/* Right Action Button */}
-        <div className="hidden sm:flex items-center gap-4">
-          <a
+        <div className="hidden sm:flex items-center gap-5">
+          <Link
+            href="/login"
+            className="text-xs font-bold uppercase tracking-wider text-white/90 hover:text-white transition-colors"
+          >
+            SIGN IN
+          </Link>
+          <Link
             href="/dashboard"
-            target="_blank"
-            rel="noreferrer"
             className="px-5 py-2.5 rounded-full bg-[#d2f831] hover:bg-[#c4ec26] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow hover:scale-[1.02]"
           >
             LAUNCH CONSOLE
-          </a>
+          </Link>
         </div>
 
         {/* Mobile Hamburger */}
@@ -99,16 +104,21 @@ export default function Navbar() {
               CASE WORKFLOWS
             </a>
           </div>
-          <div className="pt-3 border-t border-white/10">
-            <a
+          <div className="pt-3 border-t border-white/10 space-y-2">
+            <Link
+              href="/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full block text-center py-2 rounded-full bg-white/10 text-white font-bold text-xs uppercase tracking-wider"
+            >
+              SIGN IN
+            </Link>
+            <Link
               href="/dashboard"
-              target="_blank"
-              rel="noreferrer"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full block text-center py-2.5 rounded-full bg-[#d2f831] text-slate-950 font-bold text-xs uppercase tracking-wider"
             >
               LAUNCH CONSOLE
-            </a>
+            </Link>
           </div>
         </div>
       )}

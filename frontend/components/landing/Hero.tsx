@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import Navbar from "./Navbar";
 import { ArrowUpRight, Plus, Star, BarChart3, TrendingUp, Sparkles, Check, ChevronRight } from "lucide-react";
 
@@ -40,22 +41,22 @@ export default function Hero() {
 
           {/* Action CTAs */}
           <div className="mt-8 flex items-center justify-center gap-3">
-            <a
+            <Link
               href="/dashboard"
               className="px-6 py-3 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider border border-white/25 transition-all shadow-sm"
             >
               VIEW PLATFORM
-            </a>
+            </Link>
 
-            <a
-              href="#about"
+            <Link
+              href="/login"
               className="pl-6 pr-2 py-2 rounded-full bg-[#d2f831] hover:bg-[#c4ec26] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all shadow-md hover:scale-[1.02] flex items-center gap-3"
             >
               <span>GET STARTED</span>
               <div className="w-7 h-7 rounded-full bg-slate-950 text-white flex items-center justify-center">
                 <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
               </div>
-            </a>
+            </Link>
           </div>
         </div>
 
