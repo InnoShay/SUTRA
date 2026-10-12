@@ -16,10 +16,11 @@ import {
   PhoneCall,
   Shield,
 } from "lucide-react";
+import { RequestCounselorCallModal } from "@/components/RequestCounselorCallModal";
 
 export default function RequestSupportPage() {
   const router = useRouter();
-  const { user, currentPersona, requestCounselorCall } = useSkillHub();
+  const { user, currentPersona, cases, callRequests, requestCounselorCall } = useSkillHub();
 
   const [subject, setSubject] = useState("");
   const [category, setCategory] = useState("academic_mentorship");
@@ -27,6 +28,17 @@ export default function RequestSupportPage() {
   const [preferredContact, setPreferredContact] = useState<"phone" | "in_person" | "video">("in_person");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedCaseRef, setSubmittedCaseRef] = useState<string | null>(null);
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+
+  const studentId = currentPersona?.userId || "SYN-1007";
+  const studentCases = cases.filter(
+    (c) => c.student_id === studentId || c.external_student_ref === studentId
+  );
+  const activeCallReq = callRequests.find(
+    (r) =>
+      (r.student_id === studentId || r.external_student_ref === studentId) &&
+      r.status !== "closed"
+  );
 
   const categories = [
     {
@@ -92,6 +104,62 @@ export default function RequestSupportPage() {
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Overview</span>
         </Link>
+      </div>
+
+      {/* Immediate Assistance & Crisis Support Guidance */}
+      <div className="skill-card bg-white p-5 sm:p-6 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2.5 bg-amber-50 text-amber-700 rounded-2xl border border-amber-100 shrink-0">
+              <HelpCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-neutral-900 font-heading">
+                Need Immediate Assistance?
+              </h2>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Campus support services are free and confidential.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsCallModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-xl text-xs font-semibold transition-colors shrink-0 cursor-pointer"
+          >
+            <PhoneCall className="w-3.5 h-3.5 text-amber-700" />
+            <span>
+              {activeCallReq ? "Call Request Active" : "Request a Counselor Call"}
+            </span>
+          </button>
+        </div>
+
+        <p className="text-xs text-neutral-600 leading-relaxed">
+          If you are experiencing academic difficulty, attendance challenges, or personal stress,
+          you can submit a structured request below or request direct contact from a counselor.
+        </p>
+
+        <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100 text-[11px] text-neutral-500 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span className="font-semibold text-neutral-700 block">
+              Campus Crisis Line (24/7):
+            </span>
+            <span>
+              Available for emergency wellbeing support at{" "}
+              <a
+                href="tel:+918023459999"
+                className="font-bold text-rose-700 hover:underline"
+              >
+                +91 80 2345 9999
+              </a>
+              .
+            </span>
+          </div>
+          <span className="text-neutral-400 text-[10px]">
+            Confidential · SUTRA Campus Welfare
+          </span>
+        </div>
       </div>
 
       {submittedCaseRef ? (
@@ -262,14 +330,14 @@ export default function RequestSupportPage() {
             <div className="pt-2 flex items-center justify-end gap-3 border-t border-neutral-100">
               <Link
                 href="/dashboard"
-                className="px-5 py-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors"
+                className="px-5 py-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 rounded-xl transition-colors"
               >
                 Cancel
               </Link>
               <button
                 type="submit"
                 disabled={isSubmitting || !subject.trim() || !description.trim()}
-                className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 text-white rounded-full text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all"
+                className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{isSubmitting ? "Submitting..." : "Submit Request"}</span>
@@ -278,6 +346,17 @@ export default function RequestSupportPage() {
           </form>
         </div>
       )}
+
+      {/* Modal: Counselor Call Request */}
+      <RequestCounselorCallModal
+        isOpen={isCallModalOpen}
+        onClose={() => setIsCallModalOpen(false)}
+        studentId={studentId}
+        studentName={user.fullName || user.name || "Asha"}
+        caseId={studentCases[0]?.id || "CASE-SYN-1007"}
+        signalId="SIG-SYN-1007"
+        riskScore={0.68}
+      />
     </div>
   );
 }

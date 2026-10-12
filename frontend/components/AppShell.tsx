@@ -35,6 +35,7 @@ import {
   MessageCircle,
   Briefcase,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -188,16 +189,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       icon: HeartHandshake,
     },
     {
+      name: t("nav.assessment", "Assessment"),
+      shortName: t("nav.assessment_short", "Assessment"),
+      href: "/assessment",
+      icon: Sparkles,
+    },
+    {
       name: t("nav.messages", "Messages"),
       shortName: t("nav.messages_short", "Messages"),
       href: "/messages",
       icon: MessageCircle,
-    },
-    {
-      name: t("nav.documents", "Document Integrity"),
-      shortName: t("nav.documents_short", "Documents"),
-      href: "/documents",
-      icon: ShieldCheck,
     },
   ];
 
