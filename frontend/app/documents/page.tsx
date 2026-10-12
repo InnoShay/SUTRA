@@ -422,14 +422,14 @@ export default function DocumentsPage() {
           </button>
           <button
             onClick={() => setIsUploadOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-700 shadow-2xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer"
           >
             <UploadCloud className="w-3.5 h-3.5" />
-            <span>Upload file</span>
+            <span>Upload PDF / File</span>
           </button>
           <button
             onClick={() => setIsGenerateOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-700 shadow-2xs transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Agreement</span>

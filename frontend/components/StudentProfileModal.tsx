@@ -111,95 +111,31 @@ export function StudentProfileModal() {
         </div>
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
-          {/* SUTRA 360 View Banner */}
-          <div className="flex items-center justify-between p-3.5 bg-neutral-900 text-white rounded-2xl shadow-sm">
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
+          {/* Quick Metrics & Course */}
+          <div className="flex items-center justify-between p-3.5 bg-neutral-50 rounded-2xl border border-neutral-100">
             <div>
-              <div className="text-xs font-bold">360° Support View & Telemetry</div>
-              <div className="text-[10px] text-neutral-400">
-                Inspect 6-domain observations, data freshness, active signals & cases
-              </div>
+              <p className="text-xs font-bold text-neutral-900">{selectedStudent.course}</p>
+              <p className="text-[11px] text-neutral-500 mt-0.5">
+                {selectedStudent.progress}% complete • Grade {selectedStudent.grade} • {selectedStudent.attendance} attendance
+              </p>
             </div>
             <Link
               href={`/students/${selectedStudent.id}`}
               onClick={() => setSelectedStudent(null)}
-              className="px-3 py-1.5 bg-white text-neutral-900 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-neutral-100 transition-colors whitespace-nowrap shadow-2xs"
+              className="px-3 py-1.5 bg-neutral-900 text-white rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-neutral-800 transition-colors shrink-0"
             >
-              <span>Inspect</span>
+              <span>360° View</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          {/* Enrolled Course & Progress */}
-          <div className="bg-neutral-50/80 rounded-2xl p-4 border border-neutral-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-neutral-400" /> Current Course
-              </span>
-              <span className="text-xs font-bold text-neutral-900">
-                {selectedStudent.progress}% Complete
-              </span>
-            </div>
-            <h4 className="text-sm font-bold text-neutral-900 mb-3">
-              {selectedStudent.course}
-            </h4>
-            <SkillHubProgressBar progress={selectedStudent.progress} heightClass="h-3" />
-          </div>
-
-          {/* Quick Metrics Grid */}
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-            <div className="bg-white border border-neutral-100 rounded-2xl p-2.5 sm:p-3 text-center shadow-xs">
-              <span className="block text-[11px] font-medium text-neutral-400">
-                Grade
-              </span>
-              <span className="text-base sm:text-lg font-bold text-neutral-900 mt-0.5 block">
-                {selectedStudent.grade}
-              </span>
-            </div>
-            <div className="bg-white border border-neutral-100 rounded-2xl p-2.5 sm:p-3 text-center shadow-xs">
-              <span className="block text-[11px] font-medium text-neutral-400">
-                Attendance
-              </span>
-              <span className="text-base sm:text-lg font-bold text-neutral-900 mt-0.5 block">
-                {selectedStudent.attendance}
-              </span>
-            </div>
-            <div className="bg-white border border-neutral-100 rounded-2xl p-2.5 sm:p-3 text-center shadow-xs">
-              <span className="block text-[11px] font-medium text-neutral-400">
-                Lessons
-              </span>
-              <span className="text-base sm:text-lg font-bold text-neutral-900 mt-0.5 block">
-                {selectedStudent.completedLessons}/{selectedStudent.totalLessons}
-              </span>
-            </div>
-          </div>
-
-          {/* Bio / Mentor Notes */}
-          {selectedStudent.bio && (
-            <div className="text-xs text-neutral-600 leading-relaxed bg-white border border-neutral-100 rounded-2xl p-3.5">
-              <span className="font-semibold text-neutral-800 block mb-1">
-                Student Objective
-              </span>
-              {selectedStudent.bio}
-            </div>
-          )}
-
-          {/* Dynamic Messages Thread */}
-          <div className="space-y-3 pt-2 border-t border-neutral-100">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-neutral-800 block">
-                Direct Feedback &amp; Chat
-              </label>
-              <span className="text-[10px] text-neutral-400">
-                {messages.length} messages
-              </span>
-            </div>
-
-            {/* Chat conversation history */}
-            <div className="bg-neutral-50/70 rounded-2xl p-3 max-h-48 overflow-y-auto space-y-2 border border-neutral-100/80">
+          {/* Messages */}
+          <div className="space-y-2">
+            <div className="bg-neutral-50/70 rounded-2xl p-3 max-h-40 overflow-y-auto space-y-2 border border-neutral-100">
               {messages.length === 0 ? (
-                <p className="text-xs text-neutral-400 text-center py-4">
-                  No messages exchanged yet. Send notes or resources below.
+                <p className="text-xs text-neutral-400 text-center py-3">
+                  No messages yet.
                 </p>
               ) : (
                 messages.map((m) => {
@@ -210,17 +146,14 @@ export function StudentProfileModal() {
                       className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
                     >
                       <div
-                        className={`max-w-[85%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed ${
+                        className={`max-w-[85%] px-3 py-1.5 rounded-xl text-xs ${
                           isUser
-                            ? "bg-neutral-900 text-white rounded-br-xs"
-                            : "bg-white text-neutral-800 border border-neutral-200/70 rounded-bl-xs shadow-2xs"
+                            ? "bg-neutral-900 text-white"
+                            : "bg-white text-neutral-800 border border-neutral-200/70 shadow-2xs"
                         }`}
                       >
                         {m.text}
                       </div>
-                      <span className="text-[9px] text-neutral-400 mt-0.5 px-1 font-mono">
-                        {m.time}
-                      </span>
                     </div>
                   );
                 })
@@ -228,30 +161,28 @@ export function StudentProfileModal() {
             </div>
 
             {/* Quick message compose form */}
-            <form onSubmit={handleSendMessage} className="space-y-2">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  placeholder={`Send feedback or resource to ${selectedStudent.name.split(" ")[0]}...`}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="flex-1 px-4 py-2.5 bg-white border border-neutral-200/90 rounded-xl text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 shadow-2xs transition-all min-h-[44px]"
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm min-h-[44px]"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Send</span>
-                </button>
-              </div>
-              {sentSuccess && (
-                <p className="text-[11px] font-medium text-emerald-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Message sent to {selectedStudent.name}
-                </p>
-              )}
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <input
+                type="text"
+                placeholder={`Message ${selectedStudent.name.split(" ")[0]}...`}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="flex-1 px-3.5 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Send</span>
+              </button>
             </form>
+            {sentSuccess && (
+              <p className="text-[11px] font-medium text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Sent
+              </p>
+            )}
           </div>
         </div>
       </div>

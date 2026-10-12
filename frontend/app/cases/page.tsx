@@ -19,7 +19,7 @@ import { api, isDemoMode } from "@/lib/api";
 import { DEMO_CASES } from "@/lib/skillhub-data";
 
 export default function CasesPage() {
-  const { user, currentPersona, cases, activeRole, backendError, refreshBackendData } = useSkillHub();
+  const { user, currentPersona, cases, activeRole, backendConnected, backendError, refreshBackendData } = useSkillHub();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
@@ -30,13 +30,11 @@ export default function CasesPage() {
   const [studentCases, setStudentCases] = useState<StudentCaseSummaryDTO[]>([]);
   const [isLoadingStudentCases, setIsLoadingStudentCases] = useState(isStudent);
   const [studentCasesError, setStudentCasesError] = useState<string | null>(null);
-  const [isDemoPreview, setIsDemoPreview] = useState(false);
 
   const fetchStudentCases = React.useCallback(async () => {
     if (!isStudent) return;
     setIsLoadingStudentCases(true);
     setStudentCasesError(null);
-    setIsDemoPreview(false);
     try {
       const response = await api.proposed.getMyCases();
       setStudentCases(response.items || []);
@@ -90,7 +88,6 @@ export default function CasesPage() {
     let active = true;
     setIsLoadingStudentCases(true);
     setStudentCasesError(null);
-    setIsDemoPreview(false);
     setStudentCases([]);
 
     api.proposed
@@ -165,6 +162,10 @@ export default function CasesPage() {
     return true;
   });
 
+  const backendErrorText = backendError?.toLowerCase() || "";
+  const backendRequiresAuthentication = /auth|token|unauthor|forbidden|permission|campus/.test(backendErrorText);
+  const backendIsUnreachable = !backendConnected || /unable to connect|network|failed to fetch|backend offline/.test(backendErrorText);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -223,10 +224,7 @@ export default function CasesPage() {
       {backendError && (
         <div
           className={`p-3.5 rounded-2xl text-xs flex items-center justify-between gap-3 ${
-            backendError.toLowerCase().includes("jwt") ||
-            backendError.toLowerCase().includes("auth") ||
-            backendError.toLowerCase().includes("token") ||
-            backendError.toLowerCase().includes("unauthorized")
+            backendRequiresAuthentication
               ? "bg-rose-50 border border-rose-200/80 text-rose-800"
               : "bg-amber-50 border border-amber-200/80 text-amber-800"
           }`}
@@ -234,21 +232,17 @@ export default function CasesPage() {
           <div className="flex items-center gap-2">
             <span
               className={`w-2 h-2 rounded-full shrink-0 ${
-                backendError.toLowerCase().includes("jwt") ||
-                backendError.toLowerCase().includes("auth") ||
-                backendError.toLowerCase().includes("token") ||
-                backendError.toLowerCase().includes("unauthorized")
+                backendRequiresAuthentication
                   ? "bg-rose-500"
                   : "bg-amber-500"
               }`}
             />
-            {backendError.toLowerCase().includes("jwt") ||
-            backendError.toLowerCase().includes("auth") ||
-            backendError.toLowerCase().includes("token") ||
-            backendError.toLowerCase().includes("unauthorized") ? (
+            {backendRequiresAuthentication ? (
               <span>Authentication error ({backendError}). Please sign in to verify your credentials.</span>
+            ) : backendIsUnreachable ? (
+              <span>Backend service is unreachable ({backendError}).</span>
             ) : (
-              <span>Backend service is unreachable ({backendError}). Viewing local case cache.</span>
+              <span>The backend is available but did not return this case data ({backendError}).</span>
             )}
           </div>
           <button
@@ -277,46 +271,6 @@ export default function CasesPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  const demoTarget =
-                    cases.find(
-                      (c) =>
-                        c.student_id === "SYN-1007" ||
-                        c.external_student_ref === "SYN-1007"
-                    ) || DEMO_CASES[0];
-                  setStudentCases([
-                    {
-                      id: demoTarget.id,
-                      institution_id:
-                        demoTarget.institution_id ||
-                        "00000000-0000-0000-0000-000000000001",
-                      student_id: demoTarget.student_id,
-                      title: demoTarget.selected_intervention_key
-                        ? demoTarget.selected_intervention_key.replace(/_/g, " ")
-                        : "Support Plan",
-                      state: demoTarget.state,
-                      selected_intervention_key:
-                        demoTarget.selected_intervention_key,
-                      primary_owner_name:
-                        demoTarget.primary_owner_user_id || "Faculty Mentor",
-                      tasks_count: demoTarget.tasks?.length || 0,
-                      open_tasks_count:
-                        demoTarget.tasks?.filter(
-                          (t) => t.state !== "DONE" && t.state !== "COMPLETED"
-                        ).length || 0,
-                      created_at: demoTarget.created_at,
-                      updated_at: demoTarget.updated_at,
-                    },
-                  ]);
-                  setIsDemoPreview(true);
-                  setStudentCasesError(null);
-                }}
-                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
-              >
-                Preview Demo Case Record
-              </button>
               <button
                 type="button"
                 onClick={() => fetchStudentCases()}
