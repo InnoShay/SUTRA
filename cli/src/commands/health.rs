@@ -8,11 +8,10 @@ pub async fn run_health(client: &SutraApiClient) -> Result<(), String> {
     match client.health().await {
         Ok(h) => {
             println!(
-                "  {} Health: {} (version: {}, env: {})",
+                "  {} Health: {} (version: {})",
                 "✓".green().bold(),
                 h.status.green(),
-                h.version,
-                h.environment
+                h.version
             );
         }
         Err(e) => {
@@ -24,10 +23,11 @@ pub async fn run_health(client: &SutraApiClient) -> Result<(), String> {
     match client.ready().await {
         Ok(r) => {
             println!(
-                "  {} Readiness: {} (database: {})",
+                "  {} Readiness: {} (database: {}, ml_model: {})",
                 "✓".green().bold(),
                 r.status.green(),
-                r.database.cyan()
+                r.checks.database.cyan(),
+                r.checks.ml_model.cyan()
             );
         }
         Err(e) => {

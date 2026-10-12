@@ -5,16 +5,26 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthResponse {
     pub status: String,
+    #[serde(default)]
+    pub app: Option<String>,
     pub version: String,
-    pub environment: String,
-    pub timestamp: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadinessChecks {
+    pub database: String,
+    pub ml_model: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReadinessResponse {
     pub status: String,
-    pub database: String,
-    pub timestamp: String,
+    #[serde(default)]
+    pub app: Option<String>,
+    pub version: String,
+    pub checks: ReadinessChecks,
+    #[serde(default)]
+    pub timestamp: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

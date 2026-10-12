@@ -7,9 +7,16 @@ import argparse
 import asyncio
 import json
 import os
+import sys
 import uuid
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+# Ensure repository root is on sys.path
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from sqlalchemy import select
 
 from app.core.config import settings
@@ -222,7 +229,7 @@ async def seed_data(fixture_path: Path):
                     student_id=sample_sig.student_id,
                     originating_signal_id=sample_sig.id,
                     selected_intervention_key="mentor_check_in",
-                    state="IN_PROGRESS",
+                    state="support_in_progress",
                     primary_owner_user_id=faculty_user_id,
                     due_at=now + timedelta(days=3),
                     accepted_at=now - timedelta(hours=2),
@@ -277,11 +284,11 @@ async def seed_data(fixture_path: Path):
                     id=uuid.uuid4(),
                     institution_id=DEMO_CAMPUS_ID,
                     case_id=case.id,
-                    event_type="STATE_TRANSITION",
+                    event_type="SUPPORT_STARTED",
                     actor_user_id=faculty_user_id,
-                    actor_kind="USER",
-                    from_state="ACCEPTED",
-                    to_state="IN_PROGRESS",
+                    actor_kind="user",
+                    from_state="accepted",
+                    to_state="support_in_progress",
                     reason_code="FOLLOWUP_INITIATED",
                     event_metadata={"initiated_by": "Prof. Ananya Sharma"},
                     idempotency_key=f"evt-init-{case.id}",

@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-red.svg)](https://www.sqlalchemy.org/)
-[![Tests](https://img.shields.io/badge/Tests-74%2F74%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-77%2F77%20Passed-brightgreen.svg)]()
 
 > **Core Product Principle:** *“No Alert Without Action.”*
 
@@ -160,6 +160,7 @@ pytest tests -v --cov=app
 ```
 
 ### Test Coverage Highlights
+- `tests/test_phase8_acceptance.py` — Scenario 1 traceable workflow (observation to closed outcome), Scenario 2 negative boundaries & graceful AI degradation, API response time benchmarks.
 - `tests/test_ai_orchestration.py` — Bounded AI review briefs, catalog filtering, prompt injection defense, ADR-003 financial data exclusion, provider fallback, and audit logging.
 - `tests/test_auth_security.py` — Supabase JWT verification, role capabilities, campus boundary isolation.
 - `tests/test_ingestion.py` — Multi-domain observation ingestion, anti-leakage validation.
@@ -168,6 +169,32 @@ pytest tests -v --cov=app
 - `tests/test_ml_integration.py` — Day-30 25-feature schema validation, Evidence Card generation, ML audit logs.
 - `tests/test_reliability_security.py` — Idempotency replay, outbox worker exponential backoff, dead letter queue, deadline escalations.
 - `tests/test_features_schema.py` — 25-feature input validation and finite number checks.
+
+---
+
+## 🦀 Phase 7: Standalone Rust CLI & PWA Capabilities
+
+SUTRA provides an authorized Rust command-line interface (`sutra-cli`) and standalone PWA capabilities:
+
+- **Strict Gateway Conformance:** The Rust CLI communicates solely through authenticated `/api/v1` routes with `Bearer <JWT>` and `X-Campus-Id` headers. It does not possess direct database connections or bypass business rules.
+- **Commands:**
+  - `sutra health` — Validates FastAPI server liveness and database/ML readiness.
+  - `sutra catalogue` — Lists active, campus-controlled intervention catalog options.
+  - `sutra signals list` / `sutra signals review` — Inspects triage queue and records authorized reviews.
+  - `sutra cases list` / `sutra cases get` / `sutra cases transition` — Coordinates the 10-state case lifecycle.
+  - `sutra ai status` / `sutra ai review-brief <SIGNAL_ID>` — Queries bounded AI review briefs.
+- **PWA Capabilities:** Standalone `manifest.json` and static-asset-only Service Worker (`frontend/public/sw.js`) strictly omitting offline caching of student data, cases, or tokens (ADR-003/ADR-004).
+
+---
+
+## 🏁 Phase 8: Final Integration, Evaluation & Demo Readiness
+
+SUTRA is validated end-to-end for live demonstration:
+
+- **Traceable Workflow:** Observations → Signals and Evidence → Human Review → Intervention → Assignment and Deadline → Follow-up or Escalation → Outcome → Cohort-Level Insights.
+- **Empirical Latency:** All critical endpoints respond within sub-25ms times locally (Health: ~1ms, Readiness: ~5ms, Signals: ~4ms, Cases: ~8ms, AI Mock: ~6ms).
+- **Automated Verification:** 77/77 Pytest tests passing, 7/7 Rust CLI integration tests passing, 6/6 frontend contract tests passing.
+- **Full Demo Runbook:** See [`docs/docs/11_DEPLOYMENT_RUNBOOK.md`](docs/docs/11_DEPLOYMENT_RUNBOOK.md) for step-by-step walkthrough script and fallback actions.
 
 ---
 

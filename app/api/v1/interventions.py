@@ -48,6 +48,7 @@ DEFAULT_INTERVENTIONS = [
 
 
 @router.get("", response_model=List[InterventionItem])
+@router.get("/catalog", response_model=List[InterventionItem])
 async def list_interventions(
     membership: CampusMembershipContext = Depends(get_campus_membership),
     db: AsyncSession = Depends(get_db),
