@@ -380,9 +380,9 @@ export default function DocumentsPage() {
         <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-1">
           <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
             <span>Anchored On-Chain</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-bold text-emerald-700 font-heading">
+          <div className="text-2xl font-bold text-neutral-900 font-heading">
             {anchoredCount}
           </div>
           <p className="text-[11px] text-neutral-400">Base Sepolia records</p>
@@ -391,9 +391,9 @@ export default function DocumentsPage() {
         <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-1">
           <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
             <span>Verified Authentic</span>
-            <CheckCircle2 className="w-4 h-4 text-blue-500" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-bold text-blue-700 font-heading">
+          <div className="text-2xl font-bold text-neutral-900 font-heading">
             {verifiedMatchCount}
           </div>
           <p className="text-[11px] text-neutral-400">100% byte match validated</p>
@@ -504,8 +504,8 @@ export default function DocumentsPage() {
                           <h3 className="text-sm font-bold text-neutral-900 truncate">
                             {doc.title}
                           </h3>
-                          <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 shrink-0">
-                            {doc.doc_type.replace("_", " ")}
+                          <span className="text-[11px] font-mono text-neutral-400 font-medium shrink-0">
+                            [{doc.doc_type.replace("_", " ").toUpperCase()}]
                           </span>
                         </div>
                         <p className="text-xs text-neutral-400 font-mono mt-0.5">
@@ -516,32 +516,32 @@ export default function DocumentsPage() {
 
                     <div className="flex items-center gap-2 shrink-0">
                       {isDraft && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-amber-700 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-500 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
                           Draft
                         </span>
                       )}
                       {isFinalized && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-700 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-800 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-600" />
                           Finalized
                         </span>
                       )}
                       {isAnchored && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-700 font-medium">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-900 font-medium">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                           Anchored
                         </span>
                       )}
 
                       {doc.verification_status === "verified_match" && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-700 font-semibold">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-900 font-semibold">
                           <Check className="w-3.5 h-3.5 text-emerald-600" />
                           Authentic Match
                         </span>
                       )}
                       {doc.verification_status === "mismatch" && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-rose-600 font-semibold">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-900 font-semibold">
                           <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                           Tamper Alert
                         </span>
@@ -551,17 +551,17 @@ export default function DocumentsPage() {
 
                   {/* Hash & Actions Row */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                    {/* Compact SHA-256 Pill */}
-                    <div className="flex items-center gap-2 text-xs font-mono bg-neutral-50 px-2.5 py-1 rounded-lg border border-neutral-200/70 max-w-fit">
+                    {/* Compact SHA-256 Box */}
+                    <div className="flex items-center gap-2 text-xs font-mono bg-neutral-50 px-2.5 py-1 rounded-lg border border-neutral-200 text-neutral-800 max-w-fit">
                       <span className="text-[10px] uppercase font-bold text-neutral-400 font-sans">
                         SHA-256
                       </span>
-                      <span className="text-neutral-700">
+                      <span className="text-neutral-800">
                         {doc.sha256_hash.slice(0, 10)}...{doc.sha256_hash.slice(-8)}
                       </span>
                       <button
                         onClick={() => copyToClipboard(doc.sha256_hash, `hash-${doc.id}`)}
-                        className="text-neutral-400 hover:text-neutral-700 cursor-pointer ml-1"
+                        className="text-neutral-400 hover:text-neutral-800 cursor-pointer ml-1"
                         title="Copy full hash"
                       >
                         {copiedKey === `hash-${doc.id}` ? (
@@ -578,7 +578,7 @@ export default function DocumentsPage() {
                         <button
                           onClick={() => handleFinalize(doc)}
                           disabled={processingDocId === doc.id}
-                          className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold cursor-pointer transition-colors shadow-2xs"
                         >
                           {processingDocId === doc.id ? "Freezing..." : "Finalize"}
                         </button>
@@ -588,9 +588,9 @@ export default function DocumentsPage() {
                         <button
                           onClick={() => handleAnchor(doc)}
                           disabled={processingDocId === doc.id}
-                          className="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
                         >
-                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                           <span>{processingDocId === doc.id ? "Anchoring..." : "Anchor"}</span>
                         </button>
                       )}
@@ -600,19 +600,19 @@ export default function DocumentsPage() {
                           href={doc.explorer_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2.5 py-1 rounded-lg border border-neutral-200 text-neutral-600 hover:text-neutral-900 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-xl border border-neutral-200 text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                         >
                           <span>BaseScan</span>
-                          <ExternalLink className="w-3 h-3" />
+                          <ExternalLink className="w-3 h-3 text-neutral-400" />
                         </a>
                       )}
 
                       <button
                         onClick={() => handleDownload(doc)}
-                        className="p-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:text-neutral-900 text-xs cursor-pointer"
+                        className="p-2 rounded-xl border border-neutral-200 text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 text-xs cursor-pointer transition-colors"
                         title="Download PDF"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download className="w-3.5 h-3.5 text-neutral-500" />
                       </button>
 
                       <button
@@ -622,7 +622,7 @@ export default function DocumentsPage() {
                           setCandidateHash(null);
                           setVerificationResult(null);
                         }}
-                        className="px-3 py-1 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
                       >
                         <UploadCloud className="w-3.5 h-3.5 text-neutral-500" />
                         <span>Verify</span>
@@ -700,27 +700,21 @@ export default function DocumentsPage() {
 
             {/* Verification Result Banner */}
             {verificationResult && (
-              <div
-                className={`p-3.5 rounded-xl border ${
-                  verificationResult.isMatch
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                    : "bg-red-50 border-red-200 text-red-900"
-                } space-y-1`}
-              >
+              <div className="p-3.5 rounded-2xl border border-neutral-200 bg-neutral-50 text-neutral-900 space-y-1">
                 <div className="flex items-center gap-2 font-bold text-xs">
                   {verificationResult.isMatch ? (
                     <>
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>CRYPTOGRAPHIC MATCH: 100% AUTHENTIC</span>
                     </>
                   ) : (
                     <>
-                      <ShieldAlert className="w-4 h-4 text-red-600" />
+                      <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
                       <span>TAMPER DETECTED: HASH MISMATCH</span>
                     </>
                   )}
                 </div>
-                <p className="text-xs leading-relaxed opacity-90">
+                <p className="text-xs leading-relaxed text-neutral-600">
                   {verificationResult.isMatch
                     ? "The candidate document bytes match the Base Sepolia record exactly."
                     : "The candidate file bytes do NOT match the anchored record. The file has been modified or corrupted."}
@@ -864,15 +858,15 @@ export default function DocumentsPage() {
       <div className="p-5 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/60">
-              <Coins className="w-4 h-4" />
+            <div className="p-2 rounded-xl bg-neutral-100 text-neutral-800 border border-neutral-200">
+              <Coins className="w-4 h-4 text-neutral-600" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-neutral-900 font-heading">
                   SBI Digital Rupee (e₹) Milestone Rewards
                 </h2>
-                <span className="text-[11px] font-mono text-amber-700 font-medium">
+                <span className="text-[11px] font-mono text-neutral-400 font-medium">
                   (Simulated Boundary)
                 </span>
               </div>
@@ -884,7 +878,7 @@ export default function DocumentsPage() {
         </div>
 
         {/* Issuance Form */}
-        <form onSubmit={handleIssueCBDC} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs items-end bg-neutral-50/70 p-3 rounded-2xl border border-neutral-200/60">
+        <form onSubmit={handleIssueCBDC} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs items-end bg-neutral-50 p-3 rounded-2xl border border-neutral-200">
           <div>
             <label className="block font-semibold text-neutral-600 mb-1">Student Ref</label>
             <input
@@ -936,7 +930,7 @@ export default function DocumentsPage() {
             <button
               type="submit"
               disabled={isIssuingCbdc}
-              className="w-full px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="w-full px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
               {isIssuingCbdc ? "Issuing..." : "Issue Voucher"}
             </button>
@@ -951,8 +945,8 @@ export default function DocumentsPage() {
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-neutral-900">{v.voucher_id}</span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-neutral-700">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <span className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-neutral-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-500" />
                       {v.status}
                     </span>
                   </div>
