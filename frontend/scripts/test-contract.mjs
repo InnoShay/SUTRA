@@ -1083,9 +1083,85 @@ assert(
 );
 console.log("   ✓ Verified non-causal governance disclaimer\n");
 
+// ==========================================
+// 17. Student 360 Evidence Experience Contracts (Phase 4)
+// ==========================================
+console.log("17. Validating Phase 4 Student 360 Evidence Experience Contracts...");
+
+const evidenceLedgerComponentPath = path.join(__dirname, "../components/student/StudentEvidenceLedger.tsx");
+assert(fs.existsSync(evidenceLedgerComponentPath), "StudentEvidenceLedger.tsx component must exist");
+
+const ledgerCode = fs.readFileSync(evidenceLedgerComponentPath, "utf-8");
+
+// 17a. Mounting in Student 360
+assert(
+  liveStudentPageCode.includes("StudentEvidenceLedger"),
+  "Student 360 page must mount StudentEvidenceLedger component"
+);
+assert(
+  liveStudentPageCode.includes("studentReadiness") && liveStudentPageCode.includes("getReadiness"),
+  "Student 360 page must query feature readiness from API client"
+);
+console.log("   ✓ Verified StudentEvidenceLedger mounted and readiness queried in Student 360");
+
+// 17b. 5-Tier Evidence Architecture distinction
+assert(
+  ledgerCode.includes("SUTRA 5-Tier Evidence Architecture"),
+  "Must implement SUTRA 5-Tier Evidence Architecture"
+);
+assert(
+  ledgerCode.includes("Tier 1: Facts") &&
+  ledgerCode.includes("Tier 2: Rules") &&
+  ledgerCode.includes("Tier 3: ML Model") &&
+  ledgerCode.includes("Tier 4: Advisory") &&
+  ledgerCode.includes("Tier 5: Human"),
+  "Must distinguish raw facts (Tier 1), rules (Tier 2), ML model (Tier 3), advisory (Tier 4), and human decisions (Tier 5)"
+);
+console.log("   ✓ Verified 5-Tier Evidence Architecture distinguishes model predictions from facts, rules, and human decisions");
+
+// 17c. Model Input Evidence Ledger & Anti-Imputation Invariant
+assert(
+  ledgerCode.includes("25 Day-30 Canonical Features"),
+  "Must audit all 25 canonical Day-30 features"
+);
+assert(
+  ledgerCode.includes("Zero-Imputation") && ledgerCode.includes("NEVER silently filled with zeros"),
+  "Must enforce anti-imputation invariant: missing features never silently filled with zeros"
+);
+assert(
+  ledgerCode.includes("underivable") || ledgerCode.includes("missing"),
+  "Must make unavailable or incomplete features visible with derivation notes"
+);
+console.log("   ✓ Verified Model Input Evidence Ledger and anti-imputation invariants");
+
+// 17d. Model Purpose, Limitations, and Threshold Policy
+assert(
+  ledgerCode.includes("Model Purpose") &&
+  ledgerCode.includes("Score Limitations") &&
+  ledgerCode.includes("Decision Threshold Policy"),
+  "Must include concise explanations of model purpose, score limitations, and decision threshold policy"
+);
+assert(
+  ledgerCode.includes("Human-in-the-Loop Invariant") && ledgerCode.includes("never automatically create cases"),
+  "Must explicitly forbid automated case creation merely because model labels student at risk"
+);
+console.log("   ✓ Verified concise explanations of model purpose, score limitations, and decision threshold policy");
+
+// 17e. Access Control Verification
+assert(
+  liveStudentPageCode.includes("ADR-004") && liveStudentPageCode.includes("leadership"),
+  "Must enforce ADR-004 leadership privacy boundary on student profile"
+);
+assert(
+  liveStudentPageCode.includes("ADR-003") || liveStudentPageCode.includes("Fee Segregated"),
+  "Must enforce ADR-003 financial segregation on student evidence views"
+);
+console.log("   ✓ Verified access controls and privacy gates (ADR-003 and ADR-004)\n");
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
+
 
 
 

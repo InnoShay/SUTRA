@@ -312,6 +312,43 @@ export interface ReadinessResponse {
   timestamp: string;
 }
 
+export interface FeatureReadinessItem {
+  feature_name: string;
+  category: string;
+  status: 'available' | 'missing' | 'stale' | 'underivable_from_source' | string;
+  observed_value?: any;
+  source_domain?: string | null;
+  derivation_note: string;
+}
+
+export interface ObservationTelemetryAudit {
+  total_observations: number;
+  domains_present: string[];
+  quality_state_counts: Record<string, number>;
+  last_event_at?: string | null;
+  last_available_at?: string | null;
+  is_stale: boolean;
+  unsupported_sources: string[];
+}
+
+export interface StudentReadinessResponse {
+  student: StudentSummary;
+  model_name: string;
+  model_version: string;
+  target_cutoff: string;
+  is_ready_for_inference: boolean;
+  applicability_status: string;
+  applicability_rationale: string;
+  features_total_required: number;
+  features_available_count: number;
+  features_missing_count: number;
+  features_underivable_count: number;
+  features_stale_count: number;
+  features: FeatureReadinessItem[];
+  telemetry_audit: ObservationTelemetryAudit;
+  governance_disclaimer: string;
+}
+
 export interface ErrorEnvelope {
   error: {
     code: string;

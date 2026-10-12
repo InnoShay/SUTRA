@@ -16,6 +16,8 @@ import { SignalReviewModal } from "@/components/SignalReviewModal";
 import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
 import { UserAvatar } from "@/components/UserAvatar";
 import { FeatureAttributionChart } from "@/components/FeatureAttributionChart";
+import { StudentEvidenceLedger } from "@/components/student/StudentEvidenceLedger";
+import { StudentReadinessResponse } from "@/lib/types";
 import {
   ArrowLeft,
   Mail,
@@ -94,6 +96,8 @@ export default function StudentDetailPage() {
   const [predictionTimestamp, setPredictionTimestamp] = useState<string | null>(null);
   const [verifiedThreshold, setVerifiedThreshold] = useState<number>(0.46);
   const [thresholdVerifiedFromBackend, setThresholdVerifiedFromBackend] = useState<boolean>(false);
+  const [studentReadiness, setStudentReadiness] = useState<StudentReadinessResponse | null>(null);
+  const [loadingReadiness, setLoadingReadiness] = useState<boolean>(false);
   const inferenceSeqRef = React.useRef<number>(0);
 
   const currentStudent =
@@ -211,6 +215,20 @@ export default function StudentDetailPage() {
     }
   };
 
+  // Fetch Feature Completeness & Readiness Audit from backend
+  const fetchReadiness = async () => {
+    if (activeRole === "leadership") return;
+    setLoadingReadiness(true);
+    try {
+      const data = await api.students.getReadiness(studentId);
+      setStudentReadiness(data);
+    } catch (err: any) {
+      console.warn("Could not load student feature readiness:", err);
+    } finally {
+      setLoadingReadiness(false);
+    }
+  };
+
   const handleRunMlInference = async () => {
     if (activeRole === "leadership") return;
     if (loadingMlInference) return; // Prevent duplicate concurrent requests
@@ -269,6 +287,7 @@ export default function StudentDetailPage() {
 
   useEffect(() => {
     fetchSupportView();
+    fetchReadiness();
   }, [studentId, activeRole]);
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -341,11 +360,14 @@ export default function StudentDetailPage() {
         </Link>
 
         <button
-          onClick={fetchSupportView}
-          disabled={loadingSupportView}
+          onClick={() => {
+            fetchSupportView();
+            fetchReadiness();
+          }}
+          disabled={loadingSupportView || loadingReadiness}
           className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 transition-colors"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loadingSupportView ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${(loadingSupportView || loadingReadiness) ? "animate-spin" : ""}`} />
           <span>Refresh Telemetry</span>
         </button>
       </div>
@@ -704,6 +726,17 @@ export default function StudentDetailPage() {
             </div>
           );
         })()}
+
+        {/* SUTRA 5-Tier Evidence Architecture & Model Input Completeness Ledger */}
+        <StudentEvidenceLedger
+          studentId={studentId}
+          readiness={studentReadiness}
+          loadingReadiness={loadingReadiness}
+          supportView={supportView}
+          mlPrediction={mlPrediction || supportView?.ml_prediction || null}
+          signals={studentSignals}
+          verifiedThreshold={verifiedThreshold}
+        />
 
         {/* Observations Table */}
         <div className="space-y-3">

@@ -29,6 +29,7 @@ import {
   MLPredictResponse,
   HealthResponse,
   ReadinessResponse,
+  StudentReadinessResponse,
   AIStructuredReviewBriefResponse,
   AISummarizeEvidenceResponse,
   AISuggestInterventionsResponse,
@@ -456,6 +457,56 @@ class ApiClient {
       } as unknown as T;
     }
 
+    // Student 360 Feature Readiness: /students/:id/readiness
+    if (cleanEndpoint.includes('/students/') && cleanEndpoint.endsWith('/readiness')) {
+      const parts = cleanEndpoint.split('/');
+      const studentId = parts[parts.indexOf('students') + 1] || 'SYN-1007';
+      const stu = INITIAL_STUDENTS.find((s) => s.id === studentId) || INITIAL_STUDENTS[0];
+      const isComplete = studentId.includes('1007');
+
+      return {
+        student: {
+          id: stu.id,
+          external_ref: stu.id,
+          display_name: stu.name,
+          enrollment_status: stu.status.toLowerCase(),
+          risk_level: isComplete ? 'high' : 'low',
+        },
+        model_name: 'Logistic Regression Baseline',
+        model_version: '1.0.0',
+        target_cutoff: 'Day 30',
+        is_ready_for_inference: isComplete,
+        applicability_status: isComplete ? 'ready' : 'incomplete_telemetry',
+        applicability_rationale: isComplete
+          ? 'All 25 canonical Day-30 features verified and available.'
+          : 'Missing required VLE clickstream features. Live inference blocked (HTTP 422).',
+        features_total_required: 25,
+        features_available_count: isComplete ? 25 : 6,
+        features_missing_count: isComplete ? 0 : 12,
+        features_underivable_count: isComplete ? 0 : 7,
+        features_stale_count: 0,
+        features: [
+          { feature_name: 'vle_total_clicks_d30', category: 'vle_engagement', status: isComplete ? 'available' : 'underivable_from_source', observed_value: isComplete ? 142 : null, source_domain: 'participation', derivation_note: 'Cumulative LMS clicks by Day 30' },
+          { feature_name: 'vle_active_days_d30', category: 'vle_engagement', status: isComplete ? 'available' : 'underivable_from_source', observed_value: isComplete ? 8 : null, source_domain: 'participation', derivation_note: 'Active learning platform days' },
+          { feature_name: 'vle_clicks_last_7d', category: 'vle_engagement', status: isComplete ? 'available' : 'underivable_from_source', observed_value: isComplete ? 12 : null, source_domain: 'participation', derivation_note: 'Recent LMS interaction velocity' },
+          { feature_name: 'vle_days_since_last_click', category: 'vle_engagement', status: isComplete ? 'available' : 'underivable_from_source', observed_value: isComplete ? 6 : null, source_domain: 'participation', derivation_note: 'Days since last LMS login' },
+          { feature_name: 'assessments_submitted_d30', category: 'assessment_timing', status: 'available', observed_value: 1, source_domain: 'academic', derivation_note: 'Formative assessments completed' },
+          { feature_name: 'num_of_prev_attempts', category: 'academic', status: 'available', observed_value: 0, source_domain: 'academic', derivation_note: 'Previous module attempt count' },
+          { feature_name: 'studied_credits', category: 'academic', status: 'available', observed_value: 60, source_domain: 'academic', derivation_note: 'Registered credit load' },
+        ],
+        telemetry_audit: {
+          total_observations: isComplete ? 25 : 6,
+          domains_present: ['academic', 'participation', 'demographic'],
+          quality_state_counts: { valid: isComplete ? 25 : 6 },
+          last_event_at: new Date().toISOString(),
+          last_available_at: new Date().toISOString(),
+          is_stale: false,
+          unsupported_sources: [],
+        },
+        governance_disclaimer: 'Feature readiness checks audit input data completeness. Missing values are never silently filled with zeros.',
+      } as unknown as T;
+    }
+
     // AI endpoints
     if (cleanEndpoint.endsWith('/ai/status')) {
       return { status: 'operational', provider: 'local_synthesizer', model_ready: true } as unknown as T;
@@ -812,6 +863,8 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload || {}),
       }),
+    getReadiness: (id: string) =>
+      this.request<StudentReadinessResponse>(`/students/${id}/readiness`),
   };
 
   // --- Signals & Review ---
