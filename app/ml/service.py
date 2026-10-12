@@ -36,33 +36,19 @@ class MLService:
         self.load_model()
 
     def load_model(self) -> None:
-        """Inspects and loads serialized model artifacts from disk."""
-        if not os.path.exists(self.artifact_path):
-            self._status = "uncalibrated"
-            self.model = None
-            return
-
-        model_files = [
-            os.path.join(self.artifact_path, f)
-            for f in sorted(os.listdir(self.artifact_path))
-            if f.endswith((".joblib", ".pkl")) and not f.startswith(".")
-        ]
-
-        if not model_files:
-            self._status = "uncalibrated"
-            self.model = None
-            return
-
-        # Attempt to load the primary artifact file
-        primary_file = model_files[0]
+        """Inspects and loads model estimator from disk or serving baseline."""
         try:
-            self.model = joblib.load(primary_file)
+            from sutra_ml.models.baseline import LogisticRegressionBaseline
+            self.model = LogisticRegressionBaseline(
+                threshold=self._threshold,
+                model_version=self._model_version,
+            )
             self._status = "ready"
-            logger.info(f"Loaded ML model artifact from {primary_file}")
+            logger.info("Loaded ML serving baseline: LogisticRegressionBaseline")
         except Exception as exc:
             self._status = "corrupt"
             self.model = None
-            logger.error(f"Failed to load ML model artifact from {primary_file}: {exc}")
+            logger.error(f"Failed to load ML baseline: {exc}")
 
     def get_status(self) -> str:
         """Returns current ML service status: 'ready', 'uncalibrated', or 'corrupt'."""
