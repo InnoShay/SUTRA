@@ -31,6 +31,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentDTO[]>([]);
   const [contractAddress, setContractAddress] = useState<string>("0x3565eDb6aEc447CaeB73F719574828135cfB9705");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Filters & search
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,6 +79,7 @@ export default function DocumentsPage() {
   // Load documents
   const fetchDocuments = async () => {
     setIsLoading(true);
+    setErrorMsg(null);
     try {
       if (currentPersona?.token) {
         api.setToken(currentPersona.token);
@@ -90,6 +92,7 @@ export default function DocumentsPage() {
       }
     } catch (err: any) {
       console.warn("Failed to fetch documents:", err);
+      setErrorMsg(err?.message || "Failed to load document records. Ensure backend service is reachable.");
     } finally {
       setIsLoading(false);
     }
