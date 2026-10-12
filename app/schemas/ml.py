@@ -314,3 +314,253 @@ class ModelPerformanceResponse(BaseModel):
         ]
     )
 
+
+# ==========================================
+# Phase 8: Governed What-If Scenario Schemas
+# ==========================================
+
+SUPPORTED_HYPOTHETICAL_FEATURES: Dict[str, Dict[str, Any]] = {
+    "vle_active_days_d30": {
+        "min": 0.0,
+        "max": 30.0,
+        "type": "int",
+        "label": "VLE Active Days (Day 0–30)",
+        "unit": "days",
+        "default": 8.0,
+        "description": "Number of distinct calendar days the student accessed the virtual learning environment within the first 30 days.",
+    },
+    "vle_total_clicks_d30": {
+        "min": 0.0,
+        "max": 5000.0,
+        "type": "float",
+        "label": "Total VLE Interactions (Day 0–30)",
+        "unit": "clicks",
+        "default": 142.0,
+        "description": "Cumulative count of interactions across all online course components by Day 30.",
+    },
+    "vle_clicks_last_7d": {
+        "min": 0.0,
+        "max": 2000.0,
+        "type": "float",
+        "label": "Recent Activity (Days 24–30)",
+        "unit": "clicks",
+        "default": 12.0,
+        "description": "Interaction count within the final 7 days leading to the Day 30 evaluation boundary.",
+    },
+    "vle_days_since_last_click": {
+        "min": 0.0,
+        "max": 30.0,
+        "type": "float",
+        "label": "Days Since Last Interaction",
+        "unit": "days",
+        "default": 6.0,
+        "description": "Elapsed days between the student's most recent interaction and Day 30 (0 = active on Day 30, 30 = inactive since start).",
+    },
+    "assessments_submitted_d30": {
+        "min": 0.0,
+        "max": 10.0,
+        "type": "int",
+        "label": "Assessments Submitted by Day 30",
+        "unit": "submissions",
+        "default": 1.0,
+        "description": "Number of course assessment items submitted prior to Day 30.",
+    },
+    "has_early_assessment_submission_d30": {
+        "min": 0.0,
+        "max": 1.0,
+        "type": "int",
+        "label": "Early Assessment Submission",
+        "unit": "binary",
+        "default": 1.0,
+        "description": "Binary indicator of whether an early diagnostic assessment was submitted by Day 30 (1 = Yes, 0 = No).",
+    },
+    "has_vle_activity_d30": {
+        "min": 0.0,
+        "max": 1.0,
+        "type": "int",
+        "label": "Any VLE Activity by Day 30",
+        "unit": "binary",
+        "default": 1.0,
+        "description": "Binary indicator of whether the student had any recorded VLE engagement by Day 30 (1 = Yes, 0 = No).",
+    },
+}
+
+# Explicit terms representing prospective interventions or future post-cutoff occurrences
+FORBIDDEN_FUTURE_INTERVENTION_TERMS: List[str] = [
+    "tutoring",
+    "tutoring_sessions",
+    "tutoring_hours",
+    "tutor_attendance",
+    "future_attendance",
+    "future_tutoring",
+    "counseling_attendance",
+    "coaching_sessions",
+    "mentor_meetings",
+    "intervention",
+    "week_8",
+    "week_12",
+    "final_exam",
+    "final_grade",
+]
+
+# Protected demographic and historical registration attributes forbidden from being manipulated as hypothetical interventions
+IMMUTABLE_STUDENT_ATTRIBUTES: List[str] = [
+    "gender",
+    "region",
+    "highest_education",
+    "imd_band",
+    "age_band",
+    "disability",
+    "num_of_prev_attempts",
+    "studied_credits",
+    "days_registered_before_start",
+    "has_missing_registration_date",
+]
+
+
+class SupportedFeatureMetaDTO(BaseModel):
+    feature_name: str
+    min_value: float
+    max_value: float
+    feature_type: str
+    label: str
+    unit: str
+    default_value: float
+    description: str
+
+
+class HypotheticalFeatureModificationDTO(BaseModel):
+    feature: str
+    label: str
+    original_value: float
+    hypothetical_value: float
+    unit: str
+    delta: float
+
+
+class WhatIfScenarioRequest(BaseModel):
+    external_student_ref: Optional[str] = "STUDENT-WHATIF-EXPLORATION"
+    base_features: Optional[Dict[str, Any]] = None
+    hypothetical_modifications: Dict[str, Any] = Field(..., min_length=1)
+
+    @field_validator("hypothetical_modifications")
+    @classmethod
+    def validate_scenario_modifications(cls, mods: Dict[str, Any]) -> Dict[str, Any]:
+        if not mods:
+            raise ValueError("At least one hypothetical feature modification must be specified.")
+
+        for key, val in mods.items():
+            key_lower = key.lower()
+            # 1. Reject future events / prospective interventions
+            for term in FORBIDDEN_FUTURE_INTERVENTION_TERMS:
+                if term in key_lower:
+                    raise ValueError(
+                        f"Forbidden future event or prospective intervention '{key}' cannot enter a Day-30 prediction. "
+                        "The frozen baseline observes telemetry strictly up to Day 30 (t ≤ 30). "
+                        "Simulating future tutoring sessions or prospective interventions as historical Day-30 evidence "
+                        "violates temporal validity and causal integrity."
+                    )
+
+            # 2. Reject leakage features
+            for leaked in FORBIDDEN_LEAKED_FEATURES:
+                if leaked == key_lower:
+                    raise ValueError(
+                        f"Forbidden leakage feature '{key}' detected. "
+                        "Target outcomes and post-cutoff grades cannot be simulated."
+                    )
+
+            # 3. Reject immutable / demographic attributes
+            if key_lower in IMMUTABLE_STUDENT_ATTRIBUTES:
+                raise ValueError(
+                    f"Student attribute '{key}' is an immutable or demographic trait. "
+                    "Protected demographic characteristics cannot be simulated as hypothetical intervention changes."
+                )
+
+            # 4. Check whether key is supported
+            if key not in SUPPORTED_HYPOTHETICAL_FEATURES:
+                raise ValueError(
+                    f"Feature '{key}' is not a supported actionable Day-30 simulation parameter. "
+                    f"Supported features: {list(SUPPORTED_HYPOTHETICAL_FEATURES.keys())}"
+                )
+
+            # 5. Type and bounds checking
+            if isinstance(val, bool) or not isinstance(val, (int, float)):
+                raise ValueError(
+                    f"Hypothetical value for '{key}' must be numeric; got {type(val).__name__} ({val})"
+                )
+            if math.isnan(val) or math.isinf(val):
+                raise ValueError(f"Hypothetical value for '{key}' must be finite.")
+
+            meta = SUPPORTED_HYPOTHETICAL_FEATURES[key]
+            if val < meta["min"] or val > meta["max"]:
+                raise ValueError(
+                    f"Hypothetical value {val} for '{key}' is outside permitted Day-30 bounds "
+                    f"[{meta['min']}, {meta['max']}] {meta['unit']}."
+                )
+
+        return mods
+
+
+class SupportPlanningGuidanceDTO(BaseModel):
+    title: str = "Explanatory Non-Predictive Support Planning Guidance"
+    why_model_cannot_estimate_causal_interventions: str = (
+        "The production early-warning model (LogisticRegressionBaseline v1.0.0) is a correlational classifier "
+        "trained on historical observational registration data at Day 30. It evaluates observational correlations "
+        "(z = β₀ + ∑ βᵢxᵢ) between early engagement telemetry and completion. It does NOT estimate the causal "
+        "treatment effect (ATE) of real-world educator interventions. For example, mandating a student to click "
+        "the portal does not causally produce the learning gains of genuine student interest, and prospective tutoring "
+        "cannot be entered as past Day-30 evidence without a verified causal evaluation (e.g. RCT or quasi-experimental design)."
+    )
+    recommended_educator_actions: List[str] = Field(
+        default_factory=lambda: [
+            "Conduct a personalized, empathetic check-in with the student regarding study routines and obstacles.",
+            "Offer optional peer tutoring, academic mentoring, or writing lab support without attributing false statistical guarantees.",
+            "Verify whether non-engagement reflects illness, technical access hurdles, or family commitments.",
+            "Coordinate with course instructors on clarifying difficult early assessment assignments.",
+            "Document support plans qualitatively in Case Management rather than altering official ML logs.",
+        ]
+    )
+    causal_claim_warning: str = (
+        "PROHIBITION ON CAUSAL CLAIMS: Do not claim or document to students that attending tutoring or reaching a "
+        "specific click threshold will reduce course failure risk by a specific percentage. Such claims are scientifically "
+        "unsupported by the correlational model."
+    )
+
+
+class WhatIfScenarioResponse(BaseModel):
+    scenario_id: str
+    student_ref: str
+    model_name: str = "Regularized Logistic Regression Baseline"
+    model_version: str = "v1.0.0"
+    prediction_cutoff: str = "Day 30"
+    threshold: float = 0.46
+    baseline_risk_probability: float
+    baseline_classification: Literal["At_Risk", "On_Track"]
+    baseline_top_attributions: List[MLAttribution]
+    hypothetical_risk_probability: float
+    hypothetical_classification: Literal["At_Risk", "On_Track"]
+    hypothetical_top_attributions: List[MLAttribution]
+    delta_probability: float
+    delta_percentage_points: float
+    tier_transition: str
+    modified_features: List[HypotheticalFeatureModificationDTO]
+    is_hypothetical: bool = True
+    is_official_record: bool = False
+    ephemeral_notice: str = (
+        "EPHEMERAL SIMULATION: This calculation was evaluated strictly in memory. Hypothetical inputs are NEVER "
+        "written to the student's official academic record, telemetry database, or ml_inference_logs. No automated "
+        "cases, signals, or disciplinary actions have been triggered."
+    )
+    non_causal_disclaimer: str = (
+        "NON-CAUSAL MODEL CALCULATION NOTICE: The hypothetical score is a mathematical evaluation of the frozen Day-30 "
+        "logistic regression model. It is NOT a causal estimate of intervention effectiveness. Statistical correlation "
+        "does not equal intervention causality."
+    )
+    temporal_cutoff_notice: str = (
+        "DAY-30 TEMPORAL INTEGRITY NOTICE: Hypothetical adjustments reflect only plausible behavioral variation within "
+        "the Day 0–30 window. Unobserved future events (e.g., attending future tutoring or post-cutoff scores) are strictly "
+        "prohibited from entering this calculation."
+    )
+    support_planning_guidance: SupportPlanningGuidanceDTO
+
+

@@ -1680,10 +1680,87 @@ assert(
 );
 console.log("   ✓ Verified separate longitudinal performance monitoring for labeled holdouts vs pending term\n");
 
+// ============================================================================
+// 21. VALIDATING PHASE 8: GOVERNED WHAT-IF SCENARIOS CONTRACTS
+// ============================================================================
+console.log("21. Validating Phase 8 Governed What-If Scenario Contracts...");
+
+// 21a. TypeScript types contracts
+assert(
+  typesFile.includes("export interface SupportedScenarioFeature") &&
+  typesFile.includes("export interface HypotheticalFeatureModification") &&
+  typesFile.includes("export interface SupportPlanningGuidance") &&
+  typesFile.includes("export interface WhatIfScenarioRequest") &&
+  typesFile.includes("export interface WhatIfScenarioResponse"),
+  "types.ts must export all Phase 8 What-If Scenario interfaces"
+);
+assert(
+  typesFile.includes("is_hypothetical: boolean") &&
+  typesFile.includes("is_official_record: boolean") &&
+  typesFile.includes("ephemeral_notice: string") &&
+  typesFile.includes("non_causal_disclaimer: string") &&
+  typesFile.includes("temporal_cutoff_notice: string"),
+  "WhatIfScenarioResponse must include governance disclaimers and ephemeral notices"
+);
+console.log("   ✓ Verified Phase 8 TypeScript scenario domain interfaces");
+
+// 21b. API client methods
+assert(
+  apiFile.includes("simulateScenario:") &&
+  apiFile.includes("getSupportedScenarioFeatures:"),
+  "api.ts must expose simulateScenario and getSupportedScenarioFeatures"
+);
+assert(
+  apiFile.includes("cleanEndpoint.includes('/supported-scenario-features')") &&
+  apiFile.includes("cleanEndpoint.includes('/simulate-scenario')"),
+  "api.ts must implement mock handlers for Phase 8 scenario simulation endpoints"
+);
+console.log("   ✓ Verified API client scenario contracts and mock fallbacks");
+
+// 21c. GovernedScenarioPanel component contracts
+const scenarioPanelPath = path.join(__dirname, "../components/student/GovernedScenarioPanel.tsx");
+assert(fs.existsSync(scenarioPanelPath), "GovernedScenarioPanel.tsx component must exist");
+const scenarioPanelCode = fs.readFileSync(scenarioPanelPath, "utf-8");
+
+assert(
+  scenarioPanelCode.includes("Governed What-If Scenario Exploration") &&
+  scenarioPanelCode.includes("Phase 8"),
+  "GovernedScenarioPanel must display Phase 8 title and exploration header"
+);
+assert(
+  scenarioPanelCode.includes("Non-Causal Model Calculation Notice") &&
+  scenarioPanelCode.includes("Statistical correlation does not imply treatment effect"),
+  "GovernedScenarioPanel must display prominent non-causal disclaimer"
+);
+assert(
+  scenarioPanelCode.includes("Zero Database Mutation") &&
+  scenarioPanelCode.includes("ml_inference_logs"),
+  "GovernedScenarioPanel must display zero-database-mutation ephemeral guarantee"
+);
+assert(
+  scenarioPanelCode.includes("Observed Baseline (Day 30)") &&
+  scenarioPanelCode.includes("Hypothetical Scenario"),
+  "GovernedScenarioPanel must present side-by-side model comparison"
+);
+assert(
+  scenarioPanelCode.includes("Why Real Support Interventions Cannot Be Directly Scored") &&
+  scenarioPanelCode.includes("Prohibition on Causal Claims"),
+  "GovernedScenarioPanel must provide explanatory non-predictive support planning guidance"
+);
+console.log("   ✓ Verified GovernedScenarioPanel side-by-side comparison, non-causal notices, and support planning");
+
+// 21d. Student 360 page integration
+const liveStudent360Code = fs.readFileSync(path.join(__dirname, "../app/students/[id]/page.tsx"), "utf-8");
+assert(
+  liveStudent360Code.includes("GovernedScenarioPanel"),
+  "students/[id]/page.tsx must mount GovernedScenarioPanel component"
+);
+console.log("   ✓ Verified GovernedScenarioPanel mounted in Student 360 page\n");
+
 // ==========================================
-// 21. Phase 3A: Backend Handoff & Integration Readiness Contracts
+// 22. Phase 3A: Backend Handoff & Integration Readiness Contracts
 // ==========================================
-console.log("21. Validating Phase 3A: Backend Handoff & Integration Readiness Contracts...");
+console.log("22. Validating Phase 3A: Backend Handoff & Integration Readiness Contracts...");
 
 const registryDocPath = path.resolve(__dirname, "../../docs/API_INTEGRATION_REGISTRY.md");
 assert(fs.existsSync(registryDocPath), "docs/API_INTEGRATION_REGISTRY.md must exist");
@@ -1901,8 +1978,8 @@ assert(
 console.log("   ✓ Verified student privacy hygiene and form input preservation upon submission failure\n");
 
 console.log("==================================================");
-console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
+
 
 

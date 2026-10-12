@@ -70,7 +70,6 @@ export default function AnalyticsPage() {
     }
   }, []);
 
-
   // Server Analytics Response State
   const [serverAnalytics, setServerAnalytics] = useState<CohortAnalyticsSummaryResponse | null>(null);
 
