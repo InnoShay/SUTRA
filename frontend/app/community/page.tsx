@@ -12,11 +12,6 @@ import {
   ArrowUpRight,
   Heart,
   Check,
-  Layers,
-  AlertTriangle,
-  Clock,
-  Shield,
-  Activity,
 } from "lucide-react";
 
 export default function CommunityPage() {
@@ -27,15 +22,16 @@ export default function CommunityPage() {
     cases,
   } = useSkillHub();
 
+  const [activeTab, setActiveTab] = useState<"forum" | "cases">("forum");
   const [activeDiscussion, setActiveDiscussion] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [eventJoined, setEventJoined] = useState(false);
 
-  // Derive case items if backend cases exist
-  const caseList = cases.map((c) => ({
+  // Mapped case discussions for collaboration
+  const caseDiscussions = cases.map((c) => ({
     id: c.id,
-    title: `Case #${c.id.slice(0, 8)}: ${(c.selected_intervention_key || "academic_support").replace(/_/g, " ")}`,
-    summary: `Student: ${c.student_display_name || c.student_id.slice(0, 8)} (${c.external_student_ref}) • State: ${c.state} • Tasks: ${c.tasks?.length || 0} active • Follow-ups: ${c.follow_ups?.length || 0} logged`,
+    title: `Case: ${(c.selected_intervention_key || "Academic Mentoring").replace(/_/g, " ")}`,
+    summary: `Student: ${c.student_display_name || "Enrolled Student"} (${c.external_student_ref}) • State: ${c.state} • Follow-ups: ${c.follow_ups?.length || 0} logged`,
     author: c.primary_owner_user_id ? `Owner: ${c.primary_owner_user_id.slice(0, 8)}` : "Case Coordinator",
     authorRole: String(c.state),
     authorAvatar: "/assets/avatar-sarah.jpg",
@@ -43,23 +39,22 @@ export default function CommunityPage() {
     repliesCount: (c.tasks?.length || 0) + (c.follow_ups?.length || 0),
     viewsCount: 24,
     participantsCount: 3,
-    tags: [String(c.state), "Intervention", "Support"],
+    tags: [String(c.state), "Intervention"],
     isFeatured: c.is_escalated,
   }));
 
-  const allItems = caseList.length > 0 ? caseList : discussions;
-
-  const featured = allItems.find((d) => d.isFeatured) || allItems[0];
+  const activeList = activeTab === "forum" ? discussions : (caseDiscussions.length > 0 ? caseDiscussions : discussions);
+  const featured = activeList.find((d) => d.isFeatured) || activeList[0] || discussions[0];
 
   const filteredDiscussions = selectedTag
-    ? allItems.filter(
+    ? activeList.filter(
         (d) =>
           d.tags?.some((t) => t.toLowerCase().includes(selectedTag.toLowerCase())) ||
           d.title.toLowerCase().includes(selectedTag.toLowerCase())
       )
-    : allItems;
+    : activeList;
 
-  const recentList = filteredDiscussions.filter((d) => d.id !== featured.id);
+  const recentList = filteredDiscussions.filter((d) => d.id !== featured?.id);
 
   const handleJoinEvent = () => {
     setEventJoined((prev) => !prev);
@@ -67,24 +62,50 @@ export default function CommunityPage() {
 
   return (
     <div className="space-y-6">
-      {/* 1. HEADER: Title & Actions */}
+      {/* 1. HEADER: Title, Mode Tabs & Create Post Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
-            Intervention Triage &amp; Case Hub
+            Learning Community
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
-            Closed-loop student support cases, multi-disciplinary task handoffs, and 10-state progression
+            Exchange insights, ask design questions, and collaborate with peer educators
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreatePostModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Case Task</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Segmented Mode Switcher */}
+          <div className="inline-flex p-1 bg-neutral-100 rounded-full border border-neutral-200/60 shadow-2xs">
+            <button
+              onClick={() => setActiveTab("forum")}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
+                activeTab === "forum"
+                  ? "bg-white text-neutral-950 shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900"
+              }`}
+            >
+              Forum
+            </button>
+            <button
+              onClick={() => setActiveTab("cases")}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
+                activeTab === "cases"
+                  ? "bg-white text-neutral-950 shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900"
+              }`}
+            >
+              Case Threads
+            </button>
+          </div>
+
+          <button
+            onClick={() => setIsCreatePostModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Post</span>
+          </button>
+        </div>
       </div>
 
       {/* Tag Filter Pills */}
@@ -106,106 +127,100 @@ export default function CommunityPage() {
       {/* 2. MAIN SPLIT: Featured Discussion (left) & Recent Discussions (right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         {/* LEFT: Featured Discussion Card (~7 cols) */}
-        <div className="lg:col-span-7 skill-card bg-white p-5 sm:p-7 relative overflow-hidden flex flex-col justify-between min-h-[340px]">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
-                Primary Support Case in Scope
-              </span>
-              <button
-                onClick={() => likeDiscussion(featured.id)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition-colors"
-                title="Highlight Case"
-              >
-                <Heart className="w-3.5 h-3.5 fill-rose-500" />
-                <span>Priority</span>
-              </button>
-            </div>
+        {featured && (
+          <div className="lg:col-span-7 skill-card bg-white p-5 sm:p-7 relative overflow-hidden flex flex-col justify-between min-h-[340px]">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
+                  Featured Discussion
+                </span>
+                <button
+                  onClick={() => likeDiscussion(featured.id)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition-colors"
+                  title="Upvote discussion"
+                >
+                  <Heart className="w-3.5 h-3.5 fill-rose-500" />
+                  <span>Upvote</span>
+                </button>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-              {/* Text side */}
-              <div className="md:col-span-7 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-900 text-white uppercase tracking-wider">
-                    {featured.authorRole || "IN_PROGRESS"}
-                  </span>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                {/* Text side */}
+                <div className="md:col-span-7 space-y-3">
+                  <h2
+                    onClick={() => setActiveDiscussion(featured.id)}
+                    className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight leading-tight cursor-pointer hover:text-neutral-700 transition-colors"
+                  >
+                    {featured.title}
+                  </h2>
+                  {featured.summary && (
+                    <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed">
+                      {featured.summary}
+                    </p>
+                  )}
                 </div>
 
-                <h2
+                {/* 3D Bubble Illustration side */}
+                <div className="md:col-span-5 flex items-center justify-center">
+                  <img
+                    src="/assets/community-bubbles.jpg"
+                    alt="3D Speech Bubbles"
+                    className="w-32 h-32 sm:w-36 sm:h-36 object-contain drop-shadow-md cursor-pointer hover:scale-105 transition-transform"
+                    onClick={() => setActiveDiscussion(featured.id)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Stats & Actions */}
+            <div className="pt-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-400">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <MessageSquare className="w-4 h-4 text-neutral-400" />
+                  <span>{featured.repliesCount} replies</span>
+                </span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Eye className="w-4 h-4 text-neutral-400" />
+                  <span>{featured.viewsCount} views</span>
+                </span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Users className="w-4 h-4 text-neutral-400" />
+                  <span>{featured.participantsCount} participants</span>
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                <button
                   onClick={() => setActiveDiscussion(featured.id)}
-                  className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight leading-tight cursor-pointer hover:text-neutral-700 transition-colors"
+                  className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-sm transition-colors min-h-[40px]"
                 >
-                  {featured.title}
-                </h2>
-                {featured.summary && (
-                  <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed">
-                    {featured.summary}
-                  </p>
-                )}
-              </div>
+                  Join Discussion
+                </button>
 
-              {/* 3D Bubble Illustration side */}
-              <div className="md:col-span-5 flex items-center justify-center">
-                <img
-                  src="/assets/community-bubbles.jpg"
-                  alt="3D Speech Bubbles"
-                  className="w-32 h-32 sm:w-36 sm:h-36 object-contain drop-shadow-md cursor-pointer hover:scale-105 transition-transform"
+                <button
                   onClick={() => setActiveDiscussion(featured.id)}
-                />
+                  className="px-5 py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 text-neutral-800 rounded-full text-xs font-semibold transition-colors min-h-[40px]"
+                >
+                  Read More
+                </button>
+
+                <button
+                  onClick={() => setActiveDiscussion(featured.id)}
+                  className="p-2 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 transition-colors"
+                  aria-label="More options"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Stats & Actions */}
-          <div className="pt-6 space-y-4">
-            {/* Stats row */}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-400">
-              <span className="flex items-center gap-1.5 font-medium">
-                <MessageSquare className="w-4 h-4 text-neutral-400" />
-                <span>{featured.repliesCount} actions / tasks</span>
-              </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <Eye className="w-4 h-4 text-neutral-400" />
-                <span>{featured.viewsCount} reviews</span>
-              </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <Users className="w-4 h-4 text-neutral-400" />
-                <span>{featured.participantsCount} stakeholders</span>
-              </span>
-            </div>
-
-            {/* Buttons row */}
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-              <button
-                onClick={() => setActiveDiscussion(featured.id)}
-                className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-sm transition-colors min-h-[40px]"
-              >
-                Inspect Case Actions
-              </button>
-
-              <button
-                onClick={() => setActiveDiscussion(featured.id)}
-                className="px-5 py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 text-neutral-800 rounded-full text-xs font-semibold transition-colors min-h-[40px]"
-              >
-                10-State Machine
-              </button>
-
-              <button
-                onClick={() => setActiveDiscussion(featured.id)}
-                className="p-2 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 transition-colors"
-                aria-label="More options"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: Active Cases Queue (~5 cols) */}
+        {/* RIGHT: Recent Discussions Panel (~5 cols) */}
         <div className="lg:col-span-5 skill-card bg-white p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-              Active Intervention Queue
+              Recent Discussions
             </h3>
             {selectedTag ? (
               <button
@@ -216,7 +231,7 @@ export default function CommunityPage() {
               </button>
             ) : (
               <span className="text-xs font-medium text-neutral-400">
-                {recentList.length} cases
+                {recentList.length} topics
               </span>
             )}
           </div>
@@ -233,7 +248,7 @@ export default function CommunityPage() {
                     {disc.title}
                   </h4>
                   <p className="text-[11px] text-neutral-400 mt-0.5">
-                    {disc.author} • {disc.repliesCount} actions • {disc.authorRole || "ACTIVE"}
+                    {disc.author} • {disc.repliesCount} replies • {disc.timeAgo}
                   </p>
                 </div>
                 <div className="w-6 h-6 rounded-full bg-neutral-50 group-hover:bg-neutral-100 flex items-center justify-center text-neutral-400 group-hover:text-neutral-900 transition-colors flex-shrink-0">
@@ -244,7 +259,7 @@ export default function CommunityPage() {
 
             {recentList.length === 0 && (
               <div className="py-8 text-center text-xs text-neutral-400">
-                All cases triaged and progressing through lifecycle
+                No recent discussions matching this filter
               </div>
             )}
           </div>
@@ -253,38 +268,38 @@ export default function CommunityPage() {
 
       {/* 3. BOTTOM ROW: Trending Topics, Top Contributors, Upcoming Event */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Trending Intervention Domains */}
+        {/* Trending Topics */}
         <div className="skill-card bg-white p-5 space-y-3">
           <h4 className="text-xs font-bold tracking-tight uppercase text-neutral-400">
-            Intervention Domains
+            Trending Topics
           </h4>
           <div
-            onClick={() => setSelectedTag("Academic")}
+            onClick={() => setSelectedTag("UI Design")}
             className="flex items-center justify-between text-xs py-1.5 px-2 -mx-2 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors"
           >
-            <span className="font-semibold text-neutral-800"># Academic Recovery</span>
-            <span className="text-[11px] text-neutral-400 font-mono">Faculty Led</span>
+            <span className="font-semibold text-neutral-800"># UI Design</span>
+            <span className="text-[11px] text-neutral-400 font-mono">124 Posts</span>
           </div>
           <div
-            onClick={() => setSelectedTag("Attendance")}
+            onClick={() => setSelectedTag("Prototyping")}
             className="flex items-center justify-between text-xs py-1.5 px-2 -mx-2 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors"
           >
-            <span className="font-semibold text-neutral-800"># Attendance Watch</span>
-            <span className="text-[11px] text-neutral-400 font-mono">Mentor Check-in</span>
+            <span className="font-semibold text-neutral-800"># Prototyping</span>
+            <span className="text-[11px] text-neutral-400 font-mono">88 Posts</span>
           </div>
           <div
-            onClick={() => setSelectedTag("Wellbeing")}
+            onClick={() => setSelectedTag("Career Tips")}
             className="flex items-center justify-between text-xs py-1.5 px-2 -mx-2 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors"
           >
-            <span className="font-semibold text-neutral-800"># Student Wellbeing</span>
-            <span className="text-[11px] text-neutral-400 font-mono">Counselor Confidential</span>
+            <span className="font-semibold text-neutral-800"># Career Tips</span>
+            <span className="text-[11px] text-neutral-400 font-mono">65 Posts</span>
           </div>
         </div>
 
-        {/* Top Case Responders */}
+        {/* Top Contributors */}
         <div className="skill-card bg-white p-5 space-y-3">
           <h4 className="text-xs font-bold tracking-tight uppercase text-neutral-400">
-            Case Responders
+            Top Contributors
           </h4>
           <div className="flex items-center justify-between text-xs py-1">
             <div className="flex items-center gap-2">
@@ -293,9 +308,9 @@ export default function CommunityPage() {
                 alt="Sarah"
                 className="w-5 h-5 rounded-full object-cover"
               />
-              <span className="font-semibold text-neutral-800">Dr. Sarah Wilson</span>
+              <span className="font-semibold text-neutral-800">Sarah Wilson</span>
             </div>
-            <span className="text-[11px] text-emerald-600 font-semibold font-mono">Faculty (Lead)</span>
+            <span className="text-[11px] text-emerald-600 font-semibold font-mono">248 pts</span>
           </div>
           <div className="flex items-center justify-between text-xs py-1">
             <div className="flex items-center gap-2">
@@ -304,9 +319,9 @@ export default function CommunityPage() {
                 alt="Mike"
                 className="w-5 h-5 rounded-full object-cover"
               />
-              <span className="font-semibold text-neutral-800">Prof. Marcus Vance</span>
+              <span className="font-semibold text-neutral-800">Mike Chen</span>
             </div>
-            <span className="text-[11px] text-emerald-600 font-semibold font-mono">Academic Dean</span>
+            <span className="text-[11px] text-emerald-600 font-semibold font-mono">215 pts</span>
           </div>
           <div className="flex items-center justify-between text-xs py-1">
             <div className="flex items-center gap-2">
@@ -315,51 +330,57 @@ export default function CommunityPage() {
                 alt="Emma"
                 className="w-5 h-5 rounded-full object-cover"
               />
-              <span className="font-semibold text-neutral-800">Elena Rostova</span>
+              <span className="font-semibold text-neutral-800">Emma Davis</span>
             </div>
-            <span className="text-[11px] text-emerald-600 font-semibold font-mono">Lead Counselor</span>
+            <span className="text-[11px] text-emerald-600 font-semibold font-mono">198 pts</span>
           </div>
         </div>
 
-        {/* Deadlines & Escalation Watch */}
+        {/* Upcoming Event */}
         <div className="skill-card bg-white p-5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-bold tracking-tight uppercase text-neutral-400">
-                Action Deadlines Watch
-              </h4>
-              <Clock className="w-3.5 h-3.5 text-neutral-400" />
-            </div>
+            <h4 className="text-xs font-bold tracking-tight uppercase text-neutral-400 mb-2">
+              Upcoming Event
+            </h4>
             <h5 className="text-sm font-bold text-neutral-900">
-              Next Action Due: Oct 15, 2026
+              Community Q&amp;A
             </h5>
-            <p className="text-xs text-neutral-500 mt-1">
-              Case follow-up verification deadline for active Day-30 academic intervention cohort.
+            <p className="text-xs text-neutral-400 mt-1">
+              Today, 10:00 AM • Live Audio Room
             </p>
           </div>
-
-          <div className="pt-4">
+          <div className="flex items-center justify-between pt-3">
             <button
               onClick={handleJoinEvent}
-              className={`w-full py-2 rounded-full text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 eventJoined
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                   : "bg-neutral-900 text-white hover:bg-neutral-800"
               }`}
             >
-              {eventJoined ? "Deadline Acknowledged ✓" : "Review Escalation SLA"}
+              {eventJoined ? (
+                <span className="flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> RSVP Confirmed
+                </span>
+              ) : (
+                "RSVP Now"
+              )}
             </button>
+            <div
+              onClick={() => setActiveDiscussion(featured?.id || "")}
+              className="w-8 h-8 rounded-full bg-neutral-50 border border-neutral-200/60 flex items-center justify-center text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer"
+            >
+              <ArrowUpRight className="w-4 h-4" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Discussion / Case Detail Modal */}
-      {activeDiscussion && (
-        <DiscussionDetailModal
-          discussionId={activeDiscussion}
-          onClose={() => setActiveDiscussion(null)}
-        />
-      )}
+      {/* Discussion Detail & Comments Modal */}
+      <DiscussionDetailModal
+        discussionId={activeDiscussion}
+        onClose={() => setActiveDiscussion(null)}
+      />
     </div>
   );
 }

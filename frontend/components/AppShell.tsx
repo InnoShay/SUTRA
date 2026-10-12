@@ -25,7 +25,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  ChevronDown,
+  Check,
 } from "lucide-react";
+import { DEMO_PERSONAS } from "@/lib/demo-auth";
+import { UserRole } from "@/lib/types";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -47,6 +51,56 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
+
+  const personaList: {
+    role: UserRole;
+    displayLabel: string;
+    fullName: string;
+    title: string;
+    avatar: string;
+    badge?: string;
+  }[] = [
+    {
+      role: "faculty",
+      displayLabel: "Faculty (Prof. Sharma)",
+      fullName: DEMO_PERSONAS.faculty.name,
+      title: DEMO_PERSONAS.faculty.title,
+      avatar: DEMO_PERSONAS.faculty.avatar,
+    },
+    {
+      role: "counselor",
+      displayLabel: "Counselor (Dr. Nambiar)",
+      fullName: DEMO_PERSONAS.counselor.name,
+      title: DEMO_PERSONAS.counselor.title,
+      avatar: DEMO_PERSONAS.counselor.avatar,
+    },
+    {
+      role: "dean",
+      displayLabel: "Dean / HOD (Dr. Rao)",
+      fullName: DEMO_PERSONAS.dean.name,
+      title: DEMO_PERSONAS.dean.title,
+      avatar: DEMO_PERSONAS.dean.avatar,
+    },
+    {
+      role: "leadership",
+      displayLabel: "Leadership (Prof. Kulkarni)",
+      fullName: DEMO_PERSONAS.leadership.name,
+      title: DEMO_PERSONAS.leadership.title,
+      avatar: DEMO_PERSONAS.leadership.avatar,
+      badge: "ADR-004",
+    },
+    {
+      role: "superadmin",
+      displayLabel: "Superadmin",
+      fullName: DEMO_PERSONAS.superadmin.name,
+      title: DEMO_PERSONAS.superadmin.title,
+      avatar: DEMO_PERSONAS.superadmin.avatar,
+    },
+  ];
+
+  const currentPersonaOption =
+    personaList.find((p) => p.role === activeRole) || personaList[0];
 
   // If on login page, render clean auth view without shell chrome
   if (pathname === "/login") {
@@ -76,16 +130,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Quick Search Action */}
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="p-2 hover:bg-white/80 active:bg-white rounded-xl text-neutral-600 hover:text-neutral-900 transition-colors"
-            title="Search"
-            aria-label="Search"
-          >
-            <Search className="w-4 h-4" />
-          </button>
-
           {/* Messages Action */}
           <button
             onClick={() => setIsMessagesOpen(!isMessagesOpen)}
@@ -128,20 +172,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* 1. LEFT SIDEBAR: At the back on canvas base (hidden on mobile, compact on tablet, full on desktop) */}
       <aside
-        className={`hidden md:flex flex-col justify-between py-6 transition-all duration-300 ease-in-out flex-shrink-0 z-20 ${
-          sidebarCollapsed
-            ? "w-16 lg:w-20 px-2 lg:px-3"
-            : "w-16 lg:w-64 px-2 lg:pl-6 lg:pr-4"
-        }`}
+        className={`hidden md:flex flex-col justify-between py-6 transition-all duration-300 ease-in-out flex-shrink-0 z-20 ${sidebarCollapsed
+          ? "w-16 lg:w-20 px-2 lg:px-3"
+          : "w-16 lg:w-64 px-2 lg:pl-6 lg:pr-4"
+          }`}
       >
         <div className="flex-1 flex flex-col min-h-0">
           {/* Logo & Collapse Header */}
           <div
-            className={`flex items-center pb-7 ${
-              sidebarCollapsed
-                ? "flex-col gap-4 justify-center"
-                : "justify-center lg:justify-between px-1"
-            }`}
+            className={`flex items-center pb-7 ${sidebarCollapsed
+              ? "flex-col gap-4 justify-center"
+              : "justify-center lg:justify-between px-1"
+              }`}
           >
             {/* Tablet / Collapsed Logo Icon */}
             <div className="lg:hidden flex items-center justify-center">
@@ -206,22 +248,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`group relative flex items-center transition-all duration-150 ${
-                        sidebarCollapsed
-                          ? "w-11 h-11 justify-center mx-auto rounded-2xl"
-                          : "justify-center lg:justify-start w-11 h-11 lg:w-auto lg:h-auto lg:gap-3 px-0 lg:px-3.5 py-2.5 rounded-2xl text-xs"
-                      } ${
-                        isActive
+                      className={`group relative flex items-center transition-all duration-150 ${sidebarCollapsed
+                        ? "w-11 h-11 justify-center mx-auto rounded-2xl"
+                        : "justify-center lg:justify-start w-11 h-11 lg:w-auto lg:h-auto lg:gap-3 px-0 lg:px-3.5 py-2.5 rounded-2xl text-xs"
+                        } ${isActive
                           ? "bg-white text-neutral-900 font-semibold shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-neutral-200/50"
                           : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/40 font-medium"
-                      }`}
+                        }`}
                     >
                       <item.icon
-                        className={`w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-105 ${
-                          isActive
-                            ? "text-neutral-900"
-                            : "text-neutral-400 group-hover:text-neutral-600"
-                        }`}
+                        className={`w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-105 ${isActive
+                          ? "text-neutral-900"
+                          : "text-neutral-400 group-hover:text-neutral-600"
+                          }`}
                       />
                       {!sidebarCollapsed && (
                         <span className="hidden lg:inline">{item.name}</span>
@@ -261,22 +300,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`group relative flex items-center transition-all duration-150 ${
-                        sidebarCollapsed
-                          ? "w-11 h-11 justify-center mx-auto rounded-2xl"
-                          : "justify-center lg:justify-start w-11 h-11 lg:w-auto lg:h-auto lg:gap-3 px-0 lg:px-3.5 py-2.5 rounded-2xl text-xs"
-                      } ${
-                        isActive
+                      className={`group relative flex items-center transition-all duration-150 ${sidebarCollapsed
+                        ? "w-11 h-11 justify-center mx-auto rounded-2xl"
+                        : "justify-center lg:justify-start w-11 h-11 lg:w-auto lg:h-auto lg:gap-3 px-0 lg:px-3.5 py-2.5 rounded-2xl text-xs"
+                        } ${isActive
                           ? "bg-white text-neutral-900 font-semibold shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-neutral-200/50"
                           : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/40 font-medium"
-                      }`}
+                        }`}
                     >
                       <item.icon
-                        className={`w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-105 ${
-                          isActive
-                            ? "text-neutral-900"
-                            : "text-neutral-400 group-hover:text-neutral-600"
-                        }`}
+                        className={`w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-105 ${isActive
+                          ? "text-neutral-900"
+                          : "text-neutral-400 group-hover:text-neutral-600"
+                          }`}
                       />
                       {!sidebarCollapsed && (
                         <span className="hidden lg:inline">{item.name}</span>
@@ -303,11 +339,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="pt-4 border-t border-neutral-200/60 flex-shrink-0">
           <Link
             href="/settings"
-            className={`group flex items-center transition-all duration-150 rounded-2xl hover:bg-neutral-200/40 ${
-              sidebarCollapsed
-                ? "justify-center p-2 mx-auto"
-                : "justify-center lg:justify-start p-2 lg:px-3.5 lg:py-2.5 lg:gap-3"
-            }`}
+            className={`group flex items-center transition-all duration-150 rounded-2xl hover:bg-neutral-200/40 ${sidebarCollapsed
+              ? "justify-center p-2 mx-auto"
+              : "justify-center lg:justify-start p-2 lg:px-3.5 lg:py-2.5 lg:gap-3"
+              }`}
             title="View Profile Settings"
           >
             <img
@@ -334,18 +369,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="floating-window flex-1 min-w-0 flex flex-col p-4 sm:p-6 lg:p-9 rounded-2xl sm:rounded-3xl lg:rounded-[32px] relative overflow-y-auto">
           {/* Dedicated Floating Window Top Bar: visible on desktop/tablet */}
           <div className="hidden md:flex items-center justify-between gap-4 mb-7 pb-2">
-            {/* Quick Search Pill Input with subtle greyish bg */}
-            <div
-              onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-2.5 px-4 py-2.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] border border-neutral-200/70 rounded-2xl w-full max-w-sm cursor-pointer shadow-sm transition-all"
-            >
-              <Search className="w-4 h-4 text-neutral-400" />
-              <span className="text-xs text-neutral-400 select-none">
-                Search anything...
-              </span>
-              <span className="ml-auto text-[10px] font-mono text-neutral-400 bg-white border border-neutral-200/60 px-1.5 py-0.5 rounded shadow-2xs">
-                ⌘K
-              </span>
+            {/* Quick Search Pill Input */}
+            <div className="flex items-center gap-2.5 px-4 py-2 bg-[#F8F9FA] hover:bg-white focus-within:bg-white border border-neutral-200/70 focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-900/5 rounded-full w-full max-w-sm shadow-2xs transition-all">
+              <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="w-full bg-transparent text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+              />
             </div>
 
             {/* Actions: Persona Switcher + Backend Status + Messages + Notifications + Profile Avatar */}
@@ -356,20 +387,98 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span>{backendConnected ? "Backend Online" : "Demo Mode"}</span>
               </div>
 
-              {/* Persona Switcher Selector */}
+              {/* Persona Switcher Selector — Apple / iOS Popover */}
               <div className="relative">
-                <select
-                  value={activeRole}
-                  onChange={(e) => setActiveRole(e.target.value as any)}
-                  className="px-3 py-1.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] border border-neutral-200/70 rounded-xl text-xs font-semibold text-neutral-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-neutral-900 cursor-pointer transition-colors"
+                <button
+                  type="button"
+                  onClick={() => setIsPersonaMenuOpen(!isPersonaMenuOpen)}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] active:bg-neutral-200/60 border rounded-full text-xs font-semibold text-neutral-800 shadow-2xs focus:outline-none transition-all cursor-pointer ${
+                    isPersonaMenuOpen
+                      ? "border-neutral-400 bg-white shadow-xs ring-2 ring-neutral-900/5"
+                      : "border-neutral-200/70"
+                  }`}
                   title="Switch Active Persona"
+                  aria-expanded={isPersonaMenuOpen}
+                  aria-haspopup="true"
                 >
-                  <option value="faculty">Faculty (Prof. Sharma)</option>
-                  <option value="counselor">Counselor (Dr. Nambiar)</option>
-                  <option value="dean">Dean / HOD (Dr. Rao)</option>
-                  <option value="leadership">Leadership (Prof. Kulkarni)</option>
-                  <option value="superadmin">Superadmin</option>
-                </select>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200" />
+                  <span>{currentPersonaOption.displayLabel}</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
+                      isPersonaMenuOpen ? "rotate-180 text-neutral-800" : ""
+                    }`}
+                  />
+                </button>
+
+                {isPersonaMenuOpen && (
+                  <>
+                    {/* Invisible backdrop to dismiss on click outside */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsPersonaMenuOpen(false)}
+                    />
+
+                    {/* Apple / iOS-style Floating Glass Menu */}
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-white/95 backdrop-blur-xl border border-neutral-200/80 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      {/* iOS Group Header */}
+                      <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                          Active Persona
+                        </span>
+                        <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600">
+                          Demo Auth
+                        </span>
+                      </div>
+
+                      {/* Options List */}
+                      <div className="py-1 space-y-0.5">
+                        {personaList.map((p) => {
+                          const isSelected = activeRole === p.role;
+                          return (
+                            <button
+                              key={p.role}
+                              type="button"
+                              onClick={() => {
+                                setActiveRole(p.role);
+                                setIsPersonaMenuOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-neutral-100/90 text-neutral-900 shadow-2xs font-semibold"
+                                  : "hover:bg-neutral-50 active:bg-neutral-100/80 text-neutral-700"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <img
+                                  src={p.avatar}
+                                  alt={p.fullName}
+                                  className="w-7 h-7 rounded-full object-cover ring-1 ring-neutral-200/80 shrink-0"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-semibold text-neutral-900 truncate flex items-center gap-1.5">
+                                    <span>{p.displayLabel}</span>
+                                    {p.badge && (
+                                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-mono font-bold">
+                                        {p.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-400 truncate">
+                                    {p.title}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {isSelected && (
+                                <Check className="w-4 h-4 text-neutral-900 shrink-0 ml-2" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Messages Trigger */}
@@ -429,16 +538,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-150 min-h-[44px] ${
-                  isActive
-                    ? "text-neutral-950 font-bold"
-                    : "text-neutral-400 hover:text-neutral-700 font-medium"
-                }`}
+                className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-150 min-h-[44px] ${isActive
+                  ? "text-neutral-950 font-bold"
+                  : "text-neutral-400 hover:text-neutral-700 font-medium"
+                  }`}
               >
                 <div
-                  className={`p-1.5 rounded-xl transition-colors ${
-                    isActive ? "bg-neutral-100 text-neutral-950 shadow-2xs" : ""
-                  }`}
+                  className={`p-1.5 rounded-xl transition-colors ${isActive ? "bg-neutral-100 text-neutral-950 shadow-2xs" : ""
+                    }`}
                 >
                   <item.icon className="w-4 h-4" />
                 </div>

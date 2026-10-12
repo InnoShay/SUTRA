@@ -188,7 +188,96 @@ assert.throws(() => {
   );
 }, /must belong to campus catalog/);
 
-console.log("   ✓ Verified bounded AI review brief schema, catalog confinement, and advisory boundaries\n");
+// 7. Phase 1: Store & Data Integrity Remediation Validation
+console.log("7. Validating Phase 1 Store & Data Integrity Contracts...");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const demoSeedPath = path.resolve(__dirname, "../../docs/fixtures/demo_seed.json");
+const demoSeed = JSON.parse(fs.readFileSync(demoSeedPath, "utf-8"));
+
+// 7a. Verify canonical demo seed students
+assert(Array.isArray(demoSeed.students), "demo_seed.json must have students array");
+const canonicalSeedKeys = demoSeed.students.map((s) => s.key);
+assert.deepStrictEqual(
+  canonicalSeedKeys,
+  ["SYN-1007", "SYN-1008", "SYN-1009", "SYN-1010", "SYN-1011", "SYN-1012"],
+  "demo_seed.json must define canonical synthetic keys SYN-1007 through SYN-1012"
+);
+
+// 7b. Check skillhub-data.ts source code for zero Hackingly contamination
+const skillhubDataCode = fs.readFileSync(
+  path.resolve(__dirname, "../lib/skillhub-data.ts"),
+  "utf-8"
+);
+
+const forbiddenNames = [
+  "Marvin McKinney",
+  "Albert Flores",
+  "Bessie Cooper",
+  "Jane Cooper",
+  "Brooklyn Williamson",
+  "Courtney Henry",
+  "Darrell Steward",
+  "example.com",
+  "Typography Masterclass",
+  "Figma for Beginner",
+  "Best Figma plugins",
+  "sarah.wilson@sutra.design",
+];
+
+for (const forbidden of forbiddenNames) {
+  assert(
+    !skillhubDataCode.includes(forbidden),
+    `Contamination detected: "${forbidden}" found in active skillhub-data.ts!`
+  );
+}
+console.log("   ✓ Zero legacy Hackingly student names, course names, or forum discussions in skillhub-data.ts");
+
+// 7c. Check skillhub-store.tsx for elimination of fixture merging
+const storeCode = fs.readFileSync(
+  path.resolve(__dirname, "../lib/skillhub-store.tsx"),
+  "utf-8"
+);
+
+// Ensure the old bug `...INITIAL_STUDENTS.filter` is completely gone
+assert(
+  !storeCode.includes("...INITIAL_STUDENTS.filter"),
+  "Contamination defect: skillhub-store.tsx must never merge backend students with INITIAL_STUDENTS fixtures"
+);
+
+// Ensure authoritative empty response handling
+assert(
+  storeCode.includes("setStudents([])"),
+  "Store must explicitly support setting empty student roster on empty response or privacy boundary"
+);
+
+// Ensure explicit data provenance
+assert(
+  storeCode.includes('dataProvenance: backendConnected ? "live" : "demo"'),
+  "Store must explicitly distinguish live vs demo data provenance"
+);
+
+console.log("   ✓ Verified strict separation: backend responses are authoritative and never merged with mock fixtures");
+
+// 7d. Check students/[id]/page.tsx for elimination of hardcoded fake observations and fallback Aarav Sharma
+const studentDetailCode = fs.readFileSync(
+  path.resolve(__dirname, "../app/students/[id]/page.tsx"),
+  "utf-8"
+);
+
+assert(
+  !studentDetailCode.includes("Aarav Sharma"),
+  "Contamination defect: Fake fallback student 'Aarav Sharma' must not be hardcoded in students/[id]"
+);
+assert(
+  !studentDetailCode.includes("quiz_scores_avg"),
+  "Contamination defect: Fake observations table row 'quiz_scores_avg' must not be hardcoded in students/[id]"
+);
+
+console.log("   ✓ Verified student details page uses genuine observations / canonical demo fixtures with honest empty state\n");
 
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");

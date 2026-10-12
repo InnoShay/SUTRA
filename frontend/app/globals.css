@@ -19,7 +19,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-jakarta);
   letter-spacing: -0.025em;
 }
@@ -56,21 +61,22 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Signature Tick pattern for unfilled progress */
 .skill-ticks-bg {
-  background-image: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    transparent 4px,
-    #CBD5E1 4px,
-    #CBD5E1 5.5px
-  );
+  background-image: repeating-linear-gradient(90deg,
+      transparent 0px,
+      transparent 4px,
+      #CBD5E1 4px,
+      #CBD5E1 5.5px);
 }
 
 /* Live pulsating indicator */
 @keyframes live-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.25);
     opacity: 0.6;
@@ -99,3 +105,27 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
+
+/* 3D Arc Perspective Containers */
+.perspective-container {
+  perspective: 1200px;
+  perspective-origin: center center;
+}
+
+.arc-card {
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  will-change: transform;
+}
+
+.arc-card:hover {
+  transform: translateY(-8px) scale(1.04) !important;
+  z-index: 30 !important;
+}
+
+/* Cloud & Sky background styling */
+.hero-sky-bg {
+  background: 
+    linear-gradient(180deg, rgba(20, 126, 232, 0.92) 0%, rgba(27, 140, 242, 0.85) 50%, rgba(56, 166, 249, 0.8) 100%),
+    url('/clouds-bg.jpe') center bottom / cover no-repeat;
+}
