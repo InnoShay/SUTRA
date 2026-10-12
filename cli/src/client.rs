@@ -369,4 +369,343 @@ impl SutraApiClient {
 
         Err(format!("Prediction request failed (HTTP {}): {}", status, body))
     }
+
+    /// Lists authorized pseudonymous students in the active campus.
+    pub async fn list_students(
+        &self,
+        cohort: Option<&str>,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> Result<Vec<StudentSummaryDto>, String> {
+        let url = format!("{}/students", self.config.api_url);
+        let mut req_builder = self.client.get(&url).headers(self.headers());
+
+        if let Some(c) = cohort {
+            req_builder = req_builder.query(&[("cohort", c)]);
+        }
+        if let Some(l) = limit {
+            req_builder = req_builder.query(&[("limit", l.to_string())]);
+        }
+        if let Some(o) = offset {
+            req_builder = req_builder.query(&[("offset", o.to_string())]);
+        }
+
+        let resp = req_builder
+            .send()
+            .await
+            .map_err(|e| format!("Network error connecting to SUTRA backend: {}", e))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            if status == reqwest::StatusCode::UNAUTHORIZED {
+                return Err("HTTP 401 Unauthorized: Valid session or Bearer token required. Please run `sutra auth login`.".to_string());
+            } else if status == reqwest::StatusCode::FORBIDDEN {
+                return Err(format!("HTTP 403 Forbidden: Caller role is not authorized to access individual student records.\nDetails: {}", body));
+            }
+            return Err(format!("Request failed (HTTP {}): {}", status, body));
+        }
+
+        resp.json::<Vec<StudentSummaryDto>>()
+            .await
+            .map_err(|e| format!("Failed to parse students list response: {}", e))
+    }
+
+    /// Fetches authorized student profile by UUID or external reference.
+    pub async fn get_student(&self, id_or_ref: &str) -> Result<StudentSummaryDto, String> {
+        let clean_id = id_or_ref.trim();
+        if clean_id.is_empty() {
+            return Err("Student identifier or reference cannot be empty.".to_string());
+        }
+
+        let url = format!("{}/students/{}", self.config.api_url, clean_id);
+        let resp = self
+            .client
+            .get(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| format!("Network error connecting to SUTRA backend: {}", e))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            if status == reqwest::StatusCode::NOT_FOUND {
+                return Err(format!(
+                    "HTTP 404 Not Found: Student '{}' not found in active campus.",
+                    clean_id
+                ));
+            } else if status == reqwest::StatusCode::UNAUTHORIZED {
+                return Err("HTTP 401 Unauthorized: Valid session or Bearer token required. Please run `sutra auth login`.".to_string());
+            } else if status == reqwest::StatusCode::FORBIDDEN {
+                return Err(format!("HTTP 403 Forbidden: Caller role is not authorized to access individual student records.\nDetails: {}", body));
+            }
+            return Err(format!("Request failed (HTTP {}): {}", status, body));
+        }
+
+        resp.json::<StudentSummaryDto>()
+            .await
+            .map_err(|e| format!("Failed to parse student profile response: {}", e))
+    }
+
+    /// Attempts to fetch support view (active signals & cases count, freshness metrics) for a student.
+    pub async fn get_student_support_view(&self, id_or_ref: &str) -> Result<Option<StudentSupportViewDto>, String> {
+        let clean_id = id_or_ref.trim();
+        if clean_id.is_empty() {
+            return Ok(None);
+        }
+
+        let url = format!("{}/students/{}/support-view", self.config.api_url, clean_id);
+        let resp = self
+            .client
+            .get(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| format!("Network error connecting to SUTRA backend: {}", e))?;
+
+        if resp.status().is_success() {
+            let view = resp.json::<StudentSupportViewDto>().await.ok();
+            return Ok(view);
+        }
+        Ok(None)
+    }
+
+    /// Fetches the three-source data provenance overview and isolation boundaries.
+    pub async fn get_dataset_provenance(&self) -> Result<ProvenanceOverviewDto, String> {
+        let url = format!("{}/datasets/provenance", self.config.api_url);
+        let resp = self
+            .client
+            .get(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| format!("Network error connecting to SUTRA backend: {}", e))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("Request failed (HTTP {}): {}", status, body));
+        }
+
+        resp.json::<ProvenanceOverviewDto>()
+            .await
+            .map_err(|e| format!("Failed to parse provenance response: {}", e))
+    }
+
+    /// Explicitly looks up a research (OULAD) or synthetic demonstration record.
+    /// Strictly isolated from live institutional student queries.
+    pub async fn lookup_research_record(
+        &self,
+        source: &str,
+        identifier: &str,
+        module: Option<&str>,
+        presentation: Option<&str>,
+    ) -> Result<ResearchRecordDto, String> {
+        let clean_id = identifier.trim();
+        if clean_id.is_empty() {
+            return Err("Identifier cannot be empty".to_string());
+        }
+
+        let clean_source = source.to_lowercase();
+        let url = match clean_source.as_str() {
+            "oulad" => {
+                let mut u = format!("{}/datasets/research/oulad/{}", self.config.api_url, clean_id);
+                let mut query_params = Vec::new();
+                if let Some(m) = module {
+                    query_params.push(format!("module={}", m));
+                }
+                if let Some(p) = presentation {
+                    query_params.push(format!("presentation={}", p));
+                }
+                if !query_params.is_empty() {
+                    u.push('?');
+                    u.push_str(&query_params.join("&"));
+                }
+                u
+            }
+            "synthetic" | "synthetic_demo" | "demo" => {
+                format!("{}/datasets/research/synthetic/{}", self.config.api_url, clean_id)
+            }
+            other => {
+                return Err(format!(
+                    "Invalid dataset source '{}'. Allowed sources: 'oulad', 'synthetic'. (Institutional records must be queried via `sutra students get`)",
+                    other
+                ));
+            }
+        };
+
+        let resp = self
+            .client
+            .get(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| format!("Network error connecting to SUTRA backend: {}", e))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            if status == reqwest::StatusCode::NOT_FOUND {
+                return Err(format!(
+                    "HTTP 404 Not Found: Record '{}' not found in dataset source '{}'.",
+                    clean_id, source
+                ));
+            } else if status == reqwest::StatusCode::UNAUTHORIZED {
+                return Err("HTTP 401 Unauthorized: Valid session or Bearer token required. Please run `sutra auth login`.".to_string());
+            } else if status == reqwest::StatusCode::FORBIDDEN {
+                return Err(format!("HTTP 403 Forbidden: Caller is not authorized.\nDetails: {}", body));
+            }
+            return Err(format!("Request failed (HTTP {}): {}", status, body));
+        }
+
+        resp.json::<ResearchRecordDto>()
+            .await
+            .map_err(|e| format!("Failed to parse research record response: {}", e))
+    }
+
+    /// Lists chronological multi-domain student observations with optional domain/quality filters.
+    pub async fn get_student_observations(
+        &self,
+        id_or_ref: &str,
+        domain: Option<&str>,
+        quality_state: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<ObservationDto>, String> {
+        let clean_id = id_or_ref.trim();
+        if clean_id.is_empty() {
+            return Err("Student identifier cannot be empty".to_string());
+        }
+
+        let mut url = format!("{}/students/{}/observations", self.config.api_url, clean_id);
+        let mut query_params = Vec::new();
+        if let Some(d) = domain {
+            query_params.push(format!("domain={}", d));
+        }
+        if let Some(q) = quality_state {
+            query_params.push(format!("quality_state={}", q));
+        }
+        if let Some(l) = limit {
+            query_params.push(format!("limit={}", l));
+        }
+        if !query_params.join("&").is_empty() {
+            url.push('?');
+            url.push_str(&query_params.join("&"));
+        }
+
+        let resp = self
+            .client
+            .get(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| format!("Network error connecting to SUTRA backend: {}", e))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            if status == reqwest::StatusCode::NOT_FOUND {
+                return Err(format!(
+                    "HTTP 404 Not Found: Student '{}' not found in active campus.",
+                    clean_id
+                ));
+            } else if status == reqwest::StatusCode::UNAUTHORIZED {
+                return Err("HTTP 401 Unauthorized: Valid session or Bearer token required. Please run `sutra auth login`.".to_string());
+            } else if status == reqwest::StatusCode::FORBIDDEN {
+                return Err(format!("HTTP 403 Forbidden: Caller is not authorized.\nDetails: {}", body));
+            }
+            return Err(format!("Request failed (HTTP {}): {}", status, body));
+        }
+
+        resp.json::<Vec<ObservationDto>>()
+            .await
+            .map_err(|e| format!("Failed to parse student observations response: {}", e))
+    }
+
+    /// Evaluates feature completeness against the 25 canonical Day-30 ML features.
+    pub async fn get_student_readiness(&self, id_or_ref: &str) -> Result<StudentReadinessDto, String> {
+        let clean_id = id_or_ref.trim();
+        if clean_id.is_empty() {
+            return Err("Student identifier cannot be empty".to_string());
+        }
+
+        let url = format!("{}/students/{}/readiness", self.config.api_url, clean_id);
+        let resp = self
+            .client
+            .get(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| format!("Network error connecting to SUTRA backend: {}", e))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            if status == reqwest::StatusCode::NOT_FOUND {
+                return Err(format!(
+                    "HTTP 404 Not Found: Student '{}' not found in active campus.",
+                    clean_id
+                ));
+            } else if status == reqwest::StatusCode::UNAUTHORIZED {
+                return Err("HTTP 401 Unauthorized: Valid session or Bearer token required. Please run `sutra auth login`.".to_string());
+            } else if status == reqwest::StatusCode::FORBIDDEN {
+                return Err(format!("HTTP 403 Forbidden: Caller is not authorized.\nDetails: {}", body));
+            }
+            return Err(format!("Request failed (HTTP {}): {}", status, body));
+        }
+
+        resp.json::<StudentReadinessDto>()
+            .await
+            .map_err(|e| format!("Failed to parse feature readiness response: {}", e))
+    }
+
+    /// Executes authorized server-side ML prediction for a specific student in the active campus.
+    pub async fn predict_student(&self, id_or_ref: &str) -> Result<MLPredictResponseDto, String> {
+        let clean_id = id_or_ref.trim();
+        if clean_id.is_empty() {
+            return Err("Student identifier cannot be empty".to_string());
+        }
+
+        let url = format!("{}/students/{}/predict", self.config.api_url, clean_id);
+        let resp = self
+            .client
+            .post(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| format!("Failed to send student prediction request: {}", e))?;
+
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+
+        if status.is_success() {
+            return serde_json::from_str::<MLPredictResponseDto>(&body)
+                .map_err(|e| format!("Failed to parse prediction response: {}", e));
+        }
+
+        if status == reqwest::StatusCode::NOT_FOUND {
+            Err(format!(
+                "HTTP 404 Not Found: Student '{}' not found in active campus.",
+                clean_id
+            ))
+        } else if status == reqwest::StatusCode::UNAUTHORIZED {
+            Err("HTTP 401 Unauthorized: Valid session or Bearer token required. Please run `sutra auth login`.".to_string())
+        } else if status == reqwest::StatusCode::FORBIDDEN {
+            Err(format!(
+                "HTTP 403 Forbidden: Caller role is not authorized to execute student-specific ML inference.\nDetails: {}",
+                body
+            ))
+        } else if status == reqwest::StatusCode::UNPROCESSABLE_ENTITY {
+            Err(format!(
+                "HTTP 422 Incompatible / Insufficient Data: Student record cannot be evaluated by ML model.\nDetails: {}",
+                body
+            ))
+        } else {
+            Err(format!("Request failed (HTTP {}): {}", status, body))
+        }
+    }
 }
+
+
+
+

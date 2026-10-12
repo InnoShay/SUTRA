@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import AuthenticatedUser, get_current_user, require_role, require_campus_access
+from app.core.security import (
+    AuthenticatedUser,
+    CampusMembershipContext,
+    get_campus_membership,
+    get_current_user,
+    require_role,
+    require_campus_access,
+)
 from app.ml.service import ml_service
 from app.schemas.ml import (
     MLModelInfo,
@@ -80,3 +87,14 @@ async def predict_batch(
     await db.commit()
 
     return responses
+
+
+@router.post("/predict/student/{student_id}", response_model=MLPredictResponse)
+async def predict_student_alias(
+    student_id: str,
+    membership: CampusMembershipContext = Depends(get_campus_membership),
+    db: AsyncSession = Depends(get_db),
+):
+    """Alias for /api/v1/students/{student_id}/predict."""
+    from app.api.v1.students import predict_student_single
+    return await predict_student_single(student_id=student_id, membership=membership, db=db)

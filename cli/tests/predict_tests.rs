@@ -264,3 +264,37 @@ fn test_ml_predict_response_dto_deserialization() {
     assert_eq!(parsed["classification"], "At_Risk");
     assert_eq!(parsed["evidence_card"]["top_attributions"].as_array().unwrap().len(), 2);
 }
+
+#[derive(clap::Parser, Debug, PartialEq)]
+#[command(name = "predict")]
+struct TestPredictArgs {
+    #[arg(long, short, conflicts_with = "student")]
+    file: Option<std::path::PathBuf>,
+
+    #[arg(long, conflicts_with = "file")]
+    student: Option<String>,
+}
+
+#[test]
+fn test_cli_predict_flags_mutual_exclusion() {
+    use clap::Parser;
+
+    // Both flags passed -> Should fail due to conflicts_with
+    let both_res = TestPredictArgs::try_parse_from(&["predict", "--file", "test.json", "--student", "SYN-1007"]);
+    assert!(both_res.is_err(), "Passing both --file and --student must fail with mutual exclusion conflict");
+
+    // Only --file passed -> Should succeed
+    let file_res = TestPredictArgs::try_parse_from(&["predict", "--file", "test.json"]);
+    assert!(file_res.is_ok());
+    let file_args = file_res.unwrap();
+    assert_eq!(file_args.file, Some(std::path::PathBuf::from("test.json")));
+    assert_eq!(file_args.student, None);
+
+    // Only --student passed -> Should succeed
+    let student_res = TestPredictArgs::try_parse_from(&["predict", "--student", "SYN-1007"]);
+    assert!(student_res.is_ok());
+    let student_args = student_res.unwrap();
+    assert_eq!(student_args.file, None);
+    assert_eq!(student_args.student.as_deref(), Some("SYN-1007"));
+}
+

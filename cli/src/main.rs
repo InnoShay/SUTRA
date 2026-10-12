@@ -65,16 +65,31 @@ enum Commands {
 
     #[command(about = "Execute Day-30 early-warning ML inference from a validated feature JSON file")]
     Predict(PredictArgs),
+
+    #[command(about = "Lookup authorized students and profile records")]
+    Students(StudentsArgs),
+
+    #[command(about = "Data provenance framework and research/demo dataset lookup")]
+    Datasets(DatasetsArgs),
 }
+
 
 #[derive(Args)]
 struct PredictArgs {
     #[arg(
         long,
         short,
-        help = "Path to JSON file containing canonical Day-30 student feature vector"
+        help = "Path to JSON file containing canonical Day-30 student feature vector",
+        conflicts_with = "student"
     )]
-    file: std::path::PathBuf,
+    file: Option<std::path::PathBuf>,
+
+    #[arg(
+        long,
+        help = "Student UUID or external reference (e.g. SYN-1007) for authorized server-side scoring",
+        conflicts_with = "file"
+    )]
+    student: Option<String>,
 }
 
 #[derive(Args)]
@@ -233,6 +248,85 @@ enum AiCommands {
     },
 }
 
+#[derive(Args)]
+struct StudentsArgs {
+    #[command(subcommand)]
+    command: StudentsCommands,
+}
+
+#[derive(Subcommand)]
+enum StudentsCommands {
+    #[command(about = "List authorized students in the active campus tenancy")]
+    List {
+        #[arg(long, help = "Optional cohort code filter (e.g. CS-Y2)")]
+        cohort: Option<String>,
+
+        #[arg(long, help = "Optional maximum number of students to return")]
+        limit: Option<u32>,
+
+        #[arg(long, help = "Optional pagination offset")]
+        offset: Option<u32>,
+    },
+
+    #[command(about = "View detailed student profile and active academic posture")]
+    Get {
+        #[arg(help = "Student UUID or external reference (e.g. SYN-1007)")]
+        id_or_ref: String,
+    },
+
+    #[command(about = "List chronological student observations with domain and quality filters")]
+    Observations {
+        #[arg(help = "Student UUID or external reference (e.g. SYN-1007)")]
+        id_or_ref: String,
+
+        #[arg(long, help = "Optional domain filter (attendance, academic, participation, skills, faculty_feedback)")]
+        domain: Option<String>,
+
+        #[arg(long, help = "Optional quality filter (valid, stale, missing, conflicting)")]
+        quality: Option<String>,
+
+        #[arg(long, help = "Optional maximum observations to return")]
+        limit: Option<u32>,
+    },
+
+    #[command(about = "Audit feature completeness and applicability for Day-30 ML early-warning model")]
+    Readiness {
+        #[arg(help = "Student UUID or external reference (e.g. SYN-1007)")]
+        id_or_ref: String,
+    },
+}
+
+#[derive(Args)]
+struct DatasetsArgs {
+    #[command(subcommand)]
+    command: DatasetsCommands,
+}
+
+#[derive(Subcommand)]
+enum DatasetsCommands {
+    #[command(about = "Display data provenance boundaries, schemas, and source isolation rules")]
+    Info,
+
+    #[command(about = "Explicitly lookup historical research (OULAD) or synthetic demo records")]
+    Lookup {
+        #[arg(
+            long,
+            help = "Dataset source: 'oulad' (historical research) or 'synthetic' (demo test vector)"
+        )]
+        source: String,
+
+        #[arg(help = "Record identifier (e.g. OULAD student ID 11391 or synthetic ref SYN-1007 / SYNTH-BATCH-001)")]
+        identifier: String,
+
+        #[arg(long, help = "Optional OULAD course module code (e.g. AAA, BBB)")]
+        module: Option<String>,
+
+        #[arg(long, help = "Optional OULAD presentation semester code (e.g. 2013J, 2014J)")]
+        presentation: Option<String>,
+    },
+}
+
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -246,7 +340,15 @@ async fn main() {
             AuthCommands::Logout => commands::auth::run_logout(),
         },
         Commands::Health => commands::health::run_health(&client).await,
-        Commands::Predict(args) => commands::predict::run_predict(&client, &args.file).await,
+        Commands::Predict(args) => {
+            if let Some(ref file_path) = args.file {
+                commands::predict::run_predict(&client, file_path).await
+            } else if let Some(ref student_ref) = args.student {
+                commands::predict::execute_student_predict_flow(&client, student_ref).await
+            } else {
+                Err("Missing required option: Provide either `--file <PATH>` for feature file inference or `--student <ID_OR_REF>` for authorized student prediction.".to_string())
+            }
+        }
         Commands::Catalogue => commands::catalogue::list_catalogue(&client).await,
         Commands::Signals(args) => match args.command {
             SignalsCommands::List { result } => {
@@ -316,7 +418,56 @@ async fn main() {
                 commands::ai::ai_summarize_evidence(&client, student_id).await
             }
         },
+        Commands::Students(args) => match args.command {
+            StudentsCommands::List {
+                cohort,
+                limit,
+                offset,
+            } => {
+                commands::students::list_students(&client, cohort.as_deref(), limit, offset).await
+            }
+            StudentsCommands::Get { id_or_ref } => {
+                commands::students::get_student(&client, &id_or_ref).await
+            }
+            StudentsCommands::Observations {
+                id_or_ref,
+                domain,
+                quality,
+                limit,
+            } => {
+                commands::students::list_observations(
+                    &client,
+                    &id_or_ref,
+                    domain.as_deref(),
+                    quality.as_deref(),
+                    limit,
+                )
+                .await
+            }
+            StudentsCommands::Readiness { id_or_ref } => {
+                commands::students::check_readiness(&client, &id_or_ref).await
+            }
+        },
+        Commands::Datasets(args) => match args.command {
+            DatasetsCommands::Info => commands::datasets::run_info(&client).await,
+            DatasetsCommands::Lookup {
+                source,
+                identifier,
+                module,
+                presentation,
+            } => {
+                commands::datasets::run_lookup(
+                    &client,
+                    &source,
+                    &identifier,
+                    module.as_deref(),
+                    presentation.as_deref(),
+                )
+                .await
+            }
+        },
     };
+
 
     if let Err(e) = result {
         eprintln!("\nError: {}", e);
