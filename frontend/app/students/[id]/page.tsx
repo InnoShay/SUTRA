@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { SupportViewResponse, SignalDTO, AISummarizeEvidenceResponse } from "@/lib/types";
 import { SignalReviewModal } from "@/components/SignalReviewModal";
 import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   ArrowLeft,
   Mail,
@@ -210,10 +211,10 @@ export default function StudentDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-neutral-100">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <img
+              <UserAvatar
                 src={fallbackStudent.avatar}
-                alt={studentDisplayName}
-                className="w-16 h-16 rounded-full object-cover ring-4 ring-neutral-100"
+                name={studentDisplayName}
+                className="w-16 h-16 ring-4 ring-neutral-100 shadow-xs"
               />
               <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-400/50" />
             </div>

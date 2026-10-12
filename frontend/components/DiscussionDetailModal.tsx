@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSkillHub } from "@/lib/store";
 import { CaseState } from "@/lib/types";
+import { UserAvatar } from "./UserAvatar";
 import {
   X,
   MessageSquare,
@@ -177,10 +178,10 @@ export function DiscussionDetailModal({
         {/* Header */}
         <div className="p-4 sm:p-6 pb-4 border-b border-neutral-100 flex items-center justify-between flex-shrink-0 bg-neutral-50/50">
           <div className="flex items-center gap-3">
-            <img
+            <UserAvatar
               src={discussion.authorAvatar || "/assets/avatar-sarah.jpg"}
-              alt={discussion.author}
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-100"
+              name={discussion.author}
+              className="w-10 h-10 ring-2 ring-neutral-100"
             />
             <div>
               <div className="flex items-center gap-2">
@@ -449,10 +450,10 @@ export function DiscussionDetailModal({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <img
+                        <UserAvatar
                           src={comment.authorAvatar}
-                          alt={comment.author}
-                          className="w-5 h-5 rounded-full object-cover"
+                          name={comment.author}
+                          className="w-5 h-5 text-[9px]"
                         />
                         <span className="text-xs font-bold text-neutral-800">
                           {comment.author}
@@ -477,10 +478,10 @@ export function DiscussionDetailModal({
           onSubmit={handleSendComment}
           className="p-3.5 sm:p-4 border-t border-neutral-100 bg-neutral-50/50 flex items-center gap-2.5 flex-shrink-0"
         >
-          <img
+          <UserAvatar
             src={user.avatar}
-            alt={user.fullName}
-            className="w-8 h-8 rounded-full object-cover ring-1 ring-neutral-200 flex-shrink-0"
+            name={user.fullName}
+            className="w-8 h-8 ring-1 ring-neutral-200 shrink-0"
           />
           <input
             type="text"

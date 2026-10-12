@@ -29,6 +29,7 @@ import {
   Check,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
+import { UserAvatar } from "./UserAvatar";
 import { UserRole } from "@/lib/types";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -168,10 +169,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             title="Open Account Menu"
             aria-label="Open Account Menu"
           >
-            <img
+            <UserAvatar
               src={user.avatar}
-              alt={user.fullName}
-              className="w-7 h-7 rounded-full object-cover ring-2 ring-white shadow-xs"
+              name={user.fullName}
+              className="w-7 h-7 ring-2 ring-white shadow-xs"
             />
           </button>
         </div>
@@ -381,10 +382,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             title="View Profile Settings"
           >
-            <img
+            <UserAvatar
               src={user.avatar}
-              alt={user.fullName}
-              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              name={user.fullName}
+              className="w-9 h-9"
             />
             {!sidebarCollapsed && (
               <div className="min-w-0 flex-1 hidden lg:block">
@@ -434,12 +435,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       ? "border-neutral-400 bg-white shadow-xs ring-2 ring-neutral-900/5"
                       : "border-neutral-200/70"
                   }`}
-                  title="Switch Active Persona"
+                  title={supabaseSession ? "Active Campus Role" : "Switch Active Persona"}
                   aria-expanded={isPersonaMenuOpen}
                   aria-haspopup="true"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200" />
-                  <span>{currentPersonaOption.displayLabel}</span>
+                  <span>
+                    {supabaseSession
+                      ? `${activeRole.charAt(0).toUpperCase() + activeRole.slice(1)} (${user.name})`
+                      : currentPersonaOption.displayLabel}
+                  </span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
                       isPersonaMenuOpen ? "rotate-180 text-neutral-800" : ""
@@ -460,11 +465,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       {/* iOS Group Header */}
                       <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                          Active Persona
+                          {supabaseSession ? "Active Account" : "Active Persona"}
                         </span>
-                        <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600">
-                          Role Context
+                        <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-full ${
+                          supabaseSession
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200/60 font-semibold"
+                            : "bg-neutral-100 text-neutral-600"
+                        }`}>
+                          {supabaseSession ? "Google SSO Active" : "Role Context"}
                         </span>
+                      </div>
+
+                      {/* User Card if Authenticated */}
+                      {supabaseSession && (
+                        <div className="mx-1 my-1.5 p-2.5 bg-neutral-50/90 rounded-xl border border-neutral-100 flex items-center gap-2.5">
+                          <UserAvatar
+                            src={user.avatar}
+                            name={user.fullName}
+                            className="w-8 h-8 ring-2 ring-emerald-400/60 shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-neutral-900 truncate">
+                              {user.fullName}
+                            </div>
+                            <div className="text-[10px] text-neutral-500 truncate">
+                              {user.email}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Header for Roles / Personas */}
+                      <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                        {supabaseSession ? "Switch Role View" : "Available Personas"}
                       </div>
 
                       {/* Options List */}
@@ -486,10 +519,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                <img
+                                <UserAvatar
                                   src={p.avatar}
-                                  alt={p.fullName}
-                                  className="w-7 h-7 rounded-full object-cover ring-1 ring-neutral-200/80 shrink-0"
+                                  name={p.fullName}
+                                  className="w-7 h-7 ring-1 ring-neutral-200/80"
                                 />
                                 <div className="min-w-0 flex-1">
                                   <div className="text-xs font-semibold text-neutral-900 truncate flex items-center gap-1.5">
@@ -544,12 +577,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/settings"
                 className="flex items-center gap-2 pl-1 cursor-pointer group"
-                title={`${currentPersona.name} (${currentPersona.title})`}
+                title={`${user.fullName || currentPersona.name} (${user.role || currentPersona.title})`}
               >
-                <img
-                  src={currentPersona.avatar}
-                  alt={currentPersona.name}
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-100 group-hover:ring-neutral-300 shadow-sm transition-all"
+                <UserAvatar
+                  src={user.avatar || currentPersona.avatar}
+                  name={user.fullName || currentPersona.name}
+                  className="w-10 h-10 ring-2 ring-neutral-100 group-hover:ring-neutral-300 shadow-sm transition-all"
                 />
               </Link>
             </div>
@@ -611,10 +644,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {/* User Profile Header */}
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <div className="flex items-center gap-3">
-                <img
+                <UserAvatar
                   src={user.avatar}
-                  alt={user.fullName}
-                  className="w-11 h-11 rounded-full object-cover ring-2 ring-neutral-100 shadow-sm"
+                  name={user.fullName}
+                  className="w-11 h-11 ring-2 ring-neutral-100 shadow-sm"
                 />
                 <div>
                   <h4 className="text-sm font-bold text-neutral-900">

@@ -7,6 +7,7 @@ import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
 import { EngagementChart } from "@/components/EngagementChart";
 import { SignalReviewModal } from "@/components/SignalReviewModal";
 import { SignalDTO, CaseDetailDTO, CaseState } from "@/lib/types";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   computeDashboardMetrics,
   getNearestUpcomingFollowUp,
@@ -146,12 +147,16 @@ export default function DashboardPage() {
             Welcome back, {user.name}!
           </h1>
           <p className="text-xs text-neutral-400 mt-0.5 flex flex-wrap items-center gap-2">
-            <span>{currentPersona?.title || "Course Instructor & Faculty Mentor"}</span>
+            <span>
+              {supabaseSession
+                ? `${user.fullName} • ${user.role || "Faculty Mentor"}`
+                : (currentPersona?.title || "Course Instructor & Faculty Mentor")}
+            </span>
             <span>•</span>
             <span className="font-medium text-neutral-600">{activeCampusName || "Apex University Main Campus"}</span>
             <span>•</span>
             {supabaseSession ? (
-              <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Google SSO ({user.email || "Active"})</span>
               </span>
@@ -344,11 +349,11 @@ export default function DashboardPage() {
                 {/* Dynamic Avatars Stack */}
                 <div className="flex items-center -space-x-2">
                   {students.slice(0, 3).map((s) => (
-                    <img
+                    <UserAvatar
                       key={s.id}
                       src={s.avatar}
-                      alt={s.name}
-                      className="w-8 h-8 rounded-full object-cover ring-2 ring-white"
+                      name={s.name}
+                      className="w-8 h-8 ring-2 ring-white"
                     />
                   ))}
                   <div className="w-8 h-8 rounded-full bg-neutral-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-neutral-600 pl-0.5">

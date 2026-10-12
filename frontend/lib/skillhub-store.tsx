@@ -263,11 +263,20 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         role: persona.title,
         avatar: persona.avatar,
       });
+    } else {
+      setUser((prev) => ({
+        ...prev,
+        role: persona.title,
+      }));
     }
     // If leadership, immediately clear individual student roster to uphold ADR-004
     if (!persona.canViewIndividualStudents) {
       setStudents([]);
     }
+    // Refresh backend data for newly selected role
+    setTimeout(() => {
+      refreshBackendData();
+    }, 0);
   };
 
   const logout = async () => {
@@ -290,6 +299,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   };
 
   const syncUserFromSession = async (session: any) => {
+    if (!session || !session.access_token) return;
     setSupabaseSession(session);
     setSupabaseUser(session.user);
     api.setToken(session.access_token);
@@ -317,7 +327,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       } else {
         api.setCampusId(DEMO_CAMPUS_ID);
       }
-    } catch {
+    } catch (e) {
+      console.warn("Could not retrieve membership from /auth/me:", e);
       api.setCampusId(DEMO_CAMPUS_ID);
     }
 
@@ -325,17 +336,21 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       ...prev,
       name: firstName,
       fullName: fullName,
-      email: session.user.email || prev.email,
+      email: session.user?.email || prev.email,
       avatar: avatar,
+      role: "Faculty Lead & Mentor",
     }));
   };
 
   // Sync with Backend
+  // NOTE: Do NOT read supabaseSession here — it's a stale closure.
+  // Use api.getToken() which is always up-to-date (module-level singleton).
   const refreshBackendData = async () => {
     setIsLoadingBackend(true);
     setBackendError(null);
     try {
-      if (!supabaseSession?.access_token) {
+      // If api client has no token yet (truly unauthenticated), use demo persona token
+      if (!api.getToken()) {
         api.setToken(currentPersona.token);
       }
       if (!api.getCampusId()) {
@@ -469,32 +484,50 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Use refs so the auth listener always calls the LATEST function versions
+  // without needing to re-subscribe (avoids stale closure bug)
+  const refreshBackendDataRef = React.useRef(refreshBackendData);
+  const syncUserFromSessionRef = React.useRef(syncUserFromSession);
+  React.useEffect(() => {
+    refreshBackendDataRef.current = refreshBackendData;
+    syncUserFromSessionRef.current = syncUserFromSession;
+  });
+
   useEffect(() => {
     let isMounted = true;
 
     // Check existing Supabase session on startup
     supabaseAuth.getSession().then((session) => {
       if (session && session.access_token && isMounted) {
-        syncUserFromSession(session).then(() => {
-          if (isMounted) refreshBackendData();
+        syncUserFromSessionRef.current(session).then(() => {
+          if (isMounted) refreshBackendDataRef.current();
         });
       } else if (isMounted) {
-        refreshBackendData();
+        refreshBackendDataRef.current();
       }
     });
 
     // Listen to real-time auth events (Sign In, Token Refreshed, Sign Out)
+    // Subscribe ONCE — refs ensure we always call the latest function
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted) return;
-        if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
-          await syncUserFromSession(session);
-          refreshBackendData();
+        if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
+          await syncUserFromSessionRef.current(session);
+          refreshBackendDataRef.current();
         } else if (event === "SIGNED_OUT") {
           setSupabaseSession(null);
           setSupabaseUser(null);
           api.setToken(null);
           api.setCampusId(null);
+          const defaultPersona = DEMO_PERSONAS[activeRole] || DEMO_PERSONAS.faculty;
+          setUser({
+            ...CURRENT_USER,
+            name: defaultPersona.name.split(" ")[0],
+            fullName: defaultPersona.name,
+            role: defaultPersona.title,
+            avatar: defaultPersona.avatar,
+          });
+          refreshBackendDataRef.current();
         }
       }
     );
@@ -503,7 +536,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       authListener?.subscription?.unsubscribe();
     };
-  }, [activeRole]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Mount-only: refs handle latest function versions
 
   // Workflow Handlers
   const reviewSignal = async (id: string, req: SignalReviewRequest): Promise<SignalReviewResponse> => {
