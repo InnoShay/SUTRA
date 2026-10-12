@@ -201,26 +201,32 @@ enum CasesCommands {
         #[arg(help = "Case UUID")]
         id: Uuid,
 
-        #[arg(long, help = "Follow-up channel: in_person, phone, email, or lms")]
+        #[arg(long, short = 'c', alias = "type", help = "Follow-up type/channel: in_person, phone, email, lms, support_delivered")]
         channel: String,
 
-        #[arg(long, help = "Proof kind: student_signed_form, faculty_log, etc.")]
+        #[arg(long, short = 'p', help = "Proof kind: student_signed_form, faculty_log, staff_attestation, faculty_meeting_notes")]
         proof: String,
 
-        #[arg(long, help = "Optional follow-up notes")]
+        #[arg(long, help = "Contact status: student_reached, attempted_unreachable, declined (default: student_reached)")]
+        contact_status: Option<String>,
+
+        #[arg(long, short = 'n', help = "Optional follow-up notes")]
         note: Option<String>,
     },
 
-    #[command(about = "Record final intervention outcome and close case")]
+    #[command(about = "Record final intervention outcome and advance case to outcome_reviewed")]
     Outcome {
         #[arg(help = "Case UUID")]
         id: Uuid,
 
-        #[arg(long, help = "Outcome status: helped, not_helped, mixed, or unknown")]
+        #[arg(long, short = 's', help = "Outcome status: helped, not_helped, mixed, or unknown")]
         status: String,
 
-        #[arg(long, help = "Mandatory outcome rationale (min 5 characters)")]
+        #[arg(long, short = 'r', help = "Mandatory outcome rationale (min 5 characters)")]
         rationale: String,
+
+        #[arg(long, help = "Evidence kind: staff_review, student_feedback, academic_record, service_record (default: staff_review)")]
+        evidence_kind: Option<String>,
     },
 }
 
@@ -398,6 +404,7 @@ async fn main() {
                 id,
                 channel,
                 proof,
+                contact_status,
                 note,
             } => {
                 commands::cases::record_follow_up(
@@ -405,6 +412,7 @@ async fn main() {
                     id,
                     &channel,
                     &proof,
+                    contact_status.as_deref(),
                     note.as_deref(),
                 )
                 .await
@@ -413,7 +421,17 @@ async fn main() {
                 id,
                 status,
                 rationale,
-            } => commands::cases::record_outcome(&client, id, &status, &rationale).await,
+                evidence_kind,
+            } => {
+                commands::cases::record_outcome(
+                    &client,
+                    id,
+                    &status,
+                    &rationale,
+                    evidence_kind.as_deref(),
+                )
+                .await
+            }
         },
         Commands::Ai(args) => match args.command {
             AiCommands::Status => commands::ai::ai_status(&client).await,

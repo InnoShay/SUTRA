@@ -29,8 +29,8 @@ pub fn suggested_next_step(case_id: &Uuid, current_state: &str) -> Option<String
         "assigned" => Some(format!("sutra cases transition {} --to-state accepted", case_id)),
         "accepted" => Some(format!("sutra cases follow-up {} --channel in_person --proof faculty_meeting_notes --note \"Met with student\"", case_id)),
         "contact_attempted" => Some(format!("sutra cases transition {} --to-state support_in_progress", case_id)),
-        "support_in_progress" => Some(format!("sutra cases transition {} --to-state follow_up_due", case_id)),
-        "follow_up_due" | "outcome_reviewed" => Some(format!("sutra cases outcome {} --status helped --rationale \"Intervention completed with positive student engagement\"", case_id)),
+        "follow_up_due" => Some(format!("sutra cases outcome {} --status helped --rationale \"Intervention completed with positive student engagement\"", case_id)),
+        "outcome_reviewed" => Some(format!("sutra cases transition {} --to-state closed --reason \"INTERVENTION_COMPLETE\"", case_id)),
         "failed_contact" | "service_unavailable" => Some(format!("sutra cases transition {} --to-state closed --reason \"INTERVENTION_TERMINATED\"", case_id)),
         _ => None,
     }
@@ -192,11 +192,12 @@ pub async fn record_follow_up(
     id: Uuid,
     follow_up_type: &str,
     proof_kind: &str,
+    contact_status: Option<&str>,
     note: Option<&str>,
 ) -> Result<(), String> {
     let req = FollowUpRequest {
         follow_up_type: follow_up_type.to_string(),
-        contact_status: Some("student_reached".to_string()),
+        contact_status: Some(contact_status.unwrap_or("student_reached").to_string()),
         proof_kind: proof_kind.to_string(),
         occurred_at: chrono::Utc::now().to_rfc3339(),
         note: note.map(|s| s.to_string()),
@@ -222,6 +223,7 @@ pub async fn record_outcome(
     id: Uuid,
     outcome_status: &str,
     rationale: &str,
+    evidence_kind: Option<&str>,
 ) -> Result<(), String> {
     if rationale.trim().len() < 5 {
         return Err("Policy Violation: Outcome rationale must be at least 5 characters.".to_string());
@@ -230,16 +232,16 @@ pub async fn record_outcome(
     let req = OutcomeRequest {
         outcome_status: outcome_status.to_string(),
         rationale: rationale.trim().to_string(),
-        evidence_kind: Some("staff_review".to_string()),
+        evidence_kind: Some(evidence_kind.unwrap_or("staff_review").to_string()),
     };
 
     println!("Recording final intervention outcome for case #{}...", id);
     client.record_outcome(id, req).await?;
-    println!("{} Case outcome recorded and closed!", "✓".green().bold());
+    println!("{} Case outcome recorded! State transitioned to 'outcome_reviewed'.", "✓".green().bold());
 
     println!("\n{}", "Suggested Next Workflow Step:".yellow().bold());
-    println!("  Inspect completed case coordination record:");
-    println!("  {}", format!("sutra cases get {}", id).bold());
+    println!("  Formally close the case in the canonical 10-state machine:");
+    println!("  {}", format!("sutra cases transition {} --to-state closed --reason \"INTERVENTION_COMPLETE\"", id).bold());
 
     Ok(())
 }
