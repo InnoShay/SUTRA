@@ -49,10 +49,24 @@ export default function AssessmentPage() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        setAssessmentReport(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (
+          parsed &&
+          typeof parsed === "object" &&
+          Array.isArray(parsed.dimensions) &&
+          typeof parsed.answeredQuestionsCount === "number"
+        ) {
+          setAssessmentReport(parsed);
+        } else {
+          console.warn("Corrupted or incompatible assessment report in localStorage; clearing.");
+          localStorage.removeItem(STORAGE_KEY);
+        }
       }
     } catch (e) {
       console.warn("Could not read assessment report from localStorage:", e);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {}
     }
   }, []);
 

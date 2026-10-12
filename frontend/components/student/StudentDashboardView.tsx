@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 export function StudentDashboardView() {
-  const { user, currentPersona, cases, activeCampusName } = useSkillHub();
+  const { user, currentPersona, cases, activeCampusName, backendError, refreshBackendData } = useSkillHub();
 
   // Authenticated student reference (defaults to Asha SYN-1007 for demo)
   const studentId = currentPersona?.userId || "SYN-1007";
@@ -45,6 +45,22 @@ export function StudentDashboardView() {
 
   return (
     <div className="space-y-6">
+      {/* Backend Offline Indicator Banner */}
+      {backendError && (
+        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+            <span>Backend service is unreachable ({backendError}). Viewing local student state.</span>
+          </div>
+          <button
+            onClick={() => refreshBackendData()}
+            className="px-3 py-1 bg-white hover:bg-neutral-50 text-neutral-800 rounded-lg text-xs font-semibold border border-amber-200 transition-colors shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* 1. TOP HEADER: Welcome Title & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

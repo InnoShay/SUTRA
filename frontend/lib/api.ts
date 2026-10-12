@@ -64,6 +64,151 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+export function isDemoMode(): boolean {
+  if (typeof process !== 'undefined' && process.env) {
+    const val = process.env.NEXT_PUBLIC_SUTRA_DEMO_MODE;
+    return val === 'true' || val === '1';
+  }
+  return false;
+}
+
+export type ApiErrorKind =
+  | 'network_error'
+  | 'timeout'
+  | 'authentication'
+  | 'authorization'
+  | 'validation'
+  | 'not_found'
+  | 'server_error'
+  | 'invalid_format'
+  | 'unknown';
+
+export interface ApiValidationErrorDetail {
+  field?: string;
+  message: string;
+  code?: string;
+}
+
+export class ApiError extends Error {
+  public readonly kind: ApiErrorKind;
+  public readonly status: number;
+  public readonly code?: string;
+  public readonly details: ApiValidationErrorDetail[];
+  public readonly isOffline: boolean;
+  public readonly data?: any;
+
+  constructor(params: {
+    message: string;
+    kind: ApiErrorKind;
+    status: number;
+    code?: string;
+    details?: ApiValidationErrorDetail[];
+    isOffline?: boolean;
+    data?: any;
+    cause?: unknown;
+  }) {
+    super(params.message);
+    this.name = 'ApiError';
+    this.kind = params.kind;
+    this.status = params.status;
+    this.code = params.code;
+    this.details = params.details || [];
+    this.isOffline = Boolean(params.isOffline);
+    this.data = params.data;
+    if (params.cause) {
+      this.cause = params.cause;
+    }
+  }
+
+  public static isApiError(err: unknown): err is ApiError {
+    return (
+      err instanceof ApiError ||
+      (typeof err === 'object' && err !== null && (err as any).name === 'ApiError')
+    );
+  }
+
+  public static network(message?: string, cause?: unknown): ApiError {
+    return new ApiError({
+      message:
+        message ||
+        'Unable to connect to the backend server. Please verify your network connection or ensure the SUTRA backend is online.',
+      kind: 'network_error',
+      status: 0,
+      code: 'NETWORK_ERROR',
+      isOffline: true,
+      cause,
+    });
+  }
+
+  public static timeout(message?: string): ApiError {
+    return new ApiError({
+      message: message || 'Request timed out waiting for backend server response.',
+      kind: 'timeout',
+      status: 408,
+      code: 'REQUEST_TIMEOUT',
+    });
+  }
+
+  public static fromResponse(status: number, data: any, url: string): ApiError {
+    let kind: ApiErrorKind = 'unknown';
+    let code: string | undefined = data?.error?.code || data?.code;
+    let message: string | undefined = data?.error?.message || data?.detail || data?.message;
+    const details: ApiValidationErrorDetail[] = [];
+
+    if (status === 401) {
+      kind = 'authentication';
+      code = code || 'AUTHENTICATION_REQUIRED';
+      message = message || 'Authentication required. Please sign in to continue.';
+    } else if (status === 403) {
+      kind = 'authorization';
+      code = code || 'PERMISSION_DENIED';
+      message = message || 'You do not have permission to perform this action.';
+    } else if (status === 404) {
+      kind = 'not_found';
+      code = code || 'RESOURCE_NOT_FOUND';
+      message = message || `Resource not found at ${url}.`;
+    } else if (status === 422 || status === 400) {
+      kind = 'validation';
+      code = code || 'VALIDATION_FAILED';
+      message = message || 'Input validation failed. Please review your submission.';
+      if (Array.isArray(data?.error?.details)) {
+        for (const d of data.error.details) {
+          details.push({
+            field: d.field,
+            message: d.message || String(d),
+            code: d.code,
+          });
+        }
+      } else if (Array.isArray(data?.detail)) {
+        for (const d of data.detail) {
+          details.push({
+            field: Array.isArray(d.loc) ? d.loc.join('.') : String(d.loc || ''),
+            message: d.msg || 'Invalid field value',
+            code: d.type,
+          });
+        }
+      }
+    } else if (status >= 500) {
+      kind = 'server_error';
+      code = code || 'INTERNAL_SERVER_ERROR';
+      message = message || 'An unexpected internal server error occurred.';
+    }
+
+    if (!message) {
+      message = `Request failed with HTTP status ${status}`;
+    }
+
+    return new ApiError({
+      message,
+      kind,
+      status,
+      code,
+      details,
+      data,
+    });
+  }
+}
+
 class ApiClient {
   private token: string | null = null;
   private campusId: string | null = null;
@@ -73,6 +218,10 @@ class ApiClient {
       this.token = localStorage.getItem('sutra_auth_token');
       this.campusId = localStorage.getItem('sutra_active_campus_id');
     }
+  }
+
+  public isDemoMode(): boolean {
+    return isDemoMode();
   }
 
   public setToken(token: string | null) {
@@ -468,7 +617,43 @@ class ApiClient {
       } as unknown as T;
     }
 
-    // Mutations: /review, /transition, /assign, /accept, /tasks, /follow-ups, /outcome
+    // Document Subsystem Offline Fallback (Demo Mode only)
+    if (cleanEndpoint.endsWith('/documents')) {
+      return {
+        documents: [],
+        total: 0,
+        network: 'Base Sepolia (Chain ID 84532)',
+      } as unknown as T;
+    }
+
+    if (cleanEndpoint.includes('/documents/generate') && options.method?.toUpperCase() === 'POST') {
+      let bodyData: any = {};
+      try {
+        if (typeof options.body === 'string') bodyData = JSON.parse(options.body);
+      } catch {
+        // ignore
+      }
+      return {
+        id: `00000000-0000-0000-0000-${Date.now().toString().slice(-12).padStart(12, '0')}`,
+        institution_id: '00000000-0000-0000-0000-000000000001',
+        document_ref: `DOC-DEMO-${Date.now().toString().slice(-4)}`,
+        title: bodyData.title || 'Intervention Agreement',
+        doc_type: bodyData.doc_type || 'intervention_plan',
+        file_name: 'intervention_agreement.pdf',
+        file_size_bytes: 1024,
+        mime_type: 'application/pdf',
+        sha256_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        status: 'draft',
+        student_ref: bodyData.student_ref || 'SYN-1007',
+        student_name: bodyData.student_name || 'Asha',
+        chain_id: 84532,
+        anchoring_mode: 'simulated',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as unknown as T;
+    }
+
+    // Mutations: /review, /transition, /assign, /accept, /tasks, /follow-ups, /outcome (Demo Mode only)
     if (options.method && options.method.toUpperCase() === 'POST') {
       let bodyData: any = {};
       try {
@@ -509,52 +694,91 @@ class ApiClient {
       headers['X-Campus-Id'] = this.campusId;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const signal = options.signal || controller.signal;
+
     try {
       const response = await fetch(url, {
         ...options,
         headers,
+        signal,
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        let errorData: any;
+        let errorData: any = {};
         try {
-          errorData = await response.json();
+          const errText = await response.text();
+          if (errText) errorData = JSON.parse(errText);
         } catch {
           errorData = { message: response.statusText };
         }
-        const error = new Error(
-          errorData?.error?.message ||
-            errorData?.detail ||
-            `HTTP ${response.status}: ${response.statusText}`
-        );
-        (error as any).status = response.status;
-        (error as any).data = errorData;
-        throw error;
+        throw ApiError.fromResponse(response.status, errorData, url);
       }
 
-      return (await response.json()) as T;
+      if (response.status === 204) {
+        return undefined as unknown as T;
+      }
+
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        return undefined as unknown as T;
+      }
+
+      try {
+        return JSON.parse(responseText) as T;
+      } catch (jsonErr) {
+        throw new ApiError({
+          message: 'Server returned an invalid JSON response format.',
+          kind: 'invalid_format',
+          status: response.status,
+          cause: jsonErr,
+        });
+      }
     } catch (err: any) {
-      // Gracefully handle network failures when backend is offline
+      clearTimeout(timeoutId);
+
+      // Re-throw existing ApiError from non-2xx HTTP responses
+      if (ApiError.isApiError(err)) {
+        throw err;
+      }
+
+      if (err?.name === 'AbortError') {
+        throw ApiError.timeout(`Request to ${url} timed out after 15 seconds.`);
+      }
+
       const isNetworkError =
         err instanceof TypeError ||
         err?.name === 'TypeError' ||
         err?.message?.includes('Failed to fetch') ||
-        err?.message?.includes('NetworkError');
+        err?.message?.includes('NetworkError') ||
+        err?.message?.includes('fetch failed');
 
-      if (isNetworkError) {
-        console.warn(`[SUTRA API] Backend offline at ${url}. Providing graceful offline response for: ${endpoint}`);
+      // EXPLICIT DEMO MODE ONLY:
+      if (isDemoMode()) {
+        console.warn(`[SUTRA DEMO MODE] Using demo fallback for: ${endpoint}`);
         const fallback = this.getOfflineFallback<T>(endpoint, options);
         if (fallback !== undefined) {
           return fallback;
         }
-        const offlineError = new Error(`Backend offline: Unable to connect to ${url}`);
-        (offlineError as any).status = 0;
-        (offlineError as any).isOffline = true;
-        throw offlineError;
       }
 
-      // Re-throw with formatted context
-      throw err;
+      // Normal application mode: network failures MUST remain errors!
+      if (isNetworkError) {
+        throw ApiError.network(
+          `Unable to connect to the backend server at ${url}. Please ensure the SUTRA backend is running.`,
+          err
+        );
+      }
+
+      throw new ApiError({
+        message: err?.message || 'An unexpected request error occurred.',
+        kind: 'unknown',
+        status: 0,
+        cause: err,
+      });
     }
   }
 

@@ -44,7 +44,7 @@ import {
   CreateCallRequestInput,
 } from "./types";
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
-import { api } from "./api";
+import { api, isDemoMode } from "./api";
 import { supabase, supabaseAuth, SupabaseUser, SupabaseSession } from "./supabase";
 
 export interface NotificationItem {
@@ -236,17 +236,27 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingBackend, setIsLoadingBackend] = useState<boolean>(true);
   const [backendError, setBackendError] = useState<string | null>(null);
 
-  // SUTRA Data Entities (Initialized with pitch-ready synthetic demo records)
-  const [signals, setSignals] = useState<SignalDTO[]>(DEMO_SIGNALS);
-  const [cases, setCases] = useState<CaseDetailDTO[]>(DEMO_CASES);
-  const [interventions, setInterventions] = useState<InterventionItem[]>(DEMO_INTERVENTIONS);
-  const [mlModelInfo, setMlModelInfo] = useState<MLModelInfo | null>(DEMO_ML_MODEL_INFO);
+  const demoActive = isDemoMode();
+
+  // SUTRA Data Entities (Default empty in normal mode; pitch-ready fixtures in explicit demo mode)
+  const [signals, setSignals] = useState<SignalDTO[]>(demoActive ? DEMO_SIGNALS : []);
+  const [cases, setCases] = useState<CaseDetailDTO[]>(demoActive ? DEMO_CASES : []);
+  const [interventions, setInterventions] = useState<InterventionItem[]>(demoActive ? DEMO_INTERVENTIONS : []);
+  const [mlModelInfo, setMlModelInfo] = useState<MLModelInfo | null>(demoActive ? DEMO_ML_MODEL_INFO : null);
 
   // Counselor Subsystem Entities
-  const [counselorProfile, setCounselorProfile] = useState<CounselorProfileDTO | null>(INITIAL_COUNSELOR_PROFILE);
-  const [authorityContacts, setAuthorityContacts] = useState<AuthorityContactItem[]>(INITIAL_AUTHORITY_CONTACTS);
-  const [escalations, setEscalations] = useState<EscalationRecordDTO[]>(INITIAL_ESCALATIONS);
-  const [callRequests, setCallRequests] = useState<CounselorCallRequestDTO[]>(INITIAL_CALL_REQUESTS);
+  const [counselorProfile, setCounselorProfile] = useState<CounselorProfileDTO | null>(
+    demoActive ? INITIAL_COUNSELOR_PROFILE : null
+  );
+  const [authorityContacts, setAuthorityContacts] = useState<AuthorityContactItem[]>(
+    demoActive ? INITIAL_AUTHORITY_CONTACTS : []
+  );
+  const [escalations, setEscalations] = useState<EscalationRecordDTO[]>(
+    demoActive ? INITIAL_ESCALATIONS : []
+  );
+  const [callRequests, setCallRequests] = useState<CounselorCallRequestDTO[]>(
+    demoActive ? INITIAL_CALL_REQUESTS : []
+  );
 
   // UI state initialized with canonical synthetic fixtures
   const [user, setUser] = useState({
@@ -258,9 +268,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES);
-  // Default initialized with canonical synthetic records only
+  // Default initialized with canonical synthetic records only in explicit demo mode
   const [students, setStudents] = useState<Student[]>(
-    currentPersona.canViewIndividualStudents ? INITIAL_STUDENTS : []
+    demoActive && currentPersona.canViewIndividualStudents ? INITIAL_STUDENTS : []
   );
   const [discussions, setDiscussions] = useState<CommunityDiscussion[]>(INITIAL_DISCUSSIONS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
@@ -411,11 +421,34 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Check backend health
-      const healthRes: any = await api.health.check();
-      if (healthRes?.environment === 'demo-fallback' || healthRes?.status === 'offline') {
+      try {
+        const healthRes: any = await api.health.check();
+        if (healthRes?.environment === 'demo-fallback' || healthRes?.status === 'offline') {
+          setBackendConnected(false);
+          if (!isDemoMode()) {
+            setBackendError("Backend offline: Operating in disconnected mode");
+          }
+        } else {
+          setBackendConnected(true);
+          setBackendError(null);
+        }
+      } catch (healthErr: any) {
         setBackendConnected(false);
-      } else {
-        setBackendConnected(true);
+        setBackendError(healthErr.message || "Backend offline: Unable to reach SUTRA API server");
+        if (!isDemoMode()) {
+          // Normal mode: Do not populate synthetic fixtures on offline status!
+          setSignals([]);
+          setCases([]);
+          setInterventions([]);
+          setStudents([]);
+          setMlModelInfo(null);
+          setCounselorProfile(null);
+          setAuthorityContacts([]);
+          setEscalations([]);
+          setCallRequests([]);
+          setIsLoadingBackend(false);
+          return;
+        }
       }
 
       // 1. Fetch ML model info & interventions
@@ -424,28 +457,47 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
           api.ml.getModelInfo(),
           api.interventions.list(),
         ]);
-        setMlModelInfo(info);
-        setInterventions(intList || []);
+        setMlModelInfo(info || (isDemoMode() ? DEMO_ML_MODEL_INFO : null));
+        setInterventions(Array.isArray(intList) ? intList : (isDemoMode() ? DEMO_INTERVENTIONS : []));
       } catch (e: any) {
-        console.warn("Non-fatal error loading model info or interventions:", e);
+        console.warn("Error loading model info or interventions:", e);
+        if (isDemoMode()) {
+          setMlModelInfo(DEMO_ML_MODEL_INFO);
+          setInterventions(DEMO_INTERVENTIONS);
+        } else {
+          setMlModelInfo(null);
+          setInterventions([]);
+        }
       }
 
       // 2. Fetch signals and cases
-      let fetchedSignals: SignalDTO[] = DEMO_SIGNALS;
-      let fetchedCases: CaseDetailDTO[] = DEMO_CASES;
+      let fetchedSignals: SignalDTO[] = isDemoMode() ? DEMO_SIGNALS : [];
+      let fetchedCases: CaseDetailDTO[] = isDemoMode() ? DEMO_CASES : [];
       try {
         const [sigList, caseList] = await Promise.all([
           api.signals.list(),
           api.cases.list(),
         ]);
-        fetchedSignals = sigList && sigList.length > 0 ? sigList : DEMO_SIGNALS;
-        fetchedCases = caseList && caseList.length > 0 ? caseList : DEMO_CASES;
+        fetchedSignals = Array.isArray(sigList) ? sigList : [];
+        fetchedCases = Array.isArray(caseList) ? caseList : [];
+
+        // Authoritative response: Only in explicit demo mode do we substitute demo fixtures when empty
+        if (isDemoMode()) {
+          if (fetchedSignals.length === 0) fetchedSignals = DEMO_SIGNALS;
+          if (fetchedCases.length === 0) fetchedCases = DEMO_CASES;
+        }
+
         setSignals(fetchedSignals);
         setCases(fetchedCases);
       } catch (e: any) {
-        console.warn("Non-fatal error loading signals/cases, retaining pitch fixtures:", e);
-        setSignals(DEMO_SIGNALS);
-        setCases(DEMO_CASES);
+        console.warn("Error loading signals/cases from backend:", e);
+        if (isDemoMode()) {
+          setSignals(DEMO_SIGNALS);
+          setCases(DEMO_CASES);
+        } else {
+          setSignals([]);
+          setCases([]);
+        }
       }
 
       // 3. Fetch students with strict ADR-004 privacy boundaries
@@ -518,8 +570,6 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
                 };
               });
 
-              // Strict Data Integrity: Backend response is authoritative.
-              // NEVER merge with legacy INITIAL_STUDENTS fixtures.
               setStudents(mappedStudents);
             }
           }
@@ -539,38 +589,56 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       // 4. Fetch counselor subsystem entities
       try {
         const [profile, authContacts, escList, callList] = await Promise.all([
-          api.counselors.getProfile().catch(() => INITIAL_COUNSELOR_PROFILE),
-          api.counselors.getAuthorityContacts().catch(() => INITIAL_AUTHORITY_CONTACTS),
-          api.counselors.listEscalations().catch(() => INITIAL_ESCALATIONS),
-          api.counselors.listCallRequests().catch(() => INITIAL_CALL_REQUESTS),
+          api.counselors.getProfile().catch((e) => (isDemoMode() ? INITIAL_COUNSELOR_PROFILE : null)),
+          api.counselors.getAuthorityContacts().catch((e) => (isDemoMode() ? INITIAL_AUTHORITY_CONTACTS : [])),
+          api.counselors.listEscalations().catch((e) => (isDemoMode() ? INITIAL_ESCALATIONS : [])),
+          api.counselors.listCallRequests().catch((e) => (isDemoMode() ? INITIAL_CALL_REQUESTS : [])),
         ]);
         if (profile) setCounselorProfile(profile);
+        else if (!isDemoMode()) setCounselorProfile(null);
+
         if (Array.isArray(authContacts)) setAuthorityContacts(authContacts);
+        else if (!isDemoMode()) setAuthorityContacts([]);
+
         if (Array.isArray(escList)) setEscalations(escList);
+        else if (!isDemoMode()) setEscalations([]);
+
         if (Array.isArray(callList)) setCallRequests(callList);
+        else if (!isDemoMode()) setCallRequests([]);
       } catch (e: any) {
-        console.warn("Non-fatal error loading counselor entities:", e);
+        console.warn("Error loading counselor entities:", e);
       }
     } catch (err: any) {
-      console.warn("Backend API not reachable; operating in verified SUTRA demo mode:", err);
+      console.warn("Backend API not reachable:", err);
       setBackendConnected(false);
-      setBackendError(err.message || "Backend offline (Operating in Synthetic Demo Mode)");
+      setBackendError(err.message || "Backend offline");
 
-      // In synthetic demo mode:
-      if (!currentPersona.canViewIndividualStudents) {
-        setStudents([]);
+      if (isDemoMode()) {
+        if (!currentPersona.canViewIndividualStudents) {
+          setStudents([]);
+        } else {
+          setStudents(INITIAL_STUDENTS);
+        }
+        setSignals(DEMO_SIGNALS);
+        setCases(DEMO_CASES);
+        setInterventions(DEMO_INTERVENTIONS);
+        setMlModelInfo(DEMO_ML_MODEL_INFO);
+        setCounselorProfile(INITIAL_COUNSELOR_PROFILE);
+        setAuthorityContacts(INITIAL_AUTHORITY_CONTACTS);
+        setEscalations(INITIAL_ESCALATIONS);
+        setCallRequests(INITIAL_CALL_REQUESTS);
       } else {
-        // Use verified canonical SUTRA synthetic fixtures only
-        setStudents(INITIAL_STUDENTS);
+        // Normal mode: Maintain clean empty state with explicit error
+        setStudents([]);
+        setSignals([]);
+        setCases([]);
+        setInterventions([]);
+        setMlModelInfo(null);
+        setCounselorProfile(null);
+        setAuthorityContacts([]);
+        setEscalations([]);
+        setCallRequests([]);
       }
-      setSignals(DEMO_SIGNALS);
-      setCases(DEMO_CASES);
-      setInterventions(DEMO_INTERVENTIONS);
-      setMlModelInfo(DEMO_ML_MODEL_INFO);
-      setCounselorProfile(INITIAL_COUNSELOR_PROFILE);
-      setAuthorityContacts(INITIAL_AUTHORITY_CONTACTS);
-      setEscalations(INITIAL_ESCALATIONS);
-      setCallRequests(INITIAL_CALL_REQUESTS);
     } finally {
       setIsLoadingBackend(false);
     }
@@ -645,7 +713,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData();
       return res;
     } catch (err: any) {
-      console.warn("Backend API offline; processing signal review in local demo state:", err);
+      if (!isDemoMode()) {
+        throw err;
+      }
+      console.warn("Operating in demo mode; processing signal review in local demo state:", err);
       const targetSignal = signals.find((s) => s.id === id);
       const newCaseId = `CASE-${targetSignal?.student_id || "DEMO"}-${Date.now().toString().slice(-4)}`;
 
@@ -718,7 +789,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData();
       return res;
     } catch (err: any) {
-      console.warn("Backend API offline; processing assignment in local demo state:", err);
+      if (!isDemoMode()) {
+        throw err;
+      }
+      console.warn("Operating in demo mode; processing assignment in local demo state:", err);
       let updatedCase: CaseDetailDTO | null = null;
       setCases((prev) =>
         prev.map((c) => {
@@ -744,7 +818,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData();
       return res;
     } catch (err: any) {
-      console.warn("Backend API offline; processing accept in local demo state:", err);
+      if (!isDemoMode()) {
+        throw err;
+      }
+      console.warn("Operating in demo mode; processing accept in local demo state:", err);
       let updatedCase: CaseDetailDTO | null = null;
       setCases((prev) =>
         prev.map((c) => {
@@ -770,7 +847,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData();
       return res;
     } catch (err: any) {
-      console.warn("Backend API offline; processing transition in local demo state:", err);
+      if (!isDemoMode()) {
+        throw err;
+      }
+      console.warn("Operating in demo mode; processing transition in local demo state:", err);
       let updatedCase: CaseDetailDTO | null = null;
       setCases((prev) =>
         prev.map((c) => {
@@ -792,6 +872,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
+      if (!isDemoMode()) {
+        throw err;
+      }
       console.warn("Backend API offline; creating task in local demo state:", err);
       const newTask: CaseTaskDTO = {
         id: `TASK-${Date.now().toString().slice(-4)}`,
@@ -812,6 +895,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
+      if (!isDemoMode()) {
+        throw err;
+      }
       console.warn("Backend API offline; recording follow-up in local demo state:", err);
       const newFollowUp: FollowUpDTO = {
         id: `FU-${Date.now().toString().slice(-4)}`,
@@ -834,6 +920,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
+      if (!isDemoMode()) {
+        throw err;
+      }
       console.warn("Backend API offline; recording outcome in local demo state:", err);
       const newOutcome: CaseOutcomeDTO = {
         id: `OUT-${Date.now().toString().slice(-4)}`,
@@ -854,6 +943,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
+      if (!isDemoMode()) {
+        throw err;
+      }
       console.warn("Backend API offline; storing onboarding in local demo state:", err);
       const updatedProfile: CounselorProfileDTO = {
         ...INITIAL_COUNSELOR_PROFILE,
@@ -876,6 +968,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await api.counselors.approveOnboarding({ counselor_id: counselorId, decision, reason });
       await refreshBackendData().catch(console.warn);
     } catch (err: any) {
+      if (!isDemoMode()) {
+        throw err;
+      }
       console.warn("Backend API offline; updating counselor status in local demo state:", err);
       setCounselorProfile((prev) =>
         prev
@@ -899,6 +994,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
+      if (!isDemoMode()) {
+        throw err;
+      }
       console.warn("Backend API offline; recording escalation in local demo state:", err);
       const matchedAuth =
         authorityContacts.find((a) => a.id === req.authority_contact_id) || authorityContacts[0];
@@ -930,6 +1028,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
+      if (!isDemoMode()) {
+        throw err;
+      }
       console.warn("Backend API offline; recording call request in local demo state:", err);
       const stu = students.find((s) => s.id === input.student_id);
       const newReq: CounselorCallRequestDTO = {
@@ -969,6 +1070,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       });
       await refreshBackendData().catch(console.warn);
     } catch (err: any) {
+      if (!isDemoMode()) {
+        throw err;
+      }
       console.warn("Backend API offline; updating call request in local demo state:", err);
       setCallRequests((prev) =>
         prev.map((r) =>
