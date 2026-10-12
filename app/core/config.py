@@ -52,15 +52,24 @@ class Settings(BaseSettings):
     DATABASE_STATEMENT_CACHE_SIZE: int = 0
 
     # Supabase Auth & JWT Settings
-    SUPABASE_URL: str = "http://localhost:54321"
+    SUPABASE_URL: str = "https://dwhwnnvdyrxmnamgicga.supabase.co"
     SUPABASE_ANON_KEY: str = "anon-key"
     SUPABASE_JWT_SECRET: str = Field(
         default="development-secret-must-be-at-least-32-chars-long",
-        description="HMAC secret or PEM public key used for server-side JWT verification",
+        description="HMAC secret used for local development / testing / symmetric signing",
     )
     SUPABASE_JWT_ALGORITHM: str = "HS256"
+    SUPABASE_JWT_ALLOWED_ALGORITHMS: List[str] = ["HS256", "ES256", "RS256"]
     SUPABASE_JWT_AUDIENCE: Optional[str] = "authenticated"
     SUPABASE_JWT_ISSUER: Optional[str] = None
+    SUPABASE_JWKS_URL: Optional[str] = None
+    SUPABASE_JWT_PUBLIC_KEY: Optional[str] = None
+    SUPABASE_JWT_PUBLIC_KEY_FALLBACK: Optional[str] = (
+        "-----BEGIN PUBLIC KEY-----\n"
+        "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvs4HKn2s7DMYoa5msvjYtQnnONeQ\n"
+        "DSJAE8DMAXwjYER3cS++5O04nvMBeuGxzGWX7zUFK6OfYkxtjxQxJ+EHzA==\n"
+        "-----END PUBLIC KEY-----"
+    )
 
     # CORS settings
     CORS_ORIGINS: List[str] = [

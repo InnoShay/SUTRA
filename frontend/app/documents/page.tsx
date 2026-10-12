@@ -31,6 +31,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentDTO[]>([]);
   const [contractAddress, setContractAddress] = useState<string>("0x3565eDb6aEc447CaeB73F719574828135cfB9705");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Filters & search
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,7 +75,6 @@ export default function DocumentsPage() {
   const [cbdcPurpose, setCbdcPurpose] = useState("ACADEMIC_PERSISTENCE_REWARD");
   const [cbdcMilestone, setCbdcMilestone] = useState("MILESTONE-W5-CHECKIN");
   const [isIssuingCbdc, setIsIssuingCbdc] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Load documents
   const fetchDocuments = async () => {
@@ -92,7 +92,7 @@ export default function DocumentsPage() {
       }
     } catch (err: any) {
       console.warn("Failed to fetch documents:", err);
-      setErrorMsg(err?.message || "Failed to load document records");
+      setErrorMsg(err?.message || "Failed to load document records. Ensure backend service is reachable.");
     } finally {
       setIsLoading(false);
     }

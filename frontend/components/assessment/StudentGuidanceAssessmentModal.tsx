@@ -127,6 +127,8 @@ export function StudentGuidanceAssessmentModal({
   const totalQuestions = ASSESSMENT_QUESTIONS.length; // 18
   const answeredCount = Object.values(answers).filter((v) => v !== null && v !== undefined).length;
 
+  const isReportStep = currentStep === 9;
+
   return (
     <div
       role="dialog"
@@ -134,7 +136,11 @@ export function StudentGuidanceAssessmentModal({
       aria-labelledby="assessment-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-neutral-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
     >
-      <div className="bg-white rounded-3xl max-w-2xl w-full my-auto shadow-2xl border border-neutral-200/80 flex flex-col max-h-[92vh] overflow-hidden">
+      <div
+        className={`bg-white rounded-3xl w-full my-auto shadow-2xl border border-neutral-200/80 flex flex-col max-h-[92vh] overflow-hidden transition-all duration-300 ${
+          isReportStep ? "max-w-4xl" : "max-w-2xl"
+        }`}
+      >
         {/* MODAL HEADER */}
         <div className="px-6 py-4.5 border-b border-neutral-100 flex items-center justify-between shrink-0 bg-white">
           <div className="flex items-center gap-2.5">
@@ -144,12 +150,14 @@ export function StudentGuidanceAssessmentModal({
             <div>
               <h1
                 id="assessment-modal-title"
-                className="text-sm font-bold text-neutral-900 font-heading leading-tight"
+                className="text-sm font-extrabold text-neutral-900 font-heading leading-tight"
               >
                 Student Guidance Assessment
               </h1>
-              <p className="text-[11px] text-neutral-500">
-                Self-reflection tool • 18 questions • Approx. 3–4 min
+              <p className="text-[11px] font-medium text-neutral-500">
+                {isReportStep
+                  ? "Confidential Self-Reflection Summary • Ready for Counselor Discussion"
+                  : "Self-reflection tool • 18 questions • Approx. 3–4 min"}
               </p>
             </div>
           </div>
@@ -158,7 +166,7 @@ export function StudentGuidanceAssessmentModal({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors"
+            className="p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -187,7 +195,7 @@ export function StudentGuidanceAssessmentModal({
         )}
 
         {/* MODAL BODY (SCROLLABLE) */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
           {/* STEP 0: Consent & Introduction */}
           {currentStep === 0 && (
             <div className="space-y-5 text-neutral-900">

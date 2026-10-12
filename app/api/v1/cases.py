@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import uuid
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, status
@@ -6,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.errors import PermissionDeniedError, ResourceNotFoundError
-from app.core.security import CampusMembershipContext, get_campus_membership, require_roles
+from app.core.security import AuthenticatedUser, CampusMembershipContext, get_campus_membership, get_current_user, require_roles
 from app.models.case import Case, CaseEvent, CaseTask, RestrictedTaskDetail
 from app.models.followup import CaseOutcome, FollowUp
 from app.schemas.case import (
@@ -66,6 +67,72 @@ async def list_cases(
         c_dto = await CaseService.get_case_detail(db, membership.campus_id, cid)
         results.append(c_dto)
     return results
+
+
+@router.get("/my-cases", response_model=Dict[str, Any])
+async def get_my_cases(
+    user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns cases scoped to the authenticated student user."""
+    from app.models.student import Student
+
+    student_query = select(Student).where(
+        (Student.id == user.id) | (Student.external_ref == str(user.id))
+    )
+    student_res = await db.execute(student_query)
+    student_obj = student_res.scalars().first()
+
+    cases_query = select(Case)
+    if student_obj:
+        cases_query = cases_query.where(Case.student_id == student_obj.id)
+    else:
+        cases_query = cases_query.where(Case.student_id == user.id)
+
+    res = await db.execute(cases_query)
+    cases_list = res.scalars().all()
+
+    # If no case linked to this student record directly, check campus memberships
+    if not cases_list:
+        from app.models.institution import InstitutionMembership
+        mem_q = select(InstitutionMembership).where(
+            InstitutionMembership.user_id == user.id,
+            InstitutionMembership.is_active == True,
+        )
+        mem_res = await db.execute(mem_q)
+        memberships = mem_res.scalars().all()
+        campus_ids = [m.institution_id for m in memberships]
+        if campus_ids:
+            c_query = select(Case).where(Case.institution_id.in_(campus_ids)).limit(10)
+            c_res = await db.execute(c_query)
+            cases_list = c_res.scalars().all()
+
+    items = []
+    for c in cases_list:
+        task_q = select(CaseTask).where(CaseTask.case_id == c.id)
+        task_res = await db.execute(task_q)
+        tasks = task_res.scalars().all()
+        open_tasks = [t for t in tasks if t.state not in ("DONE", "COMPLETED")]
+
+        items.append({
+            "id": str(c.id),
+            "institution_id": str(c.institution_id),
+            "student_id": str(c.student_id),
+            "title": c.selected_intervention_key.replace("_", " ").title() if c.selected_intervention_key else "Academic Support Plan",
+            "state": c.state,
+            "severity": "HIGH" if c.is_escalated else "MEDIUM",
+            "selected_intervention_key": c.selected_intervention_key,
+            "primary_owner_name": "Faculty Mentor",
+            "tasks_count": len(tasks),
+            "open_tasks_count": len(open_tasks),
+            "created_at": c.created_at.isoformat() if c.created_at else datetime.now(timezone.utc).isoformat(),
+            "updated_at": c.updated_at.isoformat() if c.updated_at else datetime.now(timezone.utc).isoformat(),
+        })
+
+    return {
+        "items": items,
+        "total": len(items),
+    }
 
 
 @router.get("/{case_id}", response_model=CaseDetailDTO)

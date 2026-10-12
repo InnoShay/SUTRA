@@ -1047,4 +1047,103 @@ export interface WhatIfScenarioResponse {
   support_planning_guidance: SupportPlanningGuidance;
 }
 
+// ============================================================================
+// Phase 3A: Backend Handoff & Integration Readiness Contracts (Proposed Endpoints)
+// NOTE: These interfaces define the contracts for endpoints currently in backend
+// implementation. The frontend is prepared to consume these upon backend release.
+// ============================================================================
 
+// --- 1. Student-Scoped Case Retrieval Contract: GET /api/v1/cases/my-cases ---
+export interface StudentCaseSummaryDTO {
+  id: string;
+  institution_id: string;
+  student_id: string;
+  title: string;
+  state: string;
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  selected_intervention_key?: string | null;
+  primary_owner_name?: string | null;
+  tasks_count: number;
+  open_tasks_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentMyCasesResponse {
+  items: StudentCaseSummaryDTO[];
+  total: number;
+}
+
+// --- 2. General Support Ticket Contract: POST /api/v1/support/tickets ---
+export type SupportTicketCategory =
+  | 'counseling'
+  | 'academic_mentorship'
+  | 'attendance_support'
+  | 'learning_resources'
+  | 'administrative_guidance';
+
+export interface SupportTicketCreateRequest {
+  category: SupportTicketCategory;
+  subject: string;
+  description: string;
+  preferred_contact_method?: 'phone' | 'email' | 'in_person' | 'video';
+  urgency?: 'low' | 'medium' | 'high' | 'critical';
+  campus_id?: string;
+}
+
+export interface SupportTicketResponse {
+  ticket_id: string;
+  reference_number: string;
+  category: SupportTicketCategory;
+  subject: string;
+  description: string;
+  status: 'submitted' | 'triaged' | 'assigned' | 'in_progress' | 'resolved' | 'closed';
+  student_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// --- 3. Assessment Persistence Contract: POST /api/v1/assessments/submissions ---
+export interface AssessmentSubmissionRequest {
+  assessment_type: string;
+  overall_score: number;
+  dimension_scores: Record<string, number>;
+  strengths: string[];
+  growth_areas: string[];
+  recommended_action: string;
+  client_completed_at: string;
+}
+
+export interface AssessmentRecordDTO {
+  id: string;
+  student_id: string;
+  assessment_type: string;
+  overall_score: number;
+  dimension_scores: Record<string, number>;
+  strengths: string[];
+  growth_areas: string[];
+  recommended_action: string;
+  persisted_at: string;
+}
+
+// --- 4. Case Messaging Contract: POST/GET /api/v1/cases/{case_id}/messages ---
+export interface CaseMessageDTO {
+  id: string;
+  case_id: string;
+  sender_user_id: string;
+  sender_name: string;
+  sender_role: string;
+  text: string;
+  created_at: string;
+  is_staff: boolean;
+}
+
+export interface SendCaseMessageRequest {
+  text: string;
+}
+
+export interface CaseMessagesListResponse {
+  case_id: string;
+  messages: CaseMessageDTO[];
+  total: number;
+}

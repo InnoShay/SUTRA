@@ -71,6 +71,12 @@ DEMO_USERS = {
         "email": "admin@sutra.edu",
         "role": "superadmin",
     },
+    "student": {
+        "id": uuid.UUID("66666666-6666-6666-6666-666666666666"),
+        "name": "Asha (synthetic)",
+        "email": "syn-1007@sutra.edu",
+        "role": "student",
+    },
 }
 
 

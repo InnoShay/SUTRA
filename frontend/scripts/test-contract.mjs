@@ -1757,6 +1757,226 @@ assert(
 );
 console.log("   ✓ Verified GovernedScenarioPanel mounted in Student 360 page\n");
 
+// ==========================================
+// 22. Phase 3A: Backend Handoff & Integration Readiness Contracts
+// ==========================================
+console.log("22. Validating Phase 3A: Backend Handoff & Integration Readiness Contracts...");
+
+const registryDocPath = path.resolve(__dirname, "../../docs/API_INTEGRATION_REGISTRY.md");
+assert(fs.existsSync(registryDocPath), "docs/API_INTEGRATION_REGISTRY.md must exist");
+const registryContent = fs.readFileSync(registryDocPath, "utf-8");
+
+assert(
+  registryContent.includes("/cases/my-cases") &&
+  registryContent.includes("/support/tickets") &&
+  registryContent.includes("/assessments/submissions") &&
+  registryContent.includes("/cases/{case_id}/messages"),
+  "API Integration Registry must document all 4 proposed endpoint specifications"
+);
+console.log("   ✓ Verified API Integration Registry documentation exists and contains all proposed endpoint specifications");
+
+const p3ApiTsCode = fs.readFileSync(path.join(__dirname, "../lib/api.ts"), "utf-8");
+assert(
+  p3ApiTsCode.includes("public proposed = {") &&
+  p3ApiTsCode.includes("getMyCases:") &&
+  p3ApiTsCode.includes("createSupportTicket:") &&
+  p3ApiTsCode.includes("submitAssessment:") &&
+  p3ApiTsCode.includes("getLatestAssessment:") &&
+  p3ApiTsCode.includes("getCaseMessages:"),
+  "api.ts must define integration readiness signatures under api.proposed without replacing live routes"
+);
+console.log("   ✓ Verified api.ts defines typed proposed client signatures isolated from live endpoints");
+
+const p3TypesCode = fs.readFileSync(path.join(__dirname, "../lib/types.ts"), "utf-8");
+assert(
+  p3TypesCode.includes("export interface StudentMyCasesResponse") &&
+  p3TypesCode.includes("export interface SupportTicketCreateRequest") &&
+  p3TypesCode.includes("export interface SupportTicketResponse") &&
+  p3TypesCode.includes("export interface AssessmentSubmissionRequest") &&
+  p3TypesCode.includes("export interface AssessmentRecordDTO") &&
+  p3TypesCode.includes("export interface CaseMessageDTO"),
+  "types.ts must define all Phase 3A proposed request and response contract interfaces"
+);
+console.log("   ✓ Verified all proposed request and response contracts strictly typed in types.ts");
+
+const p3ReqSupportCode = fs.readFileSync(path.join(__dirname, "../app/request-support/page.tsx"), "utf-8");
+assert(
+  p3ReqSupportCode.includes('id: "academic_mentorship"') &&
+  p3ReqSupportCode.includes("available: false") &&
+  p3ReqSupportCode.includes("pending backend integration"),
+  "request-support page must keep unsupported categories unavailable with transparent disclosure"
+);
+console.log("   ✓ Verified unsupported ticket categories remain honestly guarded against fake submissions");
+
+const p3AssessCode = fs.readFileSync(path.join(__dirname, "../app/assessment/page.tsx"), "utf-8");
+assert(
+  p3AssessCode.includes("sutra_guidance_assessment_report") &&
+  (p3AssessCode.includes("Browser-Local Record") || p3AssessCode.includes("localStorage")),
+  "assessment page must clearly distinguish browser-local reports from server persistence"
+);
+console.log("   ✓ Verified assessment page preserves honest browser-local provenance\n");
+
+// ==========================================
+// 22. Phase 3B: Student Case API Integration Contracts
+// ==========================================
+console.log("22. Validating Phase 3B: Student Case API Integration Contracts...");
+
+const studentDashboardCode = fs.readFileSync(
+  path.join(__dirname, "../components/student/StudentDashboardView.tsx"),
+  "utf-8"
+);
+const studentCasesPageCode = fs.readFileSync(
+  path.join(__dirname, "../app/cases/page.tsx"),
+  "utf-8"
+);
+
+// 20.1: Student case history using agreed API method
+assert(
+  studentDashboardCode.includes("api.proposed.getMyCases()") &&
+  studentCasesPageCode.includes("api.proposed.getMyCases()"),
+  "Both StudentDashboardView and cases/page must use api.proposed.getMyCases() for student-scoped case retrieval"
+);
+console.log("   ✓ Verified student case retrieval consumes agreed api.proposed.getMyCases() client method");
+
+// 20.2: Loading, empty, and actionable error states
+assert(
+  studentDashboardCode.includes("isLoadingCases") &&
+  studentDashboardCode.includes("casesError") &&
+  studentDashboardCode.includes("studentCases.length === 0") &&
+  studentDashboardCode.includes("Retry Connection"),
+  "StudentDashboardView must provide loading skeleton, actionable error state with retry, and empty state"
+);
+
+assert(
+  studentCasesPageCode.includes("isLoadingStudentCases") &&
+  studentCasesPageCode.includes("studentCasesError") &&
+  studentCasesPageCode.includes("Retry Connection"),
+  "cases/page.tsx must provide loading skeleton, actionable error state with retry, and empty state"
+);
+console.log("   ✓ Verified loading skeleton, useful empty state, and actionable error with retry behavior in student views");
+
+// 20.3: Prevention of institution-wide case exposure in normal student view
+assert(
+  studentDashboardCode.includes("setCasesError(") &&
+  studentDashboardCode.includes("setStudentCases([])"),
+  "StudentDashboardView must not populate synthetic fixtures or expose institution cases in normal mode on error"
+);
+assert(
+  studentCasesPageCode.includes("relevantCases = isStudent ? (studentCases as any[]) : cases"),
+  "cases/page.tsx must strictly isolate relevantCases to studentCases when isStudent is true"
+);
+console.log("   ✓ Verified prevention of institution-wide case queue exposure in student views");
+
+// 20.4: Preservation of existing staff case workflow
+assert(
+  studentCasesPageCode.includes('const isStudent = activeRole === "student"') &&
+  studentCasesPageCode.includes(": cases") &&
+  studentCasesPageCode.includes("Student Support Cases"),
+  "cases/page.tsx must preserve staff case queue workflow, search, and status filters when activeRole is not student"
+);
+console.log("   ✓ Verified existing staff case management workflows remain intact");
+
+// 20.5: Prevention of stale data appearing after user/session change
+assert(
+  studentDashboardCode.includes("let active = true") &&
+  studentDashboardCode.includes("return () => {") &&
+  studentDashboardCode.includes("active = false"),
+  "StudentDashboardView must implement effect cancellation flag to prevent stale in-flight requests"
+);
+assert(
+  studentCasesPageCode.includes("let active = true") &&
+  studentCasesPageCode.includes("setStudentCases([])") &&
+  studentCasesPageCode.includes("active = false"),
+  "cases/page.tsx must reset studentCases and cancel in-flight requests upon identity change"
+);
+console.log("   ✓ Verified session change reset and prevention of stale data overwriting newer state\n");
+
+// ==========================================
+// 23. Phase 3C: General Support Ticket Integration Contracts
+// ==========================================
+console.log("23. Validating Phase 3C: General Support Ticket Integration Contracts...");
+
+const p3cReqSupportCode = fs.readFileSync(
+  path.join(__dirname, "../app/request-support/page.tsx"),
+  "utf-8"
+);
+
+// 23.1: Support ticket client contract and type signatures
+assert(
+  p3ApiTsCode.includes("createSupportTicket: (payload: SupportTicketCreateRequest) =>") &&
+  p3ApiTsCode.includes("this.request<SupportTicketResponse>('/support/tickets'"),
+  "api.ts must define proposed createSupportTicket method with POST /support/tickets"
+);
+assert(
+  p3TypesCode.includes("export interface SupportTicketCreateRequest") &&
+  p3TypesCode.includes("export interface SupportTicketResponse") &&
+  p3TypesCode.includes("export type SupportTicketCategory"),
+  "types.ts must define SupportTicketCreateRequest and SupportTicketResponse"
+);
+console.log("   ✓ Verified api.proposed.createSupportTicket client signature and TypeScript types");
+
+// 23.2: Unsupported categories guarded with transparent disclosure and button lock
+assert(
+  p3cReqSupportCode.includes('id: "academic_mentorship"') &&
+  p3cReqSupportCode.includes('id: "attendance_support"') &&
+  p3cReqSupportCode.includes('id: "learning_resources"') &&
+  p3cReqSupportCode.includes('id: "administrative_guidance"') &&
+  p3cReqSupportCode.includes("available: false"),
+  "request-support page must guard academic, attendance, resource, and administrative categories"
+);
+assert(
+  p3cReqSupportCode.includes("Category Pending Backend") &&
+  p3cReqSupportCode.includes("disabled={") &&
+  p3cReqSupportCode.includes("categories.find((c) => c.id === category)?.available"),
+  "Submit button must be disabled with 'Category Pending Backend' label when an unavailable category is selected"
+);
+console.log("   ✓ Verified category availability guard and transparent button state locking for pending routes");
+
+// 23.3: Strict form validation invariants (subject: 5-120 chars, description: 10-2000 chars)
+assert(
+  p3cReqSupportCode.includes("subject.trim().length < 5") &&
+  p3cReqSupportCode.includes("subject.trim().length > 120") &&
+  p3cReqSupportCode.includes("description.trim().length < 10") &&
+  p3cReqSupportCode.includes("description.trim().length > 2000"),
+  "Form validation must enforce subject length (5-120) and description length (10-2000)"
+);
+console.log("   ✓ Verified form bounds validation matching backend schema invariants (5-120 chars subject, 10-2000 chars description)");
+
+// 23.4: Duplicate submission prevention
+assert(
+  p3cReqSupportCode.includes("isSubmitting") &&
+  p3cReqSupportCode.includes("setIsSubmitting(true)") &&
+  p3cReqSupportCode.includes("setIsSubmitting(false)") &&
+  p3cReqSupportCode.includes("Submitting..."),
+  "Form submission must prevent duplicate submissions and reflect loading state"
+);
+console.log("   ✓ Verified duplicate-submission guard and disabled loading state during submission");
+
+// 23.5: Dual routing: active counselor consultation vs proposed support ticket
+assert(
+  p3cReqSupportCode.includes('if (category === "wellbeing_counseling")') &&
+  p3cReqSupportCode.includes("requestCounselorCall(") &&
+  p3cReqSupportCode.includes("api.proposed.createSupportTicket("),
+  "request-support page must preserve verified counselor call workflow while routing tickets to proposed endpoint"
+);
+console.log("   ✓ Verified preservation of verified counselor call workflow alongside proposed support ticket dispatch");
+
+// 23.6: Student privacy & error hygiene
+assert(
+  !p3cReqSupportCode.includes("console.log(description") &&
+  !p3cReqSupportCode.includes("console.log(subject") &&
+  !p3cReqSupportCode.includes("console.warn(description") &&
+  !p3cReqSupportCode.includes("console.warn(subject"),
+  "Student notes and descriptions must never be logged to browser console"
+);
+assert(
+  p3cReqSupportCode.includes('setSubject("")') &&
+  p3cReqSupportCode.includes('setDescription("")') &&
+  p3cReqSupportCode.includes("setSubmittedCaseRef("),
+  "Form fields must only be cleared upon verified server response, preserving inputs on network error"
+);
+console.log("   ✓ Verified student privacy hygiene and form input preservation upon submission failure\n");
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");

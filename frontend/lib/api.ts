@@ -57,6 +57,14 @@ import {
   SupportedScenarioFeature,
   WhatIfScenarioRequest,
   WhatIfScenarioResponse,
+  StudentMyCasesResponse,
+  SupportTicketCreateRequest,
+  SupportTicketResponse,
+  AssessmentSubmissionRequest,
+  AssessmentRecordDTO,
+  CaseMessageDTO,
+  SendCaseMessageRequest,
+  CaseMessagesListResponse,
 } from './types';
 import {
   DEMO_SIGNALS,
@@ -251,6 +259,12 @@ class ApiClient {
 
   public getToken(): string | null {
     return this.token;
+  }
+
+  private tokenRefreshHandler: (() => Promise<string | null>) | null = null;
+
+  public setTokenRefreshHandler(handler: () => Promise<string | null>) {
+    this.tokenRefreshHandler = handler;
   }
 
   public getCampusId(): string | null {
@@ -1299,6 +1313,25 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        if (response.status === 401 && !(options as any)._retry && this.tokenRefreshHandler) {
+          try {
+            const refreshedToken = await this.tokenRefreshHandler();
+            if (refreshedToken) {
+              this.setToken(refreshedToken);
+              return await this.request<T>(endpoint, {
+                ...options,
+                headers: {
+                  ...(options.headers as Record<string, string>),
+                  Authorization: `Bearer ${refreshedToken}`,
+                },
+                _retry: true,
+              } as any);
+            }
+          } catch (refreshErr) {
+            console.warn('Session refresh on 401 failed:', refreshErr);
+          }
+        }
+
         let errorData: any = {};
         try {
           const errText = await response.text();
@@ -1670,6 +1703,34 @@ class ApiClient {
       const rootUrl = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
       return this.request<ReadinessResponse>(`${rootUrl}/ready`);
     },
+  };
+
+  // --- Phase 3A Proposed Endpoints (Integration Readiness - Pending Backend Release) ---
+  // NOTE: These client methods define the exact calling signatures for endpoints
+  // currently being implemented by the backend teammate. They use the standard typed
+  // request pipeline with JWT + X-Campus-Id headers and are ready to be activated.
+  public proposed = {
+    getMyCases: () =>
+      this.request<StudentMyCasesResponse>('/cases/my-cases'),
+    createSupportTicket: (payload: SupportTicketCreateRequest) =>
+      this.request<SupportTicketResponse>('/support/tickets', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    submitAssessment: (payload: AssessmentSubmissionRequest) =>
+      this.request<AssessmentRecordDTO>('/assessments/submissions', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    getLatestAssessment: () =>
+      this.request<AssessmentRecordDTO>('/assessments/my-latest'),
+    getCaseMessages: (caseId: string) =>
+      this.request<CaseMessagesListResponse>(`/cases/${caseId}/messages`),
+    sendCaseMessage: (caseId: string, payload: SendCaseMessageRequest) =>
+      this.request<CaseMessageDTO>(`/cases/${caseId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   };
 }
 

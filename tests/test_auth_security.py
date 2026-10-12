@@ -128,3 +128,132 @@ async def test_ml_model_info_endpoint(client: AsyncClient, seed_data):
     assert data["status"] in ("uncalibrated", "ready")
     assert data["decision_threshold"] == 0.46
     assert data["cutoff_days"] == 30
+
+
+# ==============================================================================
+# Phase 7 & Multi-Algorithm ES256 Verification Tests
+# ==============================================================================
+
+from app.core.config import settings
+from tests.utils import generate_test_ec_key_pair, make_es256_jwt
+
+
+@pytest.mark.asyncio
+async def test_auth_me_valid_es256_token(client: AsyncClient, seed_data, monkeypatch):
+    """Verifies that an authentic asymmetric ES256 token (Supabase Auth format) is accepted."""
+    priv_key, pub_pem = generate_test_ec_key_pair()
+    monkeypatch.setattr(settings, "SUPABASE_JWT_PUBLIC_KEY", pub_pem)
+
+    user_id = seed_data["user_faculty_id"]
+    token = make_es256_jwt(
+        user_id=user_id,
+        private_key=priv_key,
+        email="faculty@sutra.edu",
+        audience="authenticated",
+    )
+
+    response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["user_id"] == str(user_id)
+    assert len(data["memberships"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_auth_me_expired_es256_token(client: AsyncClient, monkeypatch):
+    """Verifies that an expired ES256 token is rejected with TOKEN_EXPIRED."""
+    priv_key, pub_pem = generate_test_ec_key_pair()
+    monkeypatch.setattr(settings, "SUPABASE_JWT_PUBLIC_KEY", pub_pem)
+
+    token = make_es256_jwt(
+        user_id=uuid.uuid4(),
+        private_key=priv_key,
+        expired=True,
+    )
+    response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "TOKEN_EXPIRED"
+
+
+@pytest.mark.asyncio
+async def test_auth_me_invalid_es256_signature(client: AsyncClient, monkeypatch):
+    """Verifies that an ES256 token signed by an unknown/untrusted private key is rejected."""
+    priv_key_1, pub_pem_1 = generate_test_ec_key_pair()
+    priv_key_2, _ = generate_test_ec_key_pair()
+    monkeypatch.setattr(settings, "SUPABASE_JWT_PUBLIC_KEY", pub_pem_1)
+
+    # Sign with private key 2, but verifier only trusts public key 1
+    token = make_es256_jwt(
+        user_id=uuid.uuid4(),
+        private_key=priv_key_2,
+    )
+    response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
+
+
+@pytest.mark.asyncio
+async def test_auth_unsupported_algorithm_rejected(client: AsyncClient):
+    """Verifies that tokens using disallowed or unsigned algorithms ('none', 'fake_alg') are rejected."""
+    import jwt
+    now = uuid.uuid4()
+    payload = {"sub": str(now), "aud": "authenticated"}
+
+    # 1. Unsigned 'none' algorithm token
+    none_token = jwt.encode(payload, key="", algorithm="none")
+    res1 = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {none_token}"})
+    assert res1.status_code == 401
+    assert "alg" in res1.text.lower() or res1.json()["error"]["code"] in ("UNSUPPORTED_ALGORITHM", "INVALID_CREDENTIALS")
+
+    # 2. Arbitrary unsupported algorithm
+    import base64, json
+    h = base64.urlsafe_b64encode(json.dumps({"alg": "fake_alg", "typ": "JWT"}).encode()).decode().rstrip("=")
+    p = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    fake_token = f"{h}.{p}.invalidsignature"
+    res2 = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {fake_token}"})
+    assert res2.status_code == 401
+    assert "alg" in res2.text.lower() or res2.json()["error"]["code"] in ("UNSUPPORTED_ALGORITHM", "INVALID_CREDENTIALS")
+
+
+@pytest.mark.asyncio
+async def test_auth_invalid_audience_rejected(client: AsyncClient):
+    """Verifies that tokens issued for an incorrect audience are rejected."""
+    token = make_jwt(user_id=uuid.uuid4(), audience="attacker_service")
+    response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
+
+
+@pytest.mark.asyncio
+async def test_auth_invalid_issuer_rejected(client: AsyncClient, monkeypatch):
+    """Verifies that asymmetric tokens with an untrusted issuer are rejected."""
+    priv_key, pub_pem = generate_test_ec_key_pair()
+    monkeypatch.setattr(settings, "SUPABASE_JWT_PUBLIC_KEY", pub_pem)
+    monkeypatch.setattr(settings, "SUPABASE_JWT_ISSUER", "https://trusted-project.supabase.co/auth/v1")
+
+    # Token forged with untrusted issuer
+    token = make_es256_jwt(
+        user_id=uuid.uuid4(),
+        private_key=priv_key,
+        issuer="https://evil-untrusted-server.com/auth/v1",
+    )
+    response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
+
+
+@pytest.mark.asyncio
+async def test_student_my_cases_endpoint_retrieval(client: AsyncClient, seed_data, monkeypatch):
+    """Verifies that an authenticated user can retrieve real cases via GET /api/v1/cases/my-cases."""
+    priv_key, pub_pem = generate_test_ec_key_pair()
+    monkeypatch.setattr(settings, "SUPABASE_JWT_PUBLIC_KEY", pub_pem)
+
+    user_id = seed_data["user_faculty_id"]
+    token = make_es256_jwt(user_id=user_id, private_key=priv_key)
+
+    response = await client.get("/api/v1/cases/my-cases", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert "total" in data
+    assert isinstance(data["items"], list)

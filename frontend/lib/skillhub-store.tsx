@@ -617,9 +617,22 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         console.warn("Error loading counselor entities:", e);
       }
     } catch (err: any) {
-      console.warn("Backend API not reachable:", err);
-      setBackendConnected(false);
-      setBackendError(err.message || "Backend offline");
+      const isAuthErr =
+        err?.status === 401 ||
+        err?.kind === 'authentication' ||
+        err?.message?.includes('JWT') ||
+        err?.message?.includes('token') ||
+        err?.message?.includes('Authentication');
+
+      if (isAuthErr) {
+        console.warn("Authentication failed during backend data fetch:", err);
+        setBackendConnected(true);
+        setBackendError(err.message || "Authentication failed: Session invalid or expired");
+      } else {
+        console.warn("Backend API not reachable:", err);
+        setBackendConnected(false);
+        setBackendError(err.message || "Backend offline");
+      }
 
       if (isDemoMode()) {
         if (!currentPersona.canViewIndividualStudents) {
@@ -663,6 +676,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+
+    // Register automatic session refresh handler with API client
+    api.setTokenRefreshHandler(async () => {
+      const refreshed = await supabaseAuth.refreshSession();
+      return refreshed ? refreshed.access_token : null;
+    });
 
     // Check existing Supabase session on startup
     supabaseAuth.getSession().then((session) => {
