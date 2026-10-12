@@ -29,7 +29,7 @@ export default function CounselorAnalyticsPage() {
     { day: "Sun", scheduled: 2, completed: 2 },
   ];
 
-  // Domain Distribution (Total = 121) - Monochrome & Red only
+  // Domain Distribution (Total = 121) - Monochrome only
   const domainSegments = [
     { name: "Mental Health & Exam Anxiety", count: 46, pct: 38, isHighlight: true },
     { name: "Academic Mentoring & Workload", count: 34, pct: 28, isHighlight: false },
@@ -185,9 +185,13 @@ export default function CounselorAnalyticsPage() {
                 </div>
                 <div className="w-full h-2.5 bg-neutral-100 rounded-full overflow-hidden">
                   <div
+<<<<<<< HEAD
+                    className="h-full rounded-full transition-all duration-500 bg-neutral-900"
+=======
                     className={`h-full rounded-full transition-all duration-500 ${
                       seg.isHighlight ? "bg-red-600" : "bg-neutral-900"
                     }`}
+>>>>>>> upstream/main
                     style={{ width: `${seg.pct}%` }}
                   />
                 </div>
@@ -272,7 +276,11 @@ export default function CounselorAnalyticsPage() {
                 </div>
                 <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
                   <div
+<<<<<<< HEAD
+                    className="h-full rounded-full bg-neutral-900"
+=======
                     className={`h-full rounded-full ${item.isAlert ? "bg-red-600" : "bg-neutral-900"}`}
+>>>>>>> upstream/main
                     style={{ width: `${item.pct}%` }}
                   />
                 </div>
@@ -325,12 +333,19 @@ export default function CounselorAnalyticsPage() {
                   </td>
                   <td className="py-3 pr-2 text-right">
                     <span
+<<<<<<< HEAD
+                      className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                        c.status === "Recovered"
+                          ? "bg-neutral-900 text-white"
+                          : "bg-neutral-100 text-neutral-800 border border-neutral-300"
+=======
                       className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         c.status === "Recovered"
                           ? "bg-neutral-900 text-white"
                           : c.status === "In Progress"
                           ? "bg-neutral-100 text-neutral-800 border border-neutral-300"
                           : "bg-red-50 text-red-700 border border-red-200"
+>>>>>>> upstream/main
                       }`}
                     >
                       {c.status}
