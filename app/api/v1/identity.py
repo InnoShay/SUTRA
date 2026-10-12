@@ -22,7 +22,7 @@ from app.schemas.identity import (
     UpdateAvatarRequest,
 )
 from app.services.blockchain import base_sepolia_service
-from app.services.identity_art import artwork_traits, render_identity_art
+from app.services.identity_art import artwork_title, artwork_traits, render_identity_art
 
 router = APIRouter(prefix="/identity", tags=["Student Identity & Avatar Studio"])
 
@@ -30,6 +30,8 @@ router = APIRouter(prefix="/identity", tags=["Student Identity & Avatar Studio"]
 def _identity_response(identity: StudentIdentity) -> StudentIdentityResponse:
     tx_hash = identity.collectible_tx_hash
     onchain_enabled = base_sepolia_service.nft_mint_ready()
+    title = artwork_title(identity.art_seed)
+    traits = artwork_traits(identity.art_seed)
     return StudentIdentityResponse(
         sutra_id=identity.sutra_id,
         display_name=identity.display_name,
@@ -47,6 +49,8 @@ def _identity_response(identity: StudentIdentity) -> StudentIdentityResponse:
         explorer_url=f"https://sepolia.basescan.org/tx/{tx_hash}" if tx_hash else None,
         onchain_enabled=onchain_enabled,
         artwork_url=f"/api/v1/identity/art/{identity.sutra_id}.png",
+        art_title=title,
+        artwork_traits=traits,
     )
 
 
@@ -340,12 +344,13 @@ async def get_nft_token_metadata(
         else f"/api/v1/identity/art/{identity.sutra_id}.png"
     )
 
+    title = artwork_title(identity.art_seed)
     return NFTMetadataResponse(
-        name=f"SUTRA Identity {identity.sutra_id}",
+        name=f"{title} ({identity.sutra_id})",
         description=(
-            "Unique SUTRA identity artwork, independent of the profile avatar. "
-            "This non-transferable Base Sepolia credential contains no profile name, "
-            "academic record, or other personal data."
+            f"'{title}' is a unique generative abstract painting created exclusively for SUTRA student identity {identity.sutra_id}. "
+            "Rendered algorithmically using Vector Flow Fields & Sacred Geometry. "
+            "This non-transferable Base Sepolia credential contains zero PII, real name, email, or academic transcripts."
         ),
         image=artwork_url,
         external_url=(

@@ -167,6 +167,8 @@ class StudentIdentityResponse(BaseModel):
     explorer_url: Optional[str] = None
     onchain_enabled: bool = False
     artwork_url: str
+    art_title: str = "Abstract Identity Painting"
+    artwork_traits: Dict[str, str] = Field(default_factory=dict)
     collectible_error: Optional[str] = None
     is_test_asset: bool = True
     disclaimer: str = "SUTRA Identity Collectible on Base Sepolia testnet is an educational credential test asset with no monetary value."

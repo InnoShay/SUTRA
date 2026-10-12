@@ -39,6 +39,8 @@ export interface StudentIdentityDTO {
   explorer_url?: string | null;
   onchain_enabled?: boolean;
   artwork_url: string;
+  art_title?: string;
+  artwork_traits?: Record<string, string>;
   collectible_error?: string | null;
   created_at: string;
   network?: string;
