@@ -16,12 +16,17 @@ import {
   PhoneCall,
   User,
   ArrowUpRight,
+  Sparkles,
 } from "lucide-react";
 import { RequestCounselorCallModal } from "@/components/RequestCounselorCallModal";
+import { StudentGuidanceAssessmentModal } from "@/components/assessment/StudentGuidanceAssessmentModal";
+import { AssessmentReportResult } from "@/components/assessment/assessmentScoring";
 
 export function StudentDashboardView() {
   const { user, currentPersona, cases, callRequests, activeCampusName } = useSkillHub();
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+  const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
+  const [assessmentReport, setAssessmentReport] = useState<AssessmentReportResult | null>(null);
 
   // Authenticated student reference (defaults to Asha SYN-1007 for demo)
   const studentId = currentPersona?.userId || "SYN-1007";
@@ -255,6 +260,52 @@ export function StudentDashboardView() {
 
         {/* RIGHT COLUMN: 4 cols */}
         <div className="lg:col-span-4 space-y-6">
+          {/* Card: Student Guidance Assessment */}
+          <div className="skill-card bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-neutral-900 text-white rounded-2xl">
+                <Sparkles className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900 font-heading">
+                  Student Guidance Assessment
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  18 questions · Approximately 3–4 minutes
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Reflect on your learning habits, goals, and support needs to prepare for a counseling conversation.
+            </p>
+
+            {assessmentReport && (
+              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200/80 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>In-Session Summary Ready</span>
+                </div>
+                <span className="text-[11px] text-emerald-700">
+                  {assessmentReport.dimensions.filter((d) => d.status === "scored").length}/6 Scored
+                </span>
+              </div>
+            )}
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsAssessmentModalOpen(true)}
+                className="w-full px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>
+                  {assessmentReport ? "View Reflection Summary" : "Start Assessment"}
+                </span>
+              </button>
+            </div>
+          </div>
+
           {/* Card: Need Help? */}
           <div className="skill-card bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
             <div className="flex items-center gap-3">
@@ -355,6 +406,18 @@ export function StudentDashboardView() {
         caseId={studentCases[0]?.id || "CASE-SYN-1007"}
         signalId="SIG-SYN-1007"
         riskScore={0.68}
+      />
+
+      {/* Modal: Student Guidance Assessment */}
+      <StudentGuidanceAssessmentModal
+        isOpen={isAssessmentModalOpen}
+        onClose={() => setIsAssessmentModalOpen(false)}
+        savedReport={assessmentReport}
+        onSaveReport={(rep) => setAssessmentReport(rep)}
+        onRequestCounselorCall={() => {
+          setIsAssessmentModalOpen(false);
+          setIsCallModalOpen(true);
+        }}
       />
     </div>
   );
