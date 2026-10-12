@@ -180,6 +180,101 @@ pub struct AiMetadata {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservedDataTierDto {
+    #[serde(default)]
+    pub total_observations: usize,
+    #[serde(default)]
+    pub data_freshness: String,
+    #[serde(default)]
+    pub domains_represented: Vec<String>,
+    #[serde(default)]
+    pub observed_facts: Vec<String>,
+    #[serde(default)]
+    pub contradictions_detected: Vec<String>,
+    #[serde(default)]
+    pub data_limitations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleSignalTierDto {
+    pub rule_key: String,
+    pub result: String,
+    #[serde(default)]
+    pub evaluated_at: Option<String>,
+    #[serde(default)]
+    pub quality_state: String,
+    #[serde(default)]
+    pub trigger_summary: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MLPredictionTierDto {
+    #[serde(default)]
+    pub has_ml_prediction: bool,
+    #[serde(default)]
+    pub model_name: Option<String>,
+    #[serde(default)]
+    pub model_version: Option<String>,
+    #[serde(default)]
+    pub prediction_cutoff: Option<String>,
+    #[serde(default)]
+    pub risk_probability: Option<f64>,
+    #[serde(default)]
+    pub threshold: Option<f64>,
+    #[serde(default)]
+    pub classification: Option<String>,
+    #[serde(default)]
+    pub calibration_status: Option<String>,
+    #[serde(default)]
+    pub top_attributions: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub ml_limitations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIRecommendationTierDto {
+    pub summary: String,
+    #[serde(default)]
+    pub uncertainties: Vec<String>,
+    #[serde(default)]
+    pub review_questions: Vec<String>,
+    #[serde(default)]
+    pub candidate_interventions: Vec<AiCandidateIntervention>,
+    #[serde(default)]
+    pub is_advisory: bool,
+    #[serde(default)]
+    pub advisory_notice: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HumanDecisionTierDto {
+    #[serde(default)]
+    pub has_human_review: bool,
+    #[serde(default)]
+    pub reviewed_decision: Option<String>,
+    #[serde(default)]
+    pub reviewed_by: Option<Uuid>,
+    #[serde(default)]
+    pub reviewed_at: Option<String>,
+    #[serde(default)]
+    pub review_reason_code: Option<String>,
+    #[serde(default)]
+    pub case_id: Option<Uuid>,
+    #[serde(default)]
+    pub case_state: Option<String>,
+    #[serde(default)]
+    pub case_owner_id: Option<Uuid>,
+    #[serde(default)]
+    pub case_due_at: Option<String>,
+    #[serde(default)]
+    pub follow_ups_count: usize,
+    #[serde(default)]
+    pub outcome_status: Option<String>,
+    #[serde(default)]
+    pub outcome_rationale: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiReviewBriefResponse {
     pub target_student_ref: String,
     pub signal_id: Uuid,
@@ -191,6 +286,17 @@ pub struct AiReviewBriefResponse {
     pub candidate_interventions: Vec<AiCandidateIntervention>,
     pub limitations: Vec<String>,
     pub metadata: AiMetadata,
+
+    #[serde(default)]
+    pub tier1_observed_data: Option<ObservedDataTierDto>,
+    #[serde(default)]
+    pub tier2_rule_signal: Option<RuleSignalTierDto>,
+    #[serde(default)]
+    pub tier3_ml_prediction: Option<MLPredictionTierDto>,
+    #[serde(default)]
+    pub tier4_ai_recommendation: Option<AIRecommendationTierDto>,
+    #[serde(default)]
+    pub tier5_human_decision: Option<HumanDecisionTierDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,6 +307,17 @@ pub struct AiSummarizeEvidenceResponse {
     pub uncertainties: Vec<String>,
     pub limitations: Vec<String>,
     pub metadata: AiMetadata,
+
+    #[serde(default)]
+    pub tier1_observed_data: Option<ObservedDataTierDto>,
+    #[serde(default)]
+    pub tier2_rule_signals: Vec<RuleSignalTierDto>,
+    #[serde(default)]
+    pub tier3_ml_prediction: Option<MLPredictionTierDto>,
+    #[serde(default)]
+    pub tier4_ai_recommendation: Option<AIRecommendationTierDto>,
+    #[serde(default)]
+    pub tier5_human_decision: Option<HumanDecisionTierDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -39,6 +39,13 @@ struct Cli {
     )]
     token: Option<String>,
 
+    #[arg(
+        long,
+        global = true,
+        help = "Output structured JSON instead of human-readable text"
+    )]
+    json: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -201,26 +208,32 @@ enum CasesCommands {
         #[arg(help = "Case UUID")]
         id: Uuid,
 
-        #[arg(long, help = "Follow-up channel: in_person, phone, email, or lms")]
+        #[arg(long, short = 'c', alias = "type", help = "Follow-up type/channel: in_person, phone, email, lms, support_delivered")]
         channel: String,
 
-        #[arg(long, help = "Proof kind: student_signed_form, faculty_log, etc.")]
+        #[arg(long, short = 'p', help = "Proof kind: student_signed_form, faculty_log, staff_attestation, faculty_meeting_notes")]
         proof: String,
 
-        #[arg(long, help = "Optional follow-up notes")]
+        #[arg(long, help = "Contact status: student_reached, attempted_unreachable, declined (default: student_reached)")]
+        contact_status: Option<String>,
+
+        #[arg(long, short = 'n', help = "Optional follow-up notes")]
         note: Option<String>,
     },
 
-    #[command(about = "Record final intervention outcome and close case")]
+    #[command(about = "Record final intervention outcome and advance case to outcome_reviewed")]
     Outcome {
         #[arg(help = "Case UUID")]
         id: Uuid,
 
-        #[arg(long, help = "Outcome status: helped, not_helped, mixed, or unknown")]
+        #[arg(long, short = 's', help = "Outcome status: helped, not_helped, mixed, or unknown")]
         status: String,
 
-        #[arg(long, help = "Mandatory outcome rationale (min 5 characters)")]
+        #[arg(long, short = 'r', help = "Mandatory outcome rationale (min 5 characters)")]
         rationale: String,
+
+        #[arg(long, help = "Evidence kind: staff_review, student_feedback, academic_record, service_record (default: staff_review)")]
+        evidence_kind: Option<String>,
     },
 }
 
@@ -241,10 +254,16 @@ enum AiCommands {
         signal_id: Uuid,
     },
 
-    #[command(about = "Synthesize student multi-domain telemetry (ADR-003 financial exclusion)")]
+    #[command(about = "Synthesize student multi-domain telemetry and evidence card (ADR-003 financial exclusion)")]
     Summarize {
-        #[arg(help = "Student UUID")]
-        student_id: Uuid,
+        #[arg(help = "Student UUID or external reference (e.g. SYN-1007)")]
+        student: String,
+    },
+
+    #[command(about = "Retrieve 5-tier evidence summary card for an authorized student")]
+    Evidence {
+        #[arg(help = "Student UUID or external reference (e.g. SYN-1007)")]
+        student: String,
     },
 }
 
@@ -330,7 +349,13 @@ enum DatasetsCommands {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-    let config = CliConfig::from_env_and_flags(cli.url, cli.campus, cli.token);
+    let config = match CliConfig::from_env_and_flags(cli.url, cli.campus, cli.token, cli.json) {
+        Ok(c) => c,
+        Err(err) => {
+            eprintln!("\nError: {}", err);
+            std::process::exit(2);
+        }
+    };
     let client = SutraApiClient::new(config);
 
     let result = match cli.command {
@@ -392,6 +417,7 @@ async fn main() {
                 id,
                 channel,
                 proof,
+                contact_status,
                 note,
             } => {
                 commands::cases::record_follow_up(
@@ -399,6 +425,7 @@ async fn main() {
                     id,
                     &channel,
                     &proof,
+                    contact_status.as_deref(),
                     note.as_deref(),
                 )
                 .await
@@ -407,15 +434,28 @@ async fn main() {
                 id,
                 status,
                 rationale,
-            } => commands::cases::record_outcome(&client, id, &status, &rationale).await,
+                evidence_kind,
+            } => {
+                commands::cases::record_outcome(
+                    &client,
+                    id,
+                    &status,
+                    &rationale,
+                    evidence_kind.as_deref(),
+                )
+                .await
+            }
         },
         Commands::Ai(args) => match args.command {
             AiCommands::Status => commands::ai::ai_status(&client).await,
             AiCommands::ReviewBrief { signal_id } => {
                 commands::ai::ai_review_brief(&client, signal_id).await
             }
-            AiCommands::Summarize { student_id } => {
-                commands::ai::ai_summarize_evidence(&client, student_id).await
+            AiCommands::Summarize { student } => {
+                commands::ai::ai_summarize_evidence(&client, &student).await
+            }
+            AiCommands::Evidence { student } => {
+                commands::ai::ai_student_evidence(&client, &student).await
             }
         },
         Commands::Students(args) => match args.command {
@@ -471,6 +511,12 @@ async fn main() {
 
     if let Err(e) = result {
         eprintln!("\nError: {}", e);
-        std::process::exit(1);
+        if e.contains("401") || e.contains("403") || e.contains("Unauthorized") || e.contains("Forbidden") {
+            std::process::exit(3);
+        } else if e.contains("Invalid") || e.contains("Validation") || e.contains("Policy Violation") || e.contains("Usage") {
+            std::process::exit(2);
+        } else {
+            std::process::exit(1);
+        }
     }
 }

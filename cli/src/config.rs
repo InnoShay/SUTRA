@@ -7,6 +7,7 @@ pub struct CliConfig {
     pub api_url: String,
     pub campus_id: Option<Uuid>,
     pub token: Option<String>,
+    pub json: bool,
     #[allow(dead_code)]
     pub session: Option<CliSession>,
 }
@@ -16,7 +17,8 @@ impl CliConfig {
         flag_url: Option<String>,
         flag_campus: Option<String>,
         flag_token: Option<String>,
-    ) -> Self {
+        flag_json: bool,
+    ) -> Result<Self, String> {
         let session = SessionManager::new().load_session().unwrap_or(None);
 
         let api_url = flag_url
@@ -25,9 +27,10 @@ impl CliConfig {
 
         // Token resolution precedence:
         // 1. Explicit CLI flag `--token`
-        // 2. Environment variable `SUTRA_AUTH_TOKEN`
+        // 2. Environment variable `SUTRA_TOKEN` or `SUTRA_AUTH_TOKEN`
         // 3. Securely stored local session (`~/.sutra/session.json`)
         let token = flag_token
+            .or_else(|| env::var("SUTRA_TOKEN").ok())
             .or_else(|| env::var("SUTRA_AUTH_TOKEN").ok())
             .or_else(|| session.as_ref().map(|s| s.access_token.clone()));
 
@@ -40,18 +43,22 @@ impl CliConfig {
             match Uuid::parse_str(raw_campus) {
                 Ok(u) => Some(u),
                 Err(_) => {
-                    eprintln!("Warning: Invalid --campus UUID '{}'. Falling back to session/default tenancy.", raw_campus);
-                    session
-                        .as_ref()
-                        .and_then(|s| s.active_campus_id)
-                        .or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").ok())
+                    return Err(format!(
+                        "Invalid --campus UUID '{}'. Must be a valid 36-character UUID.",
+                        raw_campus
+                    ));
                 }
             }
         } else if let Ok(env_campus) = env::var("SUTRA_CAMPUS_ID") {
-            Uuid::parse_str(&env_campus)
-                .ok()
-                .or_else(|| session.as_ref().and_then(|s| s.active_campus_id))
-                .or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").ok())
+            match Uuid::parse_str(&env_campus) {
+                Ok(u) => Some(u),
+                Err(_) => {
+                    return Err(format!(
+                        "Invalid SUTRA_CAMPUS_ID environment variable '{}'. Must be a valid 36-character UUID.",
+                        env_campus
+                    ));
+                }
+            }
         } else {
             session
                 .as_ref()
@@ -59,11 +66,12 @@ impl CliConfig {
                 .or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").ok())
         };
 
-        Self {
+        Ok(Self {
             api_url: api_url.trim_end_matches('/').to_string(),
             campus_id,
             token,
+            json: flag_json,
             session,
-        }
+        })
     }
 }

@@ -8,6 +8,13 @@ pub async fn list_students(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<(), String> {
+    let students = client.list_students(cohort, limit, offset).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&students).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "=== SUTRA Authorized Student Registry ===".bold());
     if let Some(campus_id) = client.config.campus_id {
         println!("Campus Tenancy: {}", campus_id.to_string().cyan());
@@ -22,8 +29,6 @@ pub async fn list_students(
             offset.map(|o| o.to_string()).unwrap_or_else(|| "0".to_string())
         );
     }
-
-    let students = client.list_students(cohort, limit, offset).await?;
 
     if students.is_empty() {
         println!("{}", "\nNo authorized students found matching criteria in active campus.".yellow());
@@ -67,6 +72,16 @@ pub async fn get_student(client: &SutraApiClient, id_or_ref: &str) -> Result<(),
     }
 
     let student = client.get_student(clean_id).await?;
+
+    if client.config.json {
+        let support = client.get_student_support_view(clean_id).await.ok().flatten();
+        let payload = serde_json::json!({
+            "student": student,
+            "support_view": support,
+        });
+        println!("{}", serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
 
     println!("{}", "=== SUTRA Student Profile ===".bold());
     println!("  Student ID:        {}", student.id.to_string().white());
@@ -146,6 +161,15 @@ pub async fn list_observations(
         return Err("Validation Error: Student identifier cannot be empty.".to_string());
     }
 
+    let observations = client
+        .get_student_observations(clean_id, domain, quality, limit)
+        .await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&observations).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "=== SUTRA Student Observations Ledger ===".bold());
     println!("  Student:        {}", clean_id.cyan().bold());
     if let Some(d) = domain {
@@ -157,10 +181,6 @@ pub async fn list_observations(
     if let Some(l) = limit {
         println!("  Limit:          {}", l);
     }
-
-    let observations = client
-        .get_student_observations(clean_id, domain, quality, limit)
-        .await?;
 
     if observations.is_empty() {
         println!("{}", "\nNo observations found matching criteria for this student.".yellow());
@@ -232,6 +252,11 @@ pub async fn check_readiness(client: &SutraApiClient, id_or_ref: &str) -> Result
     }
 
     let r = client.get_student_readiness(clean_id).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&r).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
 
     println!("{}", "================================================================================".bold());
     println!("{}", "       SUTRA ML FEATURE READINESS AUDIT (DAY-30 EARLY-WARNING)                  ".bold().cyan());

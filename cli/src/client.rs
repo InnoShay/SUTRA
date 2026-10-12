@@ -5,6 +5,30 @@ use reqwest::Client;
 use std::time::Duration;
 use uuid::Uuid;
 
+fn format_api_error(status: reqwest::StatusCode, body: &str, context: &str) -> String {
+    if status == reqwest::StatusCode::UNAUTHORIZED {
+        return "HTTP 401 Unauthorized: Valid session or Bearer token required. Please run `sutra auth login`.".to_string();
+    }
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(body) {
+        if let Some(msg) = v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()) {
+            let code = v.get("error").and_then(|e| e.get("code")).and_then(|c| c.as_str()).unwrap_or("");
+            return if code.is_empty() {
+                format!("HTTP {} {}: {}", status.as_u16(), status.canonical_reason().unwrap_or("Error"), msg)
+            } else {
+                format!("HTTP {} [{}]: {}", status.as_u16(), code, msg)
+            };
+        }
+        if let Some(detail) = v.get("detail").and_then(|d| d.as_str()) {
+            return format!("HTTP {} {}: {}", status.as_u16(), status.canonical_reason().unwrap_or("Error"), detail);
+        }
+    }
+    if body.trim().is_empty() {
+        format!("HTTP {} {}: {}", status.as_u16(), status.canonical_reason().unwrap_or("Error"), context)
+    } else {
+        format!("HTTP {} {}: {}", status.as_u16(), context, body)
+    }
+}
+
 #[derive(Clone)]
 pub struct SutraApiClient {
     client: Client,
@@ -59,25 +83,29 @@ impl SutraApiClient {
         resp.json::<ReadinessResponse>().await.map_err(|e| e.to_string())
     }
 
+
+
     pub async fn list_signals(&self, result: Option<&str>) -> Result<Vec<SignalDto>, String> {
         let mut url = format!("{}/signals", self.config.api_url);
         if let Some(r) = result {
             url.push_str(&format!("?result={}", r));
         }
-        let resp = self.client.get(&url).headers(self.headers()).send().await.map_err(|e| e.to_string())?;
+        let resp = self.client.get(&url).headers(self.headers()).send().await.map_err(|e| format!("Network error: {}", e))?;
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Request failed: {}", body));
+            return Err(format_api_error(status, &body, "List signals failed"));
         }
         resp.json::<Vec<SignalDto>>().await.map_err(|e| e.to_string())
     }
 
     pub async fn get_signal(&self, id: Uuid) -> Result<SignalDto, String> {
         let url = format!("{}/signals/{}", self.config.api_url, id);
-        let resp = self.client.get(&url).headers(self.headers()).send().await.map_err(|e| e.to_string())?;
+        let resp = self.client.get(&url).headers(self.headers()).send().await.map_err(|e| format!("Network error: {}", e))?;
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Request failed: {}", body));
+            return Err(format_api_error(status, &body, "Get signal failed"));
         }
         resp.json::<SignalDto>().await.map_err(|e| e.to_string())
     }
@@ -89,11 +117,12 @@ impl SutraApiClient {
             .json(&req)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Network error: {}", e))?;
 
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Signal review rejected: {}", body));
+            return Err(format_api_error(status, &body, "Signal review rejected"));
         }
         resp.json::<SignalReviewResponse>().await.map_err(|e| e.to_string())
     }
@@ -103,20 +132,22 @@ impl SutraApiClient {
         if let Some(s) = state {
             url.push_str(&format!("?state={}", s.to_lowercase()));
         }
-        let resp = self.client.get(&url).headers(self.headers()).send().await.map_err(|e| e.to_string())?;
+        let resp = self.client.get(&url).headers(self.headers()).send().await.map_err(|e| format!("Network error: {}", e))?;
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Request failed: {}", body));
+            return Err(format_api_error(status, &body, "List cases failed"));
         }
         resp.json::<Vec<CaseDto>>().await.map_err(|e| e.to_string())
     }
 
     pub async fn get_case(&self, id: Uuid) -> Result<CaseDto, String> {
         let url = format!("{}/cases/{}", self.config.api_url, id);
-        let resp = self.client.get(&url).headers(self.headers()).send().await.map_err(|e| e.to_string())?;
+        let resp = self.client.get(&url).headers(self.headers()).send().await.map_err(|e| format!("Network error: {}", e))?;
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Request failed: {}", body));
+            return Err(format_api_error(status, &body, "Get case failed"));
         }
         resp.json::<CaseDto>().await.map_err(|e| e.to_string())
     }
@@ -128,11 +159,12 @@ impl SutraApiClient {
             .json(&req)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Network error: {}", e))?;
 
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Case transition rejected: {}", body));
+            return Err(format_api_error(status, &body, "Case transition rejected"));
         }
         resp.json::<CaseDto>().await.map_err(|e| e.to_string())
     }
@@ -144,11 +176,12 @@ impl SutraApiClient {
             .json(&req)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Network error: {}", e))?;
 
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Case assignment rejected: {}", body));
+            return Err(format_api_error(status, &body, "Case assignment rejected"));
         }
         resp.json::<CaseDto>().await.map_err(|e| e.to_string())
     }
@@ -160,11 +193,12 @@ impl SutraApiClient {
             .json(&req)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Network error: {}", e))?;
 
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Follow-up recording rejected: {}", body));
+            return Err(format_api_error(status, &body, "Follow-up recording rejected"));
         }
         resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
     }
@@ -176,11 +210,12 @@ impl SutraApiClient {
             .json(&req)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Network error: {}", e))?;
 
         if !resp.status().is_success() {
+            let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Outcome recording rejected: {}", body));
+            return Err(format_api_error(status, &body, "Outcome recording rejected"));
         }
         resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
     }
@@ -222,9 +257,15 @@ impl SutraApiClient {
         resp.json::<AiReviewBriefResponse>().await.map_err(|e| e.to_string())
     }
 
-    pub async fn ai_summarize_evidence(&self, student_id: Uuid) -> Result<AiSummarizeEvidenceResponse, String> {
+    pub async fn ai_summarize_evidence(&self, id_or_ref: &str) -> Result<AiSummarizeEvidenceResponse, String> {
+        let clean_id = id_or_ref.trim();
+        let payload = if let Ok(u) = Uuid::parse_str(clean_id) {
+            serde_json::json!({ "student_id": u })
+        } else {
+            serde_json::json!({ "student_ref": clean_id })
+        };
+
         let url = format!("{}/ai/summarize-evidence", self.config.api_url);
-        let payload = serde_json::json!({ "student_id": student_id });
         let resp = self.client.post(&url)
             .headers(self.headers())
             .json(&payload)
@@ -235,6 +276,22 @@ impl SutraApiClient {
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("AI summarize request failed: {}", body));
+        }
+        resp.json::<AiSummarizeEvidenceResponse>().await.map_err(|e| e.to_string())
+    }
+
+    pub async fn get_student_evidence_summary(&self, id_or_ref: &str) -> Result<AiSummarizeEvidenceResponse, String> {
+        let clean_id = id_or_ref.trim();
+        let url = format!("{}/students/{}/evidence-summary", self.config.api_url, clean_id);
+        let resp = self.client.get(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("Student evidence summary request failed: {}", body));
         }
         resp.json::<AiSummarizeEvidenceResponse>().await.map_err(|e| e.to_string())
     }
