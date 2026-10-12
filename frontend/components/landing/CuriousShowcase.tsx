@@ -9,44 +9,37 @@ export default function CuriousShowcase() {
     {
       id: 1,
       title: "Academic Peer Tutoring Match",
-      image:
-        "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80",
+      image: "/images/workflow-peer-tutoring.jpg",
     },
     {
       id: 2,
       title: "Attendance Drift Early Outreach",
-      image:
-        "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80",
+      image: "/images/workflow-attendance-outreach.jpg",
     },
     {
       id: 3,
       title: "Confidential Wellness Referral",
-      image:
-        "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=800&q=80",
+      image: "/images/workflow-wellness-referral.jpg",
     },
     {
       id: 4,
       title: "Emergency Hardship Aid Desk",
-      image:
-        "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80",
+      image: "/images/workflow-hardship-aid.jpg",
     },
     {
       id: 5,
       title: "Mentorship 1-on-1 Consultation",
-      image:
-        "https://images.unsplash.com/photo-1531545514256-b1400bc00f31?auto=format&fit=crop&w=800&q=80",
+      image: "/images/workflow-mentorship-consult.jpg",
     },
     {
       id: 6,
       title: "Remedial Coursework Pacing",
-      image:
-        "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80",
+      image: "/images/workflow-remedial-pacing.jpg",
     },
     {
       id: 7,
       title: "Cohort Persistence Ledger",
-      image:
-        "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80",
+      image: "/images/workflow-cohort-persistence.jpg",
     },
   ];
 

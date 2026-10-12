@@ -97,19 +97,6 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Card 3: Photo Portrait Advisor (Seamless, Zero Blackish Shadow) */}
-      <div className="w-[clamp(200px,17vw,280px)] shrink-0 rounded-2xl sm:rounded-3xl overflow-hidden shadow-none relative h-60 sm:h-68 border border-white/90 group hover:-translate-y-1.5 transition-transform duration-300">
-        <img
-          src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80"
-          alt="Faculty Mentor & Student Advisor"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between text-xs text-white drop-shadow-sm font-semibold">
-          <span>Case #8941</span>
-          <span>Lab Matched</span>
-        </div>
-      </div>
 
       {/* Card 4: Cohort Retention Curve (Seamless, Zero Blackish Shadow) */}
       <div className="w-[clamp(210px,18vw,300px)] shrink-0 rounded-2xl sm:rounded-3xl bg-white/95 p-4 sm:p-5 shadow-none border border-white/90 z-20 hover:-translate-y-1.5 transition-transform duration-300">
