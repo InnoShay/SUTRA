@@ -54,11 +54,12 @@ The canonical implementation architecture reconciles all backend, frontend, ML, 
 - `docs/11_DEPLOYMENT_RUNBOOK.md` — FastAPI setup, Alembic migrations, seed loading, local demo execution.
 - `docs/12_DECISIONS_AND_OPEN_QUESTIONS.md` — Architecture decisions (ADR-001 to ADR-006), verified vs handoff claims.
 - `docs/13_BACKEND_BACKLOG.md` — Phase-by-phase implementation backlog items (Phases 0 to 8).
+- `docs/architecture/indic_language_orchestration_and_sarvam_ai.md` — Canonical architecture for Sarvam AI Indic Neural Language Orchestration, multi-tiered caching, and React reconciliation defense.
 - `openapi/openapi.yaml` — Canonical OpenAPI 3.1.0 contract including product, ML, and compatibility endpoints.
 - `migrations/001_core_schema.sql` — PostgreSQL / Supabase structural migration starter.
 - `fixtures/demo_seed.json` — Explicitly synthetic demo fixtures covering all 6 domains.
 - `.env.example` — Configuration environment variables and placeholder definitions.
-- `decisions/ADR-*.md` — Architecture Decision Records (ADR-001 through ADR-006).
+- `decisions/ADR-*.md` — Architecture Decision Records (ADR-001 through ADR-007).
 
 ---
 

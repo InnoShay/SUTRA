@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronDown, Menu, X, ArrowUpRight, ShieldCheck, Scale, Users } from "lucide-react";
+import { LanguageSelector } from "../LanguageSelector";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -169,8 +170,9 @@ export default function Navbar() {
           </div>
         </nav>
 
-        {/* Right Section: Action Buttons (Flex-1 for balanced 3-column symmetry) */}
-        <div className="hidden sm:flex flex-1 items-center justify-end gap-5 lg:gap-6">
+        {/* Right Section: Action Buttons & Indic Language Selector */}
+        <div className="hidden sm:flex flex-1 items-center justify-end gap-4 lg:gap-5">
+          <LanguageSelector variant="landing" />
           <Link
             href="/login"
             className="text-xs font-bold uppercase tracking-wider text-white/90 hover:text-white transition-colors duration-200"
@@ -186,8 +188,9 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile Hamburger Toggle */}
-        <div className="md:hidden flex items-center justify-end">
+        {/* Mobile Hamburger Toggle & Language Selector */}
+        <div className="md:hidden flex items-center justify-end gap-2">
+          <LanguageSelector variant="landing" />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
