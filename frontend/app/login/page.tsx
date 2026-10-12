@@ -27,7 +27,14 @@ function LoginContent() {
       try {
         const session = await supabaseAuth.getSession();
         if (session && session.access_token) {
-          router.replace("/dashboard");
+          const onboardingDone =
+            typeof window !== "undefined" &&
+            localStorage.getItem("sutra_onboarding_completed") === "true";
+          if (onboardingDone) {
+            router.replace("/dashboard");
+          } else {
+            router.replace("/onboarding");
+          }
           return;
         }
       } catch {
@@ -45,12 +52,16 @@ function LoginContent() {
     setErrorMsg(null);
 
     try {
-      const { error } = await supabaseAuth.signInWithGoogle();
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/onboarding`
+          : undefined;
+      const { error } = await supabaseAuth.signInWithGoogle(redirectUrl);
       if (error) {
         setErrorMsg(error);
         setLoading(false);
       }
-      // On success, Supabase will redirect to the OAuth URL automatically
+      // On success, Supabase will redirect to Google OAuth URL automatically
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to connect to Google authentication.");
       setLoading(false);
@@ -64,37 +75,13 @@ function LoginContent() {
   return (
     <div className="min-h-screen bg-[#F4F5F7] p-4 md:p-8 flex items-center justify-center">
       <div className="w-full max-w-5xl bg-white rounded-[32px] shadow-[0_20px_60px_rgba(15,23,42,0.06)] border border-neutral-200/60 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[640px]">
-        {/* LEFT COLUMN: Visual Student Showcase Hero */}
-        <div className="lg:col-span-6 relative p-8 md:p-10 flex flex-col justify-between overflow-hidden bg-gradient-to-b from-neutral-100 to-amber-50/30">
-          {/* Background Photo */}
-          <div className="absolute inset-0 z-0">
-            <img
-              src="/assets/login-students.jpg"
-              alt="Students collaborating"
-              className="w-full h-full object-cover object-center filter contrast-[1.03]"
-            />
-            {/* Soft luminous gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/40 to-black/30" />
-          </div>
-
-          {/* Top Logo */}
-          <div className="relative z-10">
-            <SkillHubLogo light={false} />
-          </div>
-
-          {/* Bottom Hero Copy */}
-          <div className="relative z-10 pt-20">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-neutral-900/80 backdrop-blur-md rounded-full text-[11px] font-medium text-white mb-3">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              <span>No Alert Without Action</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-neutral-900 tracking-tight leading-tight font-heading">
-              Student Success and Intervention Engine.
-            </h2>
-            <p className="text-sm font-medium text-neutral-700 mt-3 leading-relaxed max-w-sm">
-              Connecting multi-source observations to explainable evidence, human review, and auditable outcomes.
-            </p>
-          </div>
+        {/* LEFT COLUMN: Pure Clean Visual Image Showcase (No text overlays, no white overlay) */}
+        <div className="lg:col-span-6 relative overflow-hidden hidden lg:block bg-neutral-100">
+          <img
+            src="/assets/login-students.jpg"
+            alt="Students collaborating"
+            className="w-full h-full object-cover object-center"
+          />
         </div>
 
         {/* RIGHT COLUMN: Clean Google Auth Card */}
@@ -180,23 +167,23 @@ function LoginContent() {
                 <div className="flex-grow border-t border-neutral-200"></div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleDemoLogin}
-                className="w-full py-2.5 px-4 bg-neutral-100 hover:bg-neutral-200/80 active:scale-[0.99] text-neutral-700 rounded-2xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Enter Offline Demo Workspace</span>
-                <ArrowRight className="w-3.5 h-3.5 text-neutral-500" />
-              </button>
-
-              <div className="p-4 bg-neutral-50/80 border border-neutral-100 rounded-2xl space-y-2 mt-4">
-                <div className="flex items-center gap-2 text-[11px] font-semibold text-neutral-700">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Institutional Access Control</span>
-                </div>
-                <p className="text-[11px] text-neutral-500 leading-relaxed">
-                  Sign in with your university or institutional Google account to securely access the SUTRA triage queue, case orchestration, and student support views.
-                </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleDemoLogin}
+                  className="py-2.5 px-3 bg-neutral-100 hover:bg-neutral-200/80 active:scale-[0.99] text-neutral-700 rounded-2xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Offline Demo</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-neutral-500" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/onboarding")}
+                  className="py-2.5 px-3 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.99] text-white rounded-2xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Start Onboarding</span>
+                </button>
               </div>
             </div>
           </div>
