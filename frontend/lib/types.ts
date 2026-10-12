@@ -886,3 +886,100 @@ export interface CounselorCalendarEvent {
   hasAttachment?: boolean;
   attachmentTitle?: string;
 }
+
+// ==========================================
+// Phase 7: Historical Risk Trends & Monitoring
+// ==========================================
+
+export interface HistoricalSnapshotPoint {
+  snapshot_id: string;
+  snapshot_timestamp: string;
+  model_version: string;
+  model_name: string;
+  prediction_cutoff: string;
+  feature_schema_version: string;
+  total_prediction_runs: number;
+  unique_students_evaluated: number;
+  repeated_rescores_count: number;
+  at_risk_count?: number | null;
+  at_risk_percentage?: number | null;
+  on_track_count?: number | null;
+  on_track_percentage?: number | null;
+  low_risk_count?: number | null;
+  moderate_risk_count?: number | null;
+  elevated_risk_count?: number | null;
+  mean_risk_probability: number;
+  is_privacy_suppressed: boolean;
+  suppression_reason?: string | null;
+  is_comparable: boolean;
+  incompatibility_reason?: string | null;
+}
+
+export interface CohortRiskTrendResponse {
+  campus_id: string;
+  cohort_code?: string | null;
+  reference_model_version: string;
+  reference_cutoff: string;
+  total_historical_runs: number;
+  total_unique_students: number;
+  rescore_frequency: number;
+  has_comparable_history: boolean;
+  snapshots: HistoricalSnapshotPoint[];
+  incompatible_snapshots_detected: number;
+  data_gap_notice?: string | null;
+  causality_disclaimer: string;
+  retention_applied_days?: number | null;
+  governance_disclaimers: string[];
+}
+
+export interface StudentRiskTrajectoryPoint {
+  prediction_id: string;
+  timestamp: string;
+  model_version: string;
+  model_name: string;
+  prediction_cutoff: string;
+  risk_probability: number;
+  threshold: number;
+  classification: string;
+  score_delta_from_previous?: number | null;
+  is_comparable_to_previous: boolean;
+  incompatibility_note?: string | null;
+}
+
+export interface StudentRiskTrajectoryResponse {
+  campus_id: string;
+  student_id?: string | null;
+  external_student_ref: string;
+  total_evaluations: number;
+  unique_timestamps_count: number;
+  trajectory: StudentRiskTrajectoryPoint[];
+  is_stale: boolean;
+  causality_notice: string;
+}
+
+export interface CohortOutcomeEvaluationPoint {
+  cohort_label: string;
+  model_version: string;
+  evaluation_date: string;
+  labeled_sample_size: number;
+  ground_truth_status: 'AVAILABLE_HISTORICAL' | 'PENDING_TERM_COMPLETION';
+  realized_accuracy?: number | null;
+  realized_recall?: number | null;
+  realized_precision?: number | null;
+  realized_fpr?: number | null;
+  realized_roc_auc?: number | null;
+  realized_brier?: number | null;
+  drift_status: 'STABLE' | 'DEGRADED' | 'LABELS_PENDING';
+  drift_warning?: string | null;
+}
+
+export interface HistoricalPerformanceMonitoringResponse {
+  campus_id: string;
+  monitoring_status: string;
+  outcome_definition: string;
+  total_labeled_cohorts: number;
+  evaluations: CohortOutcomeEvaluationPoint[];
+  evaluation_protocol_notice: string;
+  governance_disclaimers: string[];
+}
+
