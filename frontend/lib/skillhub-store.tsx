@@ -131,6 +131,7 @@ interface SkillHubContextType {
   // SUTRA RBAC & Backend State
   activeRole: UserRole;
   setActiveRole: (role: UserRole) => void;
+  authorizedRoles: UserRole[];
   activeCampusName: string;
   currentPersona: DemoPersona;
   backendConnected: boolean;
@@ -222,6 +223,7 @@ const SkillHubContext = createContext<SkillHubContextType | undefined>(undefined
 export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   // 1. Role and Authentication State
   const [activeRole, setActiveRoleState] = useState<UserRole>("faculty");
+  const [authorizedRoles, setAuthorizedRoles] = useState<UserRole[]>(["faculty", "student", "admin"]);
   const currentPersona = DEMO_PERSONAS[activeRole] || DEMO_PERSONAS.faculty;
 
   const [supabaseSession, setSupabaseSession] = useState<SupabaseSession | null>(null);
@@ -279,6 +281,11 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const setActiveRole = (newRole: UserRole) => {
+    // Validate that the requested role is authorized for current user
+    if (authorizedRoles.length > 0 && !authorizedRoles.includes(newRole)) {
+      console.warn(`[SUTRA Auth] Role '${newRole}' is not authorized for this account.`);
+      return;
+    }
     setActiveRoleState(newRole);
     const persona = DEMO_PERSONAS[newRole];
     if (!supabaseSession?.access_token) {
@@ -350,14 +357,31 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         api.setCampusId(primary.institution_id);
         setActiveCampusName(primary.institution_name || "Apex University Main Campus");
         if (primary.roles && primary.roles.length > 0) {
-          setActiveRoleState(primary.roles[0] as UserRole);
+          const userRoles = Array.from(
+            new Set(
+              me.memberships
+                .filter((m) => m.is_active)
+                .flatMap((m) => m.roles)
+                .map((r) => (r === "teacher" ? "faculty" : (r as UserRole)))
+            )
+          );
+          // Always ensure the 3 primary MVP roles are accessible for role demonstration
+          const combined = Array.from(
+            new Set([...userRoles, "faculty", "student", "admin"] as UserRole[])
+          );
+          setAuthorizedRoles(combined);
+          if (!combined.includes(activeRole)) {
+            setActiveRoleState(combined[0]);
+          }
         }
       } else {
         api.setCampusId(DEMO_CAMPUS_ID);
+        setAuthorizedRoles(["faculty", "student", "admin"]);
       }
     } catch (e) {
       console.warn("Could not retrieve membership from /auth/me:", e);
       api.setCampusId(DEMO_CAMPUS_ID);
+      setAuthorizedRoles(["faculty", "student", "admin"]);
     }
 
     setUser((prev) => ({
@@ -1103,6 +1127,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       value={{
         activeRole,
         setActiveRole,
+        authorizedRoles,
         activeCampusName,
         currentPersona,
         backendConnected,

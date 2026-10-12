@@ -451,10 +451,10 @@ export function CounselorDashboardView() {
                     {req.student_notes && (
                       <div className="pt-1.5 border-t border-neutral-200/60">
                         <span className="text-[11px] text-neutral-400 block mb-0.5">
-                          Student's voluntary context:
+                          Student&apos;s voluntary context:
                         </span>
                         <p className="text-neutral-800 text-xs italic bg-white p-2 rounded-lg border border-neutral-200/50">
-                          "{req.student_notes}"
+                          &ldquo;{req.student_notes}&rdquo;
                         </p>
                       </div>
                     )}

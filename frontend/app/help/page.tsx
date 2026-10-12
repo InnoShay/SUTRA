@@ -1,289 +1,363 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSkillHub } from "@/lib/store";
+import Link from "next/link";
 import {
-  HelpCircle,
-  Book,
-  MessageCircle,
+  HeartHandshake,
   FileText,
+  MessageCircle,
+  ChevronDown,
   ArrowUpRight,
   Search,
-  ChevronDown,
-  X,
-  Send,
-  Check,
-  Shield,
-  Activity,
-  Layers,
-  CheckCircle2,
 } from "lucide-react";
 
+interface FAQItem {
+  id: string;
+  question: string;
+  answer: React.ReactNode;
+}
+
 export default function HelpPage() {
-  const { user, backendConnected } = useSkillHub();
-
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
-  const [ticketSubject, setTicketSubject] = useState("");
-  const [ticketMessage, setTicketMessage] = useState("");
-  const [ticketSubmitted, setTicketSubmitted] = useState(false);
 
-  const categories = ["All", "Orchestration", "Case Lifecycle", "Privacy", "ML Governance"];
-
-  const allFaqs = [
+  const faqs: FAQItem[] = [
     {
-      category: "Orchestration",
-      q: "What does the product principle 'No Alert Without Action' mean?",
-      a: "Every early warning or rule-triggered alert requires an explicit human review action (Approve to create case, Modify intervention, or Dismiss with rationale). Signals never languish as ignored notifications and automated actions are never triggered without human educator accountability.",
+      id: "how-to-request",
+      question: "How do I request support?",
+      answer: (
+        <p>
+          You can submit a support request at any time through the{" "}
+          <Link href="/request-support" className="font-semibold text-neutral-900 underline underline-offset-2">
+            Request Support
+          </Link>{" "}
+          page. Select an appropriate category (such as Academic Mentorship, Attendance &amp; Schedule Support, Learning Resources, Student Wellbeing, or General Support), provide a clear subject and description of your concern, and choose your preferred contact method (in-person, video, or phone). Once submitted, your request is logged and routed directly to your campus support advisors.
+        </p>
+      ),
     },
     {
-      category: "Case Lifecycle",
-      q: "How does the SUTRA 10-State Case Machine govern interventions?",
-      a: "Cases progress strictly through audited transitions: NEW -> TRIAGED -> UNDER_REVIEW -> ACTIONABLE -> ASSIGNED -> ACCEPTED -> IN_PROGRESS -> FOLLOW_UP_REQUIRED -> RESOLVED -> CLOSED. Every transition records reviewer identity, transition rationale, and follow-up verification evidence.",
+      id: "track-case",
+      question: "How can I track my case?",
+      answer: (
+        <p>
+          You can track all your active and previous requests by visiting{" "}
+          <Link href="/cases" className="font-semibold text-neutral-900 underline underline-offset-2">
+            My Cases
+          </Link>
+          . The case list shows your assigned faculty mentor or lead advisor, current status, intervention type, and the date the case was created. Selecting any case opens its detailed history and notes.
+        </p>
+      ),
     },
     {
-      category: "Privacy",
-      q: "Why are individual student profiles hidden in Leadership role (ADR-004)?",
-      a: "Under ADR-004 and data minimization governance, executive leadership accounts are restricted to institutional cohort-level aggregates. FastAPI returns HTTP 403 InstitutionalPrivacyRestrictedError if leadership attempts to inspect individual student 360° telemetry.",
+      id: "case-statuses",
+      question: "What do the different case statuses mean?",
+      answer: (
+        <div className="space-y-2.5">
+          <p>
+            SUTRA uses a closed-loop case lifecycle to track each support request from submission to resolution:
+          </p>
+          <ul className="space-y-1.5 list-disc list-inside text-xs sm:text-sm text-neutral-600">
+            <li>
+              <strong className="text-neutral-900 font-semibold">New / Triaged:</strong> Your request has been received and logged in the campus triage queue for initial evaluation.
+            </li>
+            <li>
+              <strong className="text-neutral-900 font-semibold">Under Review / Actionable:</strong> An advisor is reviewing the details to verify needed assistance and outline intervention steps.
+            </li>
+            <li>
+              <strong className="text-neutral-900 font-semibold">Assigned / Accepted:</strong> A dedicated faculty mentor or advisor has accepted ownership of your request.
+            </li>
+            <li>
+              <strong className="text-neutral-900 font-semibold">In Progress:</strong> Support meetings, academic guidance sessions, or check-ins are actively underway.
+            </li>
+            <li>
+              <strong className="text-neutral-900 font-semibold">Follow-Up Required:</strong> Initial steps have taken place, and a scheduled follow-up checkpoint is set to ensure the support resolved your concern.
+            </li>
+            <li>
+              <strong className="text-neutral-900 font-semibold">Resolved / Closed:</strong> All agreed intervention milestones have been successfully completed, and the case record is archived.
+            </li>
+          </ul>
+        </div>
+      ),
     },
     {
-      category: "Privacy",
-      q: "What is Sensitive Domain Separation (ADR-003)?",
-      a: "Fee records, financial hardship applications, and billing arrears are strictly partitioned from academic telemetry. Educators and academic mentors cannot view financial records in student support views.",
+      id: "receive-updates",
+      question: "How will I receive updates?",
+      answer: (
+        <p>
+          You will receive updates directly through the in-app{" "}
+          <Link href="/messages" className="font-semibold text-neutral-900 underline underline-offset-2">
+            Messages
+          </Link>{" "}
+          screen and the top navigation <strong>Notifications</strong> drawer. When an advisor replies to your request or advances your case state, an unread indicator will appear in your top navigation bar.
+        </p>
+      ),
     },
     {
-      category: "ML Governance",
-      q: "How are Evidence Cards and Platt calibration thresholds applied?",
-      a: "Early warning models run Day-30 inference with Platt-calibrated thresholds (0.46) to maximize sensitivity without bias. Models output Evidence Cards with feature attributions rather than autonomous diagnoses.",
+      id: "update-request",
+      question: "Can I update an existing request?",
+      answer: (
+        <p>
+          Once submitted, active support cases cannot be directly edited by students to maintain audit compliance and official record integrity. However, you can communicate additional details, clarify circumstances, or provide new information at any time by messaging your assigned advisor through{" "}
+          <Link href="/messages" className="font-semibold text-neutral-900 underline underline-offset-2">
+            Messages
+          </Link>{" "}
+          or during scheduled one-on-one sessions.
+        </p>
+      ),
+    },
+    {
+      id: "who-can-access",
+      question: "Who can access my information?",
+      answer: (
+        <p>
+          SUTRA strictly enforces institutional privacy boundaries (ADR-004 data minimization). Only you and the faculty mentors, counselors, and advisors explicitly assigned to your campus and case can view your individual support records. Other students cannot see your cases, and executive leadership only has access to aggregated, anonymized statistics. Sensitive financial records are also strictly partitioned from academic support views.
+        </p>
+      ),
+    },
+    {
+      id: "urgent-issues",
+      question: "What should I do if my issue is urgent?",
+      answer: (
+        <p>
+          If you need prompt institutional support, submit a request under the <strong>Student Wellbeing &amp; Counseling</strong> category and choose phone or in-person as your preferred contact method. In-app triage requests are monitored during campus administrative hours. If you are experiencing an immediate physical or medical emergency, or personal safety crisis, please contact your campus emergency security desk, campus medical clinic, or local emergency services directly.
+        </p>
+      ),
     },
   ];
 
-  const filteredFaqs = allFaqs.filter((faq) => {
-    const matchesCategory =
-      selectedCategory === "All" || faq.category === selectedCategory;
-    const matchesSearch =
-      searchQuery === "" ||
-      faq.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.a.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
-  const handleTicketSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticketSubject.trim() || !ticketMessage.trim()) return;
-
-    setTicketSubmitted(true);
-    setTimeout(() => {
-      setTicketSubmitted(false);
-      setIsTicketModalOpen(false);
-      setTicketSubject("");
-      setTicketMessage("");
-    }, 1800);
-  };
+  const filteredFaqs = faqs.filter(
+    (faq) =>
+      faq.question.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* 1. HEADER */}
+    <div className="space-y-7 max-w-5xl mx-auto pb-10">
+      {/* A. PAGE HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
-            SUTRA Runbook &amp; Documentation
+            Help &amp; Support
           </h1>
-          <p className="text-xs text-neutral-400 mt-1">
-            Operational workflows, 10-state case transitions, and institutional privacy runbooks
+          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
+            Find answers, understand your cases, or contact the support team.
           </p>
         </div>
 
-        <button
-          onClick={() => setIsTicketModalOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto active:scale-95"
+        <Link
+          href="/request-support"
+          className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-xs transition-all self-start sm:self-auto cursor-pointer"
         >
-          <MessageCircle className="w-4 h-4" />
-          <span>Support Escalation</span>
-        </button>
+          <HeartHandshake className="w-3.5 h-3.5" />
+          <span>Request Support</span>
+        </Link>
       </div>
 
-      {/* System Health Status Card */}
-      <div className="skill-card bg-white p-5 rounded-3xl border border-neutral-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-neutral-900 flex items-center gap-2">
-              <span>Backend Core API Status</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                {backendConnected ? "ONLINE" : "STANDBY"}
-              </span>
+      {/* B. QUICK HELP: 3 COMPACT OPTIONS */}
+      <div>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-3 px-1">
+          Quick Help
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 1. My Cases */}
+          <Link
+            href="/cases"
+            className="group p-5 bg-white rounded-3xl border border-neutral-200/70 hover:border-neutral-300 hover:shadow-xs transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-2xl bg-neutral-100 group-hover:bg-neutral-200/70 flex items-center justify-center text-neutral-800 transition-colors mb-3.5">
+                <FileText className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-neutral-900 font-heading group-hover:text-neutral-950">
+                My Cases
+              </h3>
+              <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                View your cases, current status, and updates.
+              </p>
             </div>
-            <p className="text-[11px] text-neutral-400 mt-0.5">
-              FastAPI v0.115 • Supabase JWT Verification Active • Temporal UTC Cutoffs
+            <div className="flex items-center gap-1 text-xs font-semibold text-neutral-700 mt-4 group-hover:text-neutral-950">
+              <span>View Cases</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-700 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
+          </Link>
+
+          {/* 2. Request Support */}
+          <Link
+            href="/request-support"
+            className="group p-5 bg-white rounded-3xl border border-neutral-200/70 hover:border-neutral-300 hover:shadow-xs transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-2xl bg-neutral-900 text-white flex items-center justify-center mb-3.5">
+                <HeartHandshake className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-sm font-bold text-neutral-900 font-heading group-hover:text-neutral-950">
+                Request Support
+              </h3>
+              <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                Ask for help with an academic or personal concern.
+              </p>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-semibold text-neutral-700 mt-4 group-hover:text-neutral-950">
+              <span>Start Request</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-700 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
+          </Link>
+
+          {/* 3. Messages */}
+          <Link
+            href="/messages"
+            className="group p-5 bg-white rounded-3xl border border-neutral-200/70 hover:border-neutral-300 hover:shadow-xs transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-2xl bg-neutral-100 group-hover:bg-neutral-200/70 flex items-center justify-center text-neutral-800 transition-colors mb-3.5">
+                <MessageCircle className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-neutral-900 font-heading group-hover:text-neutral-950">
+                Messages
+              </h3>
+              <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                View replies and communicate with your support team.
+              </p>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-semibold text-neutral-700 mt-4 group-hover:text-neutral-950">
+              <span>Open Messages</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-700 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* C. FREQUENTLY ASKED QUESTIONS */}
+      <div className="space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              Clear answers about support requests, lifecycle tracking, and privacy.
             </p>
           </div>
+
+          {/* Quick FAQ Search */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter questions..."
+              className="w-full pl-8 pr-3 py-1.5 bg-white border border-neutral-200/80 rounded-full text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+            />
+          </div>
         </div>
 
-        <div className="text-xs font-mono text-neutral-500">
-          Campus: Apex Main (v1)
-        </div>
-      </div>
-
-      {/* 2. SEARCH BAR & CATEGORIES */}
-      <div className="space-y-3">
-        <div className="relative">
-          <Search className="w-4 h-4 text-neutral-400 absolute left-4 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search SUTRA policy rules, state transitions, privacy safeguards..."
-            className="w-full pl-11 pr-4 py-3 bg-white border border-neutral-200/80 rounded-2xl text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 shadow-xs"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 text-xs"
-            >
-              ×
-            </button>
+        <div className="bg-white rounded-3xl border border-neutral-200/70 divide-y divide-neutral-100 overflow-hidden shadow-2xs">
+          {filteredFaqs.length === 0 ? (
+            <div className="p-8 text-center text-xs text-neutral-400">
+              No matching questions found for &ldquo;{searchQuery}&rdquo;.
+            </div>
+          ) : (
+            filteredFaqs.map((faq, index) => {
+              const isOpen = expandedIndex === index;
+              return (
+                <div key={faq.id} className="transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedIndex(isOpen ? null : index)}
+                    className="w-full text-left px-5 sm:px-6 py-4 flex items-center justify-between gap-4 hover:bg-neutral-50/70 transition-colors cursor-pointer"
+                    aria-expanded={isOpen}
+                  >
+                    <span className="text-xs sm:text-sm font-semibold text-neutral-900 font-heading">
+                      {faq.question}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-neutral-400 shrink-0 transition-transform duration-200 ${
+                        isOpen ? "rotate-180 text-neutral-900" : ""
+                      }`}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="px-5 sm:px-6 pb-4 pt-1 text-xs sm:text-sm text-neutral-600 leading-relaxed border-t border-neutral-50 bg-neutral-50/30 animate-in fade-in duration-150">
+                      {faq.answer}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
+      </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                selectedCategory === cat
-                  ? "bg-neutral-900 text-white"
-                  : "bg-white text-neutral-600 hover:bg-neutral-100/70 border border-neutral-200/50"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+      {/* D. CONTACT AND ESCALATION */}
+      <div className="bg-white rounded-3xl border border-neutral-200/70 p-5 sm:p-6 shadow-2xs space-y-4">
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+            Contact &amp; Assistance
+          </h2>
+          <h3 className="text-base font-bold text-neutral-900 mt-1 font-heading">
+            Need further guidance or follow-up?
+          </h3>
+          <p className="text-xs text-neutral-500 mt-1 max-w-2xl leading-relaxed">
+            All student support requests in SUTRA are handled through structured in-app workflows to ensure audit traceability, advisor accountability, and closed-loop follow-up.
+          </p>
         </div>
-      </div>
 
-      {/* 3. FAQ ACCORDION LIST */}
-      <div className="space-y-3">
-        {filteredFaqs.map((faq, index) => {
-          const isOpen = expandedFaqIndex === index;
-          return (
-            <div
-              key={index}
-              className="skill-card bg-white rounded-2xl border border-neutral-100 overflow-hidden transition-all"
-            >
-              <button
-                onClick={() => setExpandedFaqIndex(isOpen ? null : index)}
-                className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 hover:bg-neutral-50/50 transition-colors"
-              >
-                <span className="text-xs sm:text-sm font-bold text-neutral-900 leading-snug">
-                  {faq.q}
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-neutral-400 transition-transform flex-shrink-0 ${
-                    isOpen ? "rotate-180 text-neutral-900" : ""
-                  }`}
-                />
-              </button>
-
-              {isOpen && (
-                <div className="px-4 pb-4 sm:px-5 sm:pb-5 text-xs text-neutral-600 leading-relaxed border-t border-neutral-50 pt-3 animate-in fade-in duration-150">
-                  {faq.a}
-                </div>
-              )}
+        {/* Categories Supported in App */}
+        <div className="p-4 rounded-2xl bg-neutral-50/70 border border-neutral-200/60 space-y-2">
+          <p className="text-[11px] font-bold text-neutral-700 uppercase tracking-wide">
+            Supported Assistance Categories
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs text-neutral-600">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>Academic Tutoring &amp; Mentorship</span>
             </div>
-          );
-        })}
-
-        {filteredFaqs.length === 0 && (
-          <div className="py-12 text-center text-xs text-neutral-400 bg-white rounded-2xl border border-neutral-100">
-            No questions found matching your query
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>Attendance &amp; Schedule Support</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>Learning Materials &amp; Grants</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>Student Wellbeing &amp; Counseling</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>General Institutional Guidance</span>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Support Escalation Modal */}
-      {isTicketModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setIsTicketModalOpen(false)}
-        >
-          <div
-            className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-neutral-100 overflow-hidden animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <Link
+            href="/request-support"
+            className="flex items-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer"
           >
-            <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
-              <h3 className="text-base font-bold text-neutral-900">
-                Log Support Escalation
-              </h3>
-              <button
-                onClick={() => setIsTicketModalOpen(false)}
-                className="p-1 rounded-full text-neutral-400 hover:text-neutral-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <HeartHandshake className="w-3.5 h-3.5" />
+            <span>Request Support</span>
+          </Link>
 
-            <form onSubmit={handleTicketSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-neutral-700 block mb-1">
-                  Escalation Topic
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Urgent Case Escalation / False Positive Report"
-                  value={ticketSubject}
-                  onChange={(e) => setTicketSubject(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-                />
-              </div>
+          <Link
+            href="/messages"
+            className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-neutral-50 border border-neutral-200/80 text-neutral-800 rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+          >
+            <MessageCircle className="w-3.5 h-3.5 text-neutral-500" />
+            <span>Open Messages</span>
+          </Link>
 
-              <div>
-                <label className="text-xs font-semibold text-neutral-700 block mb-1">
-                  Details &amp; Case Reference
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Provide details on the case ID, student cohort, or rule version..."
-                  value={ticketMessage}
-                  onChange={(e) => setTicketMessage(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 resize-none"
-                />
-              </div>
-
-              {ticketSubmitted && (
-                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-semibold flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Escalation logged to Dean review dispatch.</span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsTicketModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-600 hover:bg-neutral-100 rounded-full"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={ticketSubmitted}
-                  className="px-5 py-2 bg-neutral-900 text-white text-xs font-semibold rounded-full hover:bg-neutral-800"
-                >
-                  Submit
-                </button>
-              </div>
-            </form>
-          </div>
+          <Link
+            href="/cases"
+            className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-neutral-50 border border-neutral-200/80 text-neutral-800 rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5 text-neutral-500" />
+            <span>View Active Cases</span>
+          </Link>
         </div>
-      )}
+      </div>
     </div>
   );
 }

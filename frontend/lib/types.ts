@@ -1,6 +1,12 @@
-// SUTRA Canonical TypeScript Definitions (Reconciled with FastAPI OpenAPI Contract)
-
-export type UserRole = 'superadmin' | 'leadership' | 'dean' | 'counselor' | 'faculty';
+export type UserRole =
+  | 'student'
+  | 'staff'
+  | 'admin'
+  | 'superadmin'
+  | 'leadership'
+  | 'dean'
+  | 'counselor'
+  | 'faculty';
 
 export interface CampusMembershipItem {
   institution_id: string;

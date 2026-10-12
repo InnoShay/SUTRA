@@ -279,7 +279,7 @@ export default function SettingsPage() {
             <p className="text-xs text-neutral-500 capitalize">{user.role || activeRole}</p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
-                Verified SUTRA Educator
+                {activeRole === "student" ? "Verified SUTRA Student" : "Verified SUTRA Educator"}
               </span>
               <span className="text-[10px] font-medium text-neutral-500 bg-neutral-100 px-2.5 py-0.5 rounded-full">
                 {activeCampusName}
@@ -455,6 +455,47 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Admin User & Role Governance (Phase 5 / 8) */}
+      {(activeRole === "admin" || activeRole === "superadmin") && (
+        <div className="skill-card bg-white p-5 sm:p-6 md:p-8 space-y-5 border border-neutral-200/80 rounded-3xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-neutral-100 text-neutral-800 rounded-2xl border border-neutral-200">
+                <ShieldCheck className="w-5 h-5 text-neutral-800" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900 font-heading">
+                  User &amp; Access Governance (3-Role MVP)
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  Consolidated role management for Student, Staff, and Administrator identities.
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+              Model: Active
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-xs text-neutral-600 leading-relaxed">
+              SUTRA operates under an explicit 3-role security model to eliminate operational ambiguity:
+              <ul className="list-disc list-inside mt-2 space-y-1.5 font-medium">
+                <li>
+                  <strong className="text-neutral-900">Student:</strong> Self-service portal, personal case tracking (`/cases`), and support requests (`/request-support`). Strictly isolated from other students&apos; records.
+                </li>
+                <li>
+                  <strong className="text-neutral-900">Staff:</strong> Course instructors, faculty mentors, and counselors managing case lifecycles, signal triage, and student check-ins.
+                </li>
+                <li>
+                  <strong className="text-neutral-900">Admin:</strong> User provisioning, case assignment oversight, protocol governance, and institutional settings.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Session Management & Sign Out */}
       <div className="skill-card bg-white p-5 sm:p-6 md:p-8 space-y-4 border border-neutral-200/80 rounded-3xl">

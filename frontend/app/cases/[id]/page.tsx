@@ -1,0 +1,280 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useSkillHub } from "@/lib/store";
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  FileText,
+  HeartHandshake,
+  MessageSquare,
+  Shield,
+  User,
+  AlertCircle,
+  ChevronRight,
+  Send,
+} from "lucide-react";
+
+export default function CaseDetailPage() {
+  const params = useParams();
+  const caseId = (params?.id as string) || "CASE-SYN-1007";
+  const { cases, user, activeRole, currentPersona } = useSkillHub();
+
+  const isStudent = activeRole === "student";
+  const matchedCase = cases.find((c) => c.id === caseId) || cases[0];
+
+  const [newMessage, setNewMessage] = useState("");
+  const [messages, setMessages] = useState<
+    { id: string; sender: string; time: string; text: string; isStudent: boolean }[]
+  >([
+    {
+      id: "m-1",
+      sender: "Prof. Ananya Sharma",
+      time: "Oct 11, 14:30",
+      text: "Hello Asha. I reviewed your recent lab check-in. Let's meet on Tuesday at 17:30 to walk through the week 3 exercises together.",
+      isStudent: false,
+    },
+    {
+      id: "m-2",
+      sender: "Asha (synthetic)",
+      time: "Oct 11, 15:10",
+      text: "Thank you Professor Sharma. Tuesday works well for me. I will bring my problem set draft.",
+      isStudent: true,
+    },
+  ]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `m-${Date.now()}`,
+        sender: user.fullName || user.name || "Student",
+        time: "Just now",
+        text: newMessage,
+        isStudent: true,
+      },
+    ]);
+    setNewMessage("");
+  };
+
+  if (!matchedCase) {
+    return (
+      <div className="p-12 text-center bg-white rounded-3xl border border-neutral-200/80 max-w-xl mx-auto space-y-4">
+        <AlertCircle className="w-10 h-10 text-neutral-400 mx-auto" />
+        <h2 className="text-base font-bold text-neutral-900">Case Not Found</h2>
+        <p className="text-xs text-neutral-500">
+          The requested support case could not be located or you may not have permission to view it.
+        </p>
+        <Link
+          href="/cases"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 text-white rounded-full text-xs font-semibold"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Cases</span>
+        </Link>
+      </div>
+    );
+  }
+
+  const isResolved =
+    matchedCase.state === "RESOLVED" || matchedCase.state === "CLOSED";
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      {/* Top Breadcrumb & Navigation */}
+      <div className="flex items-center gap-2 text-xs text-neutral-500">
+        <Link
+          href="/cases"
+          className="flex items-center gap-1 text-neutral-600 hover:text-neutral-900 font-medium hover:underline"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Cases</span>
+        </Link>
+        <span>/</span>
+        <span className="font-mono text-neutral-400">{matchedCase.id}</span>
+      </div>
+
+      {/* Case Header Card */}
+      <div className="skill-card bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-neutral-100">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl md:text-2xl font-extrabold text-neutral-900 tracking-tight font-heading">
+                {matchedCase.selected_intervention_key
+                  ? matchedCase.selected_intervention_key
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (l) => l.toUpperCase())
+                  : "Academic Support & Mentorship Plan"}
+              </h1>
+              <span
+                className={`text-xs font-semibold px-3 py-1 rounded-full border ${
+                  isResolved
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                }`}
+              >
+                {matchedCase.state.replace(/_/g, " ")}
+              </span>
+            </div>
+            <p className="text-xs text-neutral-500 flex items-center gap-2">
+              <span>Case ID: <strong className="font-mono text-neutral-700">{matchedCase.id}</strong></span>
+              <span>•</span>
+              <span>Opened on: {new Date(matchedCase.created_at).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</span>
+            </p>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-2">
+            <span className="text-xs text-neutral-500 bg-neutral-50 px-3 py-1.5 rounded-full border border-neutral-200/70">
+              Assigned Mentor: <strong className="text-neutral-800 font-semibold">{matchedCase.primary_owner_user_id || "Faculty Mentor"}</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Permitted Case Scope & Description */}
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">
+            Plan Objective &amp; Support Scope
+          </h3>
+          <p className="text-xs text-neutral-600 leading-relaxed bg-neutral-50/80 p-4 rounded-2xl border border-neutral-200/60">
+            Assistance allocated under institutional student support framework. The goal is to provide structured mentorship check-ins, coursework guidance, and subject-matter assistance.
+          </p>
+        </div>
+      </div>
+
+      {/* Grid: Left (Actionable Milestones & Timeline) | Right (Messages) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Milestones */}
+        <div className="lg:col-span-7 space-y-6">
+          <div className="skill-card bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
+            <div className="pb-3 border-b border-neutral-100">
+              <h2 className="text-base font-bold text-neutral-900 font-heading">
+                Action Items &amp; Next Steps
+              </h2>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Tasks arranged by your mentor to support your academic progress.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {(matchedCase.tasks || []).map((t) => (
+                <div
+                  key={t.id}
+                  className="p-4 bg-neutral-50/80 rounded-2xl border border-neutral-200/60 flex items-start gap-3"
+                >
+                  <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl mt-0.5 shrink-0">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-neutral-900">
+                      {t.generic_label}
+                    </h4>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      Target Window: Within 48 hours • Assignee: Faculty Mentor
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-200/70 text-neutral-700 shrink-0">
+                    {t.state}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Activity History */}
+          <div className="skill-card bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
+            <div className="pb-3 border-b border-neutral-100">
+              <h2 className="text-base font-bold text-neutral-900 font-heading">
+                Case Activity
+              </h2>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Audited milestones and updates recorded on this support case.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {(matchedCase.events || []).map((evt) => (
+                <div
+                  key={evt.id}
+                  className="p-3 bg-neutral-50/60 rounded-xl border border-neutral-100 text-xs flex items-center justify-between gap-2"
+                >
+                  <span className="font-semibold text-neutral-800">
+                    {evt.event_type.replace(/_/g, " ")}
+                  </span>
+                  <span className="text-[11px] text-neutral-400">
+                    {new Date(evt.created_at).toLocaleDateString([], {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Student-Visible Messages */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="skill-card bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
+            <div className="pb-3 border-b border-neutral-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900 font-heading">
+                  Case Messages
+                </h3>
+                <p className="text-[11px] text-neutral-500">
+                  Direct communication with your assigned mentor.
+                </p>
+              </div>
+              <MessageSquare className="w-4 h-4 text-neutral-400" />
+            </div>
+
+            {/* Message Feed */}
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+              {messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`p-3 rounded-2xl text-xs space-y-1 ${
+                    m.isStudent
+                      ? "bg-neutral-900 text-white ml-6"
+                      : "bg-neutral-100 text-neutral-800 mr-6"
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[10px] opacity-75">
+                    <span className="font-semibold">{m.sender}</span>
+                    <span>{m.time}</span>
+                  </div>
+                  <p className="leading-relaxed">{m.text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Message Reply Form */}
+            <form onSubmit={handleSendMessage} className="pt-2 border-t border-neutral-100 flex items-center gap-2">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type your response or update..."
+                className="flex-1 px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+              />
+              <button
+                type="submit"
+                disabled={!newMessage.trim()}
+                className="p-2 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 text-white rounded-xl transition-colors"
+                title="Send Message"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

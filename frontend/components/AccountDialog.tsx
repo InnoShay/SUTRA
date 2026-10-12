@@ -149,6 +149,17 @@ export function AccountDialog({ isOpen, onClose }: AccountDialogProps) {
             <div className="flex items-center justify-between text-neutral-600 pt-1.5 border-t border-neutral-200/50">
               <span className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
                 <ShieldCheck className="w-3.5 h-3.5 text-neutral-400" />
+                Environment
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-700">
+                <span className={`w-1.5 h-1.5 rounded-full ${supabaseSession ? "bg-emerald-500 ring-2 ring-emerald-200" : "bg-amber-400"}`} />
+                <span>{supabaseSession ? "Live Mode" : "Demo Mode"}</span>
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-neutral-600 pt-1.5 border-t border-neutral-200/50">
+              <span className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
+                <ShieldCheck className="w-3.5 h-3.5 text-neutral-400" />
                 Auth Session
               </span>
               <span className="text-[11px] font-medium text-neutral-700">

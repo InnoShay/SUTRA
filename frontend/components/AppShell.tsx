@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSkillHub } from "@/lib/store";
 import { SkillHubLogo, SkillHubLogoIcon } from "./SkillHubLogo";
 import { NewCourseModal } from "./NewCourseModal";
@@ -29,6 +29,9 @@ import {
   X,
   ChevronDown,
   Check,
+  FileText,
+  HeartHandshake,
+  MessageCircle,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -37,11 +40,13 @@ import { LanguageSelector } from "./LanguageSelector";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useLanguage();
   const {
     user,
     activeRole,
     setActiveRole,
+    authorizedRoles,
     currentPersona,
     backendConnected,
     setIsSearchOpen,
@@ -63,70 +68,152 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
 
-  const personaList: {
-    role: UserRole;
-    displayLabel: string;
-    fullName: string;
-    title: string;
-    avatar: string;
-    badge?: string;
-  }[] = [
-    {
-      role: "faculty",
-      displayLabel: "Faculty (Prof. Sharma)",
-      fullName: DEMO_PERSONAS.faculty.name,
-      title: DEMO_PERSONAS.faculty.title,
-      avatar: DEMO_PERSONAS.faculty.avatar,
-    },
-    {
-      role: "counselor",
-      displayLabel: "Counselor (Dr. Nambiar)",
-      fullName: DEMO_PERSONAS.counselor.name,
-      title: DEMO_PERSONAS.counselor.title,
-      avatar: DEMO_PERSONAS.counselor.avatar,
-    },
-    {
-      role: "dean",
-      displayLabel: "Dean / HOD (Dr. Rao)",
-      fullName: DEMO_PERSONAS.dean.name,
-      title: DEMO_PERSONAS.dean.title,
-      avatar: DEMO_PERSONAS.dean.avatar,
-    },
-    {
-      role: "leadership",
-      displayLabel: "Leadership (Prof. Kulkarni)",
-      fullName: DEMO_PERSONAS.leadership.name,
-      title: DEMO_PERSONAS.leadership.title,
-      avatar: DEMO_PERSONAS.leadership.avatar,
-      badge: "ADR-004",
-    },
-    {
-      role: "superadmin",
-      displayLabel: "Superadmin",
-      fullName: DEMO_PERSONAS.superadmin.name,
-      title: DEMO_PERSONAS.superadmin.title,
-      avatar: DEMO_PERSONAS.superadmin.avatar,
-    },
-  ];
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        roleDropdownRef.current &&
+        !roleDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsRoleDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
-  const currentPersonaOption =
-    personaList.find((p) => p.role === activeRole) || personaList[0];
+  const ROLE_CONFIG: Record<string, { label: string; short: string }> = {
+    faculty: { label: "Teacher / Faculty", short: "Faculty" },
+    student: { label: "Student", short: "Student" },
+    admin: { label: "Admin", short: "Admin" },
+  };
+
+  const availableRoleOptions = (
+    authorizedRoles && authorizedRoles.length > 0
+      ? authorizedRoles
+      : (["faculty", "student", "admin"] as UserRole[])
+  ).filter((r) => Boolean(ROLE_CONFIG[r]));
+
+  const handleRoleSelect = (role: UserRole) => {
+    setIsRoleDropdownOpen(false);
+    if (authorizedRoles.length > 0 && !authorizedRoles.includes(role)) {
+      console.warn(`[SUTRA Auth] Unauthorized role selection rejected: ${role}`);
+      return;
+    }
+    if (role === activeRole) return;
+    setActiveRole(role);
+    if (pathname !== "/dashboard") {
+      router.push("/dashboard");
+    }
+  };
 
   // If on landing page (/) or login page (/login), render clean full-width view without dashboard shell chrome
   if (pathname === "/login" || pathname === "/") {
     return <>{children}</>;
   }
 
-  const mainNavItems = [
-    { name: t("nav.dashboard", "Overview"), shortName: t("nav.dashboard_short", "Overview"), href: "/dashboard", icon: LayoutGrid },
-    { name: t("nav.courses", "Interventions & Protocols"), shortName: t("nav.courses_short", "Protocols"), href: "/courses", icon: Bookmark },
-    { name: t("nav.students", "Student Directory"), shortName: t("nav.students_short", "Students"), href: "/students", icon: GraduationCap },
-    { name: t("nav.community", "Case Management"), shortName: t("nav.community_short", "Cases"), href: "/community", icon: Users },
-    { name: t("nav.analytics", "Institutional Analytics"), shortName: t("nav.analytics_short", "Analytics"), href: "/analytics", icon: BarChart2 },
+  const isStudent = activeRole === "student";
+  const isAdmin = activeRole === "admin" || activeRole === "superadmin";
+
+  // Standardized navigation definitions: Teacher-centric with legacy compatibility aliases
+  // Audited labels: Overview, Interventions & Protocols, Student Directory, Case Management, Institutional Analytics
+  const studentNavItems = [
+    {
+      name: t("nav.dashboard", "Overview"),
+      shortName: t("nav.dashboard_short", "Overview"),
+      href: "/dashboard",
+      icon: LayoutGrid,
+    },
+    {
+      name: t("nav.my_cases", "My Cases"),
+      shortName: t("nav.my_cases_short", "Cases"),
+      href: "/cases",
+      icon: FileText,
+    },
+    {
+      name: t("nav.request_support", "Request Support"),
+      shortName: t("nav.request_support_short", "Support"),
+      href: "/request-support",
+      icon: HeartHandshake,
+    },
+    {
+      name: t("nav.messages", "Messages"),
+      shortName: t("nav.messages_short", "Messages"),
+      href: "/messages",
+      icon: MessageCircle,
+    },
   ];
+
+  const teacherNavItems = [
+    {
+      name: t("nav.dashboard", "Overview"),
+      shortName: t("nav.dashboard_short", "Overview"),
+      href: "/dashboard",
+      icon: LayoutGrid,
+    },
+    {
+      name: t("nav.my_cases", "My Cases"),
+      shortName: t("nav.community_short", "Case Management"),
+      href: "/cases",
+      icon: FileText,
+    },
+    {
+      name: t("nav.students", "Student Directory"),
+      shortName: t("nav.students_short", "Students"),
+      href: "/students",
+      icon: GraduationCap,
+    },
+    {
+      name: t("nav.courses", "Interventions & Protocols"),
+      shortName: t("nav.courses_short", "Protocols"),
+      href: "/courses",
+      icon: Bookmark,
+    },
+  ];
+
+  const adminNavItems = [
+    {
+      name: t("nav.dashboard", "Overview"),
+      shortName: t("nav.dashboard_short", "Overview"),
+      href: "/dashboard",
+      icon: LayoutGrid,
+    },
+    {
+      name: t("nav.my_cases", "Case Management"),
+      shortName: t("nav.community_short", "Case Management"),
+      href: "/cases",
+      icon: FileText,
+    },
+    {
+      name: t("nav.students", "Student Directory"),
+      shortName: t("nav.students_short", "Students"),
+      href: "/students",
+      icon: GraduationCap,
+    },
+    {
+      name: t("nav.courses", "Interventions & Protocols"),
+      shortName: t("nav.courses_short", "Protocols"),
+      href: "/courses",
+      icon: Bookmark,
+    },
+    {
+      name: t("nav.analytics", "Institutional Analytics"),
+      shortName: t("nav.analytics_short", "Analytics"),
+      href: "/analytics",
+      icon: BarChart2,
+    },
+  ];
+
+  const mainNavItems = isStudent
+    ? studentNavItems
+    : isAdmin
+    ? adminNavItems
+    : teacherNavItems;
 
   const othersNavItems = [
     { name: t("nav.settings", "Settings"), href: "/settings", icon: Settings },
@@ -382,7 +469,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Bottom User Profile Section */}
-        <div className="pt-4 border-t border-neutral-200/60 flex-shrink-0">
+        <div className="pt-4 border-t border-neutral-200/60 flex-shrink-0 space-y-2">
+          {!sidebarCollapsed && (
+            <div className="px-2 hidden lg:block">
+              <LanguageSelector />
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setIsAccountDialogOpen(true)}
@@ -435,134 +527,59 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
             </div>
 
-            {/* Actions: Indic Language (Sarvam AI) + Persona Switcher + Messages + Notifications + Profile Avatar */}
+            {/* Actions: Single Role Dropdown + Messages + Notifications + Profile Avatar */}
             <div className="flex items-center gap-2.5">
-              {/* Indic Regional Language Selector (Powered by Sarvam AI) */}
-              <LanguageSelector />
-
-              {/* Persona Switcher Selector — Apple / iOS Popover */}
-              <div className="relative">
+              {/* Single Role-Switching Dropdown */}
+              <div ref={roleDropdownRef} className="relative">
                 <button
                   type="button"
-                  onClick={() => setIsPersonaMenuOpen(!isPersonaMenuOpen)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] active:bg-neutral-200/60 border rounded-full text-xs font-semibold text-neutral-800 shadow-2xs focus:outline-none transition-all cursor-pointer ${
-                    isPersonaMenuOpen
-                      ? "border-neutral-400 bg-white shadow-xs ring-2 ring-neutral-900/5"
-                      : "border-neutral-200/70"
-                  }`}
-                  title={supabaseSession ? "Active Campus Role" : "Switch Active Persona"}
-                  aria-expanded={isPersonaMenuOpen}
-                  aria-haspopup="true"
+                  onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+                  className="flex items-center gap-2 px-3.5 py-1.5 bg-[#F8F9FA] hover:bg-neutral-100 border border-neutral-200/70 rounded-full text-xs font-semibold text-neutral-800 shadow-2xs transition-all cursor-pointer"
+                  aria-expanded={isRoleDropdownOpen}
+                  aria-haspopup="listbox"
+                  title="Switch active role"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200" />
-                  <span>
-                    {supabaseSession
-                      ? `${activeRole.charAt(0).toUpperCase() + activeRole.slice(1)} (${user.name})`
-                      : currentPersonaOption.displayLabel}
-                  </span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Role: {ROLE_CONFIG[activeRole]?.short || activeRole}</span>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
-                      isPersonaMenuOpen ? "rotate-180 text-neutral-800" : ""
+                    className={`w-3.5 h-3.5 text-neutral-500 transition-transform duration-150 ${
+                      isRoleDropdownOpen ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
-                {isPersonaMenuOpen && (
-                  <>
-                    {/* Invisible backdrop to dismiss on click outside */}
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsPersonaMenuOpen(false)}
-                    />
-
-                    {/* Apple / iOS-style Floating Glass Menu */}
-                    <div className="absolute right-0 top-full mt-2 w-80 bg-white/95 backdrop-blur-xl border border-neutral-200/80 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                      {/* iOS Group Header */}
-                      <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                          {supabaseSession ? "Active Account" : "Active Persona"}
-                        </span>
-                        <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-full ${
-                          supabaseSession
-                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200/60 font-semibold"
-                            : "bg-neutral-100 text-neutral-600"
-                        }`}>
-                          {supabaseSession ? "Google SSO Active" : "Role Context"}
-                        </span>
-                      </div>
-
-                      {/* User Card if Authenticated */}
-                      {supabaseSession && (
-                        <div className="mx-1 my-1.5 p-2.5 bg-neutral-50/90 rounded-xl border border-neutral-100 flex items-center gap-2.5">
-                          <UserAvatar
-                            src={user.avatar}
-                            name={user.fullName}
-                            className="w-8 h-8 ring-2 ring-emerald-400/60 shrink-0"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-bold text-neutral-900 truncate">
-                              {user.fullName}
-                            </div>
-                            <div className="text-[10px] text-neutral-500 truncate">
-                              {user.email}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Header for Roles / Personas */}
-                      <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                        {supabaseSession ? "Switch Role View" : "Available Personas"}
-                      </div>
-
-                      {/* Options List */}
-                      <div className="py-1 space-y-0.5">
-                        {personaList.map((p) => {
-                          const isSelected = activeRole === p.role;
-                          return (
-                            <button
-                              key={p.role}
-                              type="button"
-                              onClick={() => {
-                                setActiveRole(p.role);
-                                setIsPersonaMenuOpen(false);
-                              }}
-                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all cursor-pointer ${
-                                isSelected
-                                  ? "bg-neutral-100/90 text-neutral-900 shadow-2xs font-semibold"
-                                  : "hover:bg-neutral-50 active:bg-neutral-100/80 text-neutral-700"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                <UserAvatar
-                                  src={p.avatar}
-                                  name={p.fullName}
-                                  className="w-7 h-7 ring-1 ring-neutral-200/80"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-xs font-semibold text-neutral-900 truncate flex items-center gap-1.5">
-                                    <span>{p.displayLabel}</span>
-                                    {p.badge && (
-                                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-mono font-bold">
-                                        {p.badge}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-[10px] text-neutral-400 truncate">
-                                    {p.title}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {isSelected && (
-                                <Check className="w-4 h-4 text-neutral-900 shrink-0 ml-2" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
+                {isRoleDropdownOpen && (
+                  <div
+                    role="listbox"
+                    className="absolute right-0 mt-2 w-48 bg-white border border-neutral-200/80 rounded-2xl shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"
+                  >
+                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                      Authorized Roles
                     </div>
-                  </>
+                    {availableRoleOptions.map((roleKey) => {
+                      const isSelected = activeRole === roleKey;
+                      const config = ROLE_CONFIG[roleKey];
+                      return (
+                        <button
+                          key={roleKey}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => handleRoleSelect(roleKey)}
+                          className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
+                            isSelected
+                              ? "bg-neutral-100 font-bold text-neutral-900"
+                              : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 font-medium"
+                          }`}
+                        >
+                          <span>{config?.label || roleKey}</span>
+                          {isSelected && (
+                            <Check className="w-3.5 h-3.5 text-neutral-900 shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
@@ -616,7 +633,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Mobile Navigation"
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-neutral-200/60 px-2 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
       >
-        <div className="grid grid-cols-5 items-center justify-around max-w-md mx-auto">
+        <div
+          className={`grid ${
+            mainNavItems.length === 5 ? "grid-cols-5" : "grid-cols-4"
+          } items-center justify-around max-w-md mx-auto`}
+        >
           {mainNavItems.map((item) => {
             const isActive =
               pathname === item.href ||
