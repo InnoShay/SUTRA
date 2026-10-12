@@ -92,11 +92,21 @@ def deploy_contract(rpc_url: str, private_key: str | None, simulate: bool = Fals
     nonce = w3.eth.get_transaction_count(deployer_address)
 
     print("\n[*] Building contract creation transaction...")
+    # Safe gas estimation with fallback for OP-Stack Base Sepolia
+    try:
+        estimated_gas = w3.eth.estimate_gas({"from": deployer_address, "data": bytecode})
+        gas_limit = int(estimated_gas * 1.25)
+    except Exception:
+        gas_limit = 650000
+
+    gas_price = int(w3.eth.gas_price * 1.15) if w3.eth.gas_price else 10000000
+
     construct_txn = contract.constructor().build_transaction({
         "from": deployer_address,
         "nonce": nonce,
         "chainId": BASE_SEPOLIA_CHAIN_ID,
-        "gasPrice": w3.eth.gas_price,
+        "gas": gas_limit,
+        "gasPrice": gas_price,
     })
 
     print("[*] Signing transaction with deployer key...")

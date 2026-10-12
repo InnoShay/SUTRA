@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { DocumentDTO, CBDCVoucherRecord } from "@/lib/types";
 import { useSkillHub } from "@/lib/store";
+import { WalletConnectButton } from "@/components/WalletConnectButton";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -20,20 +21,16 @@ import {
   Coins,
   AlertTriangle,
   Info,
-  Clock,
-  Sparkles,
   Search,
   Filter,
 } from "lucide-react";
 
 export default function DocumentsPage() {
-  const { currentPersona, activeRole } = useSkillHub();
+  const { currentPersona } = useSkillHub();
 
   const [documents, setDocuments] = useState<DocumentDTO[]>([]);
-  const [network, setNetwork] = useState<string>("Base Sepolia (Chain ID 84532)");
   const [contractAddress, setContractAddress] = useState<string>("0x3565eDb6aEc447CaeB73F719574828135cfB9705");
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Filters & search
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,22 +78,18 @@ export default function DocumentsPage() {
   // Load documents
   const fetchDocuments = async () => {
     setIsLoading(true);
-    setErrorMsg(null);
     try {
       if (currentPersona?.token) {
         api.setToken(currentPersona.token);
       }
       const res = await api.documents.list();
       setDocuments(res.documents || []);
-      if (res.network) setNetwork(res.network);
-      // Capture contract address if available from any anchored doc
       const anchoredWithContract = res.documents.find((d) => d.contract_address);
       if (anchoredWithContract?.contract_address) {
         setContractAddress(anchoredWithContract.contract_address);
       }
     } catch (err: any) {
-      console.warn("Failed to fetch documents from backend:", err);
-      setErrorMsg(err.message || "Failed to load document records.");
+      console.warn("Failed to fetch documents:", err);
     } finally {
       setIsLoading(false);
     }
@@ -106,14 +99,14 @@ export default function DocumentsPage() {
     fetchDocuments();
   }, [currentPersona]);
 
-  // Copy to clipboard helper
+  // Copy helper
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // Generate Document Action
+  // Generate Document
   const handleGenerateDocument = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!genTitle.trim()) return;
@@ -129,7 +122,6 @@ export default function DocumentsPage() {
           metadata_payload: {
             cohort: "CS-Y2",
             academic_term: "Fall 2026",
-            department: "School of Engineering",
           },
         },
         genFinalizeImmediately
@@ -138,13 +130,13 @@ export default function DocumentsPage() {
       setIsGenerateOpen(false);
       setGenTitle("");
     } catch (err: any) {
-      alert("Error generating document: " + (err.message || "Unknown error"));
+      alert("Error creating document: " + (err.message || "Unknown error"));
     } finally {
       setIsSubmittingGen(false);
     }
   };
 
-  // Finalize Document Action
+  // Finalize Document
   const handleFinalize = async (doc: DocumentDTO) => {
     setProcessingDocId(doc.id);
     try {
@@ -168,7 +160,7 @@ export default function DocumentsPage() {
     }
   };
 
-  // Anchor to Base Sepolia Action
+  // Anchor to Base Sepolia
   const handleAnchor = async (doc: DocumentDTO) => {
     setProcessingDocId(doc.id);
     try {
@@ -199,7 +191,7 @@ export default function DocumentsPage() {
     }
   };
 
-  // Download PDF Action
+  // Download Authentic PDF
   const handleDownload = async (doc: DocumentDTO) => {
     try {
       const downloadUrl = api.documents.getDownloadUrl(doc.id);
@@ -213,9 +205,7 @@ export default function DocumentsPage() {
         },
       });
 
-      if (!resp.ok) {
-        throw new Error(`Failed to download: ${resp.statusText}`);
-      }
+      if (!resp.ok) throw new Error("Download failed");
 
       const blob = await resp.blob();
       const url = window.URL.createObjectURL(blob);
@@ -227,11 +217,11 @@ export default function DocumentsPage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err: any) {
-      alert("Download error: " + (err.message || "Failed to download document bytes"));
+      alert("Download error: " + (err.message || "Could not retrieve document bytes"));
     }
   };
 
-  // Compute local SHA-256 of candidate file
+  // Compute file SHA-256 in browser
   const computeFileSha256 = async (file: File): Promise<string> => {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
@@ -239,7 +229,6 @@ export default function DocumentsPage() {
     return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   };
 
-  // Handle Candidate File Selection
   const handleFileChange = async (file: File) => {
     setCandidateFile(file);
     setVerificationResult(null);
@@ -247,11 +236,11 @@ export default function DocumentsPage() {
       const hash = await computeFileSha256(file);
       setCandidateHash(hash);
     } catch (err) {
-      console.warn("Local SHA256 calc error:", err);
+      console.warn("SHA256 calculation error:", err);
     }
   };
 
-  // Submit Candidate File Verification
+  // Submit Verification
   const handleVerifySubmit = async () => {
     if (!verifyDocTarget || !candidateFile) return;
     setIsVerifying(true);
@@ -266,7 +255,6 @@ export default function DocumentsPage() {
         disclaimer: res.legal_disclaimer,
       });
 
-      // Update state in table
       setDocuments((prev) =>
         prev.map((d) =>
           d.id === verifyDocTarget.id
@@ -300,7 +288,7 @@ export default function DocumentsPage() {
       });
       setVouchers((prev) => [voucher, ...prev]);
     } catch (err: any) {
-      alert("Voucher issuance error: " + (err.message || "Failed to issue simulated voucher"));
+      alert("Voucher error: " + (err.message || "Failed to issue simulated voucher"));
     } finally {
       setIsIssuingCbdc(false);
     }
@@ -323,139 +311,131 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* 1. HEADER: Title & Telemetry Actions */}
+      {/* 1. HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
-              Document Integrity &amp; Blockchain Anchoring
+              Document Integrity
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Base Sepolia (84532)
             </span>
           </div>
-          <p className="text-xs text-neutral-500 mt-1 max-w-3xl">
-            Byte-level cryptographic SHA-256 anchoring and tamper verification for student intervention agreements,
-            milestone plans, and institutional retention contracts. Zero student PII on-chain.
+          <p className="text-xs text-neutral-500 mt-1">
+            Byte-level cryptographic SHA-256 anchoring and tamper verification for student agreements. Zero PII on-chain.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <WalletConnectButton />
           <button
             onClick={fetchDocuments}
             disabled={isLoading}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200/80 bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-700 transition-all shadow-2xs active:scale-[0.98]"
-            title="Refresh Records"
+            className="p-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600 transition-all shadow-2xs cursor-pointer"
+            title="Refresh"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-neutral-500 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           </button>
           <button
             onClick={() => setIsGenerateOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-xs font-semibold text-white transition-all shadow-xs active:scale-[0.98]"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            Generate Document
+            <span>New Agreement</span>
           </button>
         </div>
       </div>
 
-      {/* 2. LEGAL DISCLAIMER BANNER (Apple-Style Glass Accent) */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-white border border-blue-200/60 shadow-2xs flex items-start gap-3.5">
-        <div className="p-2 rounded-xl bg-blue-100/70 text-blue-700 mt-0.5">
-          <ShieldCheck className="w-5 h-5" />
+      {/* 2. SECURITY & GUARANTEE CALLOUT */}
+      <div className="px-4 py-3 rounded-2xl bg-neutral-100/70 border border-neutral-200/80 flex items-center justify-between gap-3 text-xs text-neutral-600">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>
+            <strong className="text-neutral-800">Immutable Integrity Guarantee:</strong> Document hashes are anchored to Base Sepolia smart contract registry. Student personal data is kept strictly private off-chain.
+          </span>
         </div>
-        <div className="space-y-1 text-xs">
-          <p className="font-bold text-neutral-900">
-            Cryptographic Document Integrity Guarantee &amp; Non-PII Bound
-          </p>
-          <p className="text-neutral-600 leading-relaxed">
-            Proof of byte-level immutability is anchored to Base Sepolia smart contract registry. Anchoring guarantees
-            un-tampered existence of identical file bytes at a point in time; it does <span className="font-semibold text-neutral-800">NOT</span> certify
-            external factual truth, legal enforceability, or institutional authorization. Zero student names or grades are broadcast on-chain.
-          </p>
-        </div>
+        <span className="text-[11px] font-mono text-neutral-400 shrink-0 hidden sm:inline">
+          EIP-1193 • SHA-256
+        </span>
       </div>
 
-      {/* 3. METRICS OVERVIEW CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-2">
+      {/* 3. METRIC CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-1">
           <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
-            <span>Total Documents</span>
+            <span>Documents</span>
             <FileText className="w-4 h-4 text-neutral-400" />
           </div>
-          <div className="text-2xl font-extrabold text-neutral-900 tracking-tight font-heading">
+          <div className="text-2xl font-bold text-neutral-900 font-heading">
             {documents.length}
           </div>
-          <p className="text-[11px] text-neutral-400">Intervention agreements &amp; plans</p>
+          <p className="text-[11px] text-neutral-400">Total institutional records</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-2">
+        <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-1">
           <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
-            <span>Anchored to Base Sepolia</span>
+            <span>Anchored On-Chain</span>
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-extrabold text-emerald-700 tracking-tight font-heading">
+          <div className="text-2xl font-bold text-emerald-700 font-heading">
             {anchoredCount}
           </div>
-          <p className="text-[11px] text-neutral-400">Chain ID 84532 immutable records</p>
+          <p className="text-[11px] text-neutral-400">Base Sepolia records</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-2">
+        <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-1">
           <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
-            <span>Verified Authentic Matches</span>
+            <span>Verified Authentic</span>
             <CheckCircle2 className="w-4 h-4 text-blue-500" />
           </div>
-          <div className="text-2xl font-extrabold text-blue-700 tracking-tight font-heading">
+          <div className="text-2xl font-bold text-blue-700 font-heading">
             {verifiedMatchCount}
           </div>
-          <p className="text-[11px] text-neutral-400">100% cryptographic byte match</p>
+          <p className="text-[11px] text-neutral-400">100% byte match validated</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-2">
+        <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-2xs space-y-1">
           <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
             <span>Registry Contract</span>
-            <Sparkles className="w-4 h-4 text-purple-500" />
-          </div>
-          <div className="font-mono text-xs font-bold text-neutral-800 truncate" title={contractAddress}>
-            {contractAddress.slice(0, 10)}...{contractAddress.slice(-8)}
-          </div>
-          <div className="flex items-center gap-1.5 pt-0.5">
             <button
               onClick={() => copyToClipboard(contractAddress, "contract")}
-              className="text-[11px] text-purple-700 hover:text-purple-900 font-semibold flex items-center gap-1"
+              className="text-[11px] text-neutral-500 hover:text-neutral-900 font-medium flex items-center gap-1 cursor-pointer"
             >
               {copiedKey === "contract" ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-              {copiedKey === "contract" ? "Copied" : "Copy Address"}
+              <span>{copiedKey === "contract" ? "Copied" : "Copy"}</span>
             </button>
           </div>
+          <div className="font-mono text-sm font-bold text-neutral-800 truncate" title={contractAddress}>
+            {contractAddress ? `${contractAddress.slice(0, 8)}...${contractAddress.slice(-6)}` : "Pending"}
+          </div>
+          <p className="text-[11px] text-neutral-400">Chain ID 84532</p>
         </div>
       </div>
 
-      {/* 4. CONTROLS: Search & Status Filters */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-neutral-200/80 shadow-2xs">
+      {/* 4. SEARCH & FILTERS */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-neutral-200/80 shadow-2xs">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by title, reference (DOC-2026...), or SHA-256 fingerprint..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl bg-neutral-50 border border-neutral-200 focus:bg-white focus:outline-none focus:ring-1 focus:ring-neutral-900 transition-all"
+            placeholder="Search by title, document reference, or hash..."
+            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-neutral-50 border border-neutral-200 focus:bg-white focus:outline-none focus:ring-1 focus:ring-neutral-900"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <Filter className="w-3.5 h-3.5 text-neutral-400 mr-1" />
+        <div className="flex items-center gap-1.5 overflow-x-auto">
           {["ALL", "ANCHORED", "FINALIZED", "DRAFT"].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 statusFilter === status
                   ? "bg-neutral-900 text-white shadow-2xs"
-                  : "bg-neutral-100 hover:bg-neutral-200/70 text-neutral-600"
+                  : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"
               }`}
             >
               {status}
@@ -464,12 +444,12 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      {/* 5. DOCUMENTS TABLE / CARDS */}
+      {/* 5. DOCUMENTS LIST */}
       <div className="bg-white rounded-2xl border border-neutral-200/80 shadow-2xs overflow-hidden">
         {isLoading ? (
-          <div className="py-16 text-center space-y-3">
-            <RefreshCw className="w-6 h-6 text-neutral-400 animate-spin mx-auto" />
-            <p className="text-xs text-neutral-500 font-medium">Loading document integrity records...</p>
+          <div className="py-16 text-center space-y-2">
+            <RefreshCw className="w-5 h-5 text-neutral-400 animate-spin mx-auto" />
+            <p className="text-xs text-neutral-500">Loading documents...</p>
           </div>
         ) : errorMsg ? (
           <div className="py-16 text-center space-y-3 px-4">
@@ -489,189 +469,160 @@ export default function DocumentsPage() {
             </div>
           </div>
         ) : filteredDocuments.length === 0 ? (
-          <div className="py-16 text-center space-y-3 px-4">
-            <FileText className="w-10 h-10 text-neutral-300 mx-auto" />
-            <h3 className="text-sm font-bold text-neutral-800">No document records found</h3>
-            <p className="text-xs text-neutral-400 max-w-sm mx-auto">
-              Generate an intervention agreement or retention contract to establish byte-level cryptographic integrity.
-            </p>
+          <div className="py-14 text-center space-y-2 px-4">
+            <FileText className="w-8 h-8 text-neutral-300 mx-auto" />
+            <p className="text-sm font-semibold text-neutral-800">No documents found</p>
+            <p className="text-xs text-neutral-400">Generate an agreement to start anchoring records on-chain.</p>
             <button
               onClick={() => setIsGenerateOpen(true)}
-              className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 text-white text-xs font-semibold"
+              className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-neutral-900 text-white text-xs font-semibold cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              Generate First Document
+              <span>Create Agreement</span>
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-100 overflow-x-auto">
+          <div className="divide-y divide-neutral-100">
             {filteredDocuments.map((doc) => {
               const isAnchored = doc.status === "anchored";
               const isFinalized = doc.status === "finalized";
               const isDraft = doc.status === "draft";
-              const hasExplorerUrl = Boolean(doc.explorer_url);
 
               return (
-                <div key={doc.id} className="p-4 sm:p-5 hover:bg-neutral-50/70 transition-colors space-y-3">
-                  {/* Top Row: Title, Reference, Status Badge */}
+                <div key={doc.id} className="p-4 hover:bg-neutral-50/60 transition-colors space-y-3">
+                  {/* Top Bar: Title, Reference, Status */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-neutral-100 text-neutral-700">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-xl bg-neutral-100 text-neutral-700 shrink-0">
                         <FileText className="w-4 h-4" />
                       </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
-                          {doc.title}
-                          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-bold text-neutral-900 truncate">
+                            {doc.title}
+                          </h3>
+                          <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 shrink-0">
                             {doc.doc_type.replace("_", " ")}
                           </span>
-                        </h3>
+                        </div>
                         <p className="text-xs text-neutral-400 font-mono mt-0.5">
                           {doc.document_ref} • {(doc.file_size_bytes / 1024).toFixed(1)} KB • {new Date(doc.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Status Badge */}
+                    <div className="flex items-center gap-2 shrink-0">
                       {isDraft && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/80">
-                          Draft (Unfinalized)
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          Draft
                         </span>
                       )}
                       {isFinalized && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80">
-                          Finalized (Fingerprint Ready)
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                          Finalized
                         </span>
                       )}
                       {isAnchored && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Anchored to Base Sepolia
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Anchored
                         </span>
                       )}
 
-                      {/* Verification Status Badge */}
                       {doc.verification_status === "verified_match" && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 flex items-center gap-1">
                           <Check className="w-3 h-3" />
-                          Verified Authentic
+                          Authentic Match
                         </span>
                       )}
                       {doc.verification_status === "mismatch" && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3" />
-                          Tamper Detected (Mismatch)
+                          Tamper Alert
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Middle Row: SHA-256 Monospace Fingerprint */}
-                  <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap">
-                        SHA-256:
+                  {/* Hash & Actions Row */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                    {/* Compact SHA-256 Pill */}
+                    <div className="flex items-center gap-2 text-xs font-mono bg-neutral-50 px-2.5 py-1 rounded-lg border border-neutral-200/70 max-w-fit">
+                      <span className="text-[10px] uppercase font-bold text-neutral-400 font-sans">
+                        SHA-256
                       </span>
-                      <span className="font-mono text-neutral-800 truncate" title={doc.sha256_hash}>
-                        {doc.sha256_hash}
+                      <span className="text-neutral-700">
+                        {doc.sha256_hash.slice(0, 10)}...{doc.sha256_hash.slice(-8)}
                       </span>
-                    </div>
-                    <button
-                      onClick={() => copyToClipboard(doc.sha256_hash, `hash-${doc.id}`)}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 shrink-0"
-                    >
-                      {copiedKey === `hash-${doc.id}` ? (
-                        <>
+                      <button
+                        onClick={() => copyToClipboard(doc.sha256_hash, `hash-${doc.id}`)}
+                        className="text-neutral-400 hover:text-neutral-700 cursor-pointer ml-1"
+                        title="Copy full hash"
+                      >
+                        {copiedKey === `hash-${doc.id}` ? (
                           <Check className="w-3 h-3 text-emerald-600" />
-                          <span className="text-emerald-700">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3 text-neutral-400" />
-                          <span>Copy Hash</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
 
-                  {/* Blockchain Anchoring & Explorer Details */}
-                  {isAnchored && (
-                    <div className="text-[11px] text-neutral-500 flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <span>Network: <strong className="text-neutral-700">Base Sepolia (84532)</strong></span>
-                      {doc.anchoring_mode === "simulated" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium">
-                          Simulated Anchor Receipt (Contract: {contractAddress.slice(0, 8)}...)
-                        </span>
-                      ) : (
-                        doc.tx_hash && (
-                          <span className="inline-flex items-center gap-1 text-blue-700">
-                            Tx: {doc.tx_hash.slice(0, 10)}...{doc.tx_hash.slice(-8)}
-                          </span>
-                        )
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {isDraft && (
+                        <button
+                          onClick={() => handleFinalize(doc)}
+                          disabled={processingDocId === doc.id}
+                          className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer"
+                        >
+                          {processingDocId === doc.id ? "Freezing..." : "Finalize"}
+                        </button>
                       )}
 
-                      {/* Explorer Link (Only when real URL exists) */}
-                      {hasExplorerUrl && (
+                      {isFinalized && (
+                        <button
+                          onClick={() => handleAnchor(doc)}
+                          disabled={processingDocId === doc.id}
+                          className="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>{processingDocId === doc.id ? "Anchoring..." : "Anchor"}</span>
+                        </button>
+                      )}
+
+                      {doc.explorer_url && (
                         <a
-                          href={doc.explorer_url!}
+                          href={doc.explorer_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1"
+                          className="px-2.5 py-1 rounded-lg border border-neutral-200 text-neutral-600 hover:text-neutral-900 text-xs font-semibold flex items-center gap-1 cursor-pointer"
                         >
-                          View on BaseScan <ExternalLink className="w-3 h-3" />
+                          <span>BaseScan</span>
+                          <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
+
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="p-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:text-neutral-900 text-xs cursor-pointer"
+                        title="Download PDF"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setVerifyDocTarget(doc);
+                          setCandidateFile(null);
+                          setCandidateHash(null);
+                          setVerificationResult(null);
+                        }}
+                        className="px-3 py-1 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5 text-neutral-500" />
+                        <span>Verify</span>
+                      </button>
                     </div>
-                  )}
-
-                  {/* Bottom Row: Actions */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-neutral-100">
-                    {/* Draft -> Finalize */}
-                    {isDraft && (
-                      <button
-                        onClick={() => handleFinalize(doc)}
-                        disabled={processingDocId === doc.id}
-                        className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs active:scale-[0.98] transition-all"
-                      >
-                        {processingDocId === doc.id ? "Finalizing..." : "Finalize & Freeze Fingerprint"}
-                      </button>
-                    )}
-
-                    {/* Finalized -> Anchor */}
-                    {isFinalized && (
-                      <button
-                        onClick={() => handleAnchor(doc)}
-                        disabled={processingDocId === doc.id}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-2xs active:scale-[0.98] transition-all flex items-center gap-1.5"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        {processingDocId === doc.id ? "Anchoring..." : "Anchor to Base Sepolia"}
-                      </button>
-                    )}
-
-                    {/* Download authentic bytes */}
-                    <button
-                      onClick={() => handleDownload(doc)}
-                      className="px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs"
-                    >
-                      <Download className="w-3.5 h-3.5 text-neutral-500" />
-                      Download Authentic PDF
-                    </button>
-
-                    {/* Verify candidate document */}
-                    <button
-                      onClick={() => {
-                        setVerifyDocTarget(doc);
-                        setCandidateFile(null);
-                        setCandidateHash(null);
-                        setVerificationResult(null);
-                      }}
-                      className="px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs"
-                    >
-                      <UploadCloud className="w-3.5 h-3.5 text-neutral-500" />
-                      Verify Candidate File
-                    </button>
                   </div>
                 </div>
               );
@@ -680,49 +631,44 @@ export default function DocumentsPage() {
         )}
       </div>
 
-      {/* 6. VERIFY DOCUMENT MODAL (Tamper Detection) */}
+      {/* 6. VERIFY MODAL */}
       {verifyDocTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-xl border border-neutral-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4 animate-in fade-in zoom-in-95 duration-100">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-50 text-blue-700">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-neutral-900">Verify Candidate Document</h3>
-                  <p className="text-xs text-neutral-400">Target: {verifyDocTarget.document_ref}</p>
-                </div>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900">Verify Document Integrity</h3>
+                <p className="text-xs text-neutral-400 font-mono">{verifyDocTarget.document_ref}</p>
               </div>
               <button
                 onClick={() => setVerifyDocTarget(null)}
-                className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100"
+                className="p-1 text-neutral-400 hover:text-neutral-700 cursor-pointer"
               >
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Target Anchored Hash Info */}
-            <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/70 space-y-1 text-xs">
-              <p className="font-semibold text-neutral-500 uppercase tracking-wider text-[10px]">
-                Target Anchored Record Fingerprint
-              </p>
+            {/* Target Anchored Hash */}
+            <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200/70 text-xs space-y-1">
+              <span className="font-semibold text-neutral-400 uppercase text-[10px]">
+                On-Chain Target SHA-256
+              </span>
               <p className="font-mono text-neutral-800 break-all text-[11px]">
                 {verifyDocTarget.sha256_hash}
               </p>
             </div>
 
-            {/* Drag & Drop Upload Zone */}
+            {/* Drag & Drop Zone */}
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-neutral-300 hover:border-neutral-400 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-neutral-50/50 hover:bg-neutral-50 space-y-2"
+              className="border-2 border-dashed border-neutral-300 hover:border-neutral-400 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-neutral-50/50 hover:bg-neutral-50 space-y-1.5"
             >
-              <UploadCloud className="w-8 h-8 text-neutral-400 mx-auto" />
+              <UploadCloud className="w-7 h-7 text-neutral-400 mx-auto" />
               <p className="text-xs font-semibold text-neutral-700">
-                {candidateFile ? candidateFile.name : "Click or drag & drop candidate PDF file to verify"}
+                {candidateFile ? candidateFile.name : "Select or drop candidate PDF to verify"}
               </p>
               <p className="text-[11px] text-neutral-400">
-                Computes exact raw byte SHA-256 fingerprint without normalization or modification
+                Calculates raw byte SHA-256 and compares against anchored registry.
               </p>
               <input
                 ref={fileInputRef}
@@ -737,55 +683,51 @@ export default function DocumentsPage() {
 
             {/* Candidate Hash preview */}
             {candidateHash && (
-              <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/70 space-y-1 text-xs">
-                <p className="font-semibold text-neutral-500 uppercase tracking-wider text-[10px]">
-                  Candidate File Calculated SHA-256
-                </p>
+              <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/70 text-xs space-y-1">
+                <span className="font-semibold text-neutral-400 uppercase text-[10px]">
+                  Uploaded File SHA-256
+                </span>
                 <p className="font-mono text-neutral-800 break-all text-[11px]">
                   {candidateHash}
                 </p>
               </div>
             )}
 
-            {/* Verification Result Display */}
+            {/* Verification Result Banner */}
             {verificationResult && (
               <div
-                className={`p-4 rounded-2xl border ${
+                className={`p-3.5 rounded-xl border ${
                   verificationResult.isMatch
-                    ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
-                    : "bg-red-50/80 border-red-200 text-red-900"
-                } space-y-2`}
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : "bg-red-50 border-red-200 text-red-900"
+                } space-y-1`}
               >
-                <div className="flex items-center gap-2 font-bold text-sm">
+                <div className="flex items-center gap-2 font-bold text-xs">
                   {verificationResult.isMatch ? (
                     <>
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                      <span>CRYPTOGRAPHIC INTEGRITY CONFIRMED (100% BYTE MATCH)</span>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>CRYPTOGRAPHIC MATCH: 100% AUTHENTIC</span>
                     </>
                   ) : (
                     <>
-                      <ShieldAlert className="w-5 h-5 text-red-600" />
-                      <span>TAMPER DETECTED: CRYPTOGRAPHIC HASH MISMATCH</span>
+                      <ShieldAlert className="w-4 h-4 text-red-600" />
+                      <span>TAMPER DETECTED: HASH MISMATCH</span>
                     </>
                   )}
                 </div>
                 <p className="text-xs leading-relaxed opacity-90">
                   {verificationResult.isMatch
-                    ? "The uploaded file is byte-for-byte identical to the version anchored on Base Sepolia. Zero alterations or corruptions detected."
-                    : "The uploaded file bytes do NOT match the anchored record. The document has been modified, corrupted, or re-saved with altered metadata."}
-                </p>
-                <p className="text-[10px] opacity-75 pt-1 border-t border-current/20">
-                  {verificationResult.disclaimer}
+                    ? "The candidate document bytes match the Base Sepolia record exactly."
+                    : "The candidate file bytes do NOT match the anchored record. The file has been modified or corrupted."}
                 </p>
               </div>
             )}
 
-            {/* Modal Actions */}
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setVerifyDocTarget(null)}
-                className="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+                className="px-3.5 py-1.5 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 cursor-pointer"
               >
                 Close
               </button>
@@ -793,40 +735,35 @@ export default function DocumentsPage() {
                 type="button"
                 onClick={handleVerifySubmit}
                 disabled={!candidateFile || isVerifying}
-                className="px-4 py-2 rounded-xl bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50"
+                className="px-4 py-1.5 rounded-xl bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 cursor-pointer"
               >
-                {isVerifying ? "Verifying..." : "Run Cryptographic Verification"}
+                {isVerifying ? "Verifying..." : "Run Verification"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 7. GENERATE DOCUMENT MODAL */}
+      {/* 7. GENERATE MODAL */}
       {isGenerateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4 animate-in fade-in zoom-in-95 duration-100">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-neutral-100 text-neutral-700">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-neutral-900">Generate Student Agreement</h3>
-                  <p className="text-xs text-neutral-400">Produces PDF &amp; exact SHA-256 fingerprint</p>
-                </div>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900">New Student Agreement</h3>
+                <p className="text-xs text-neutral-400">Generates PDF &amp; SHA-256 fingerprint</p>
               </div>
               <button
                 onClick={() => setIsGenerateOpen(false)}
-                className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100"
+                className="p-1 text-neutral-400 hover:text-neutral-700 cursor-pointer"
               >
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleGenerateDocument} className="space-y-3.5 text-xs">
+            <form onSubmit={handleGenerateDocument} className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Document Title</label>
+                <label className="block font-semibold text-neutral-700 mb-1">Title</label>
                 <input
                   type="text"
                   required
@@ -839,7 +776,7 @@ export default function DocumentsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Document Type</label>
+                  <label className="block font-semibold text-neutral-700 mb-1">Type</label>
                   <select
                     value={genDocType}
                     onChange={(e) => setGenDocType(e.target.value)}
@@ -848,7 +785,6 @@ export default function DocumentsPage() {
                     <option value="intervention_plan">Intervention Plan</option>
                     <option value="retention_contract">Retention Contract</option>
                     <option value="case_decision">Case Decision</option>
-                    <option value="student_summary">Student Summary</option>
                   </select>
                 </div>
 
@@ -865,7 +801,7 @@ export default function DocumentsPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Student Name (for PDF rendering only)</label>
+                <label className="block font-semibold text-neutral-700 mb-1">Student Display Name (PDF Only)</label>
                 <input
                   type="text"
                   value={genStudentName}
@@ -873,18 +809,14 @@ export default function DocumentsPage() {
                   placeholder="e.g. Asha (synthetic)"
                   className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:bg-white focus:outline-none"
                 />
-                <p className="text-[10px] text-neutral-400 mt-0.5">
-                  Never broadcast on-chain. Blockchain receives only docRefHash and documentHash.
-                </p>
               </div>
 
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Agreed Terms &amp; Support Goals</label>
+                <label className="block font-semibold text-neutral-700 mb-1">Intervention Terms</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={genContentText}
                   onChange={(e) => setGenContentText(e.target.value)}
-                  placeholder="Outline agreed tutoring hours, milestones, or faculty check-ins..."
                   className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:bg-white focus:outline-none"
                 />
               </div>
@@ -898,7 +830,7 @@ export default function DocumentsPage() {
                   className="rounded text-neutral-900 focus:ring-neutral-900"
                 />
                 <label htmlFor="finalizeImmediately" className="font-semibold text-neutral-700 cursor-pointer">
-                  Finalize and freeze SHA-256 fingerprint immediately upon creation
+                  Finalize and freeze fingerprint immediately
                 </label>
               </div>
 
@@ -906,14 +838,14 @@ export default function DocumentsPage() {
                 <button
                   type="button"
                   onClick={() => setIsGenerateOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-neutral-700 font-semibold hover:bg-neutral-50"
+                  className="px-3.5 py-1.5 rounded-xl border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingGen}
-                  className="px-4 py-2 rounded-xl bg-neutral-900 text-white font-semibold hover:bg-neutral-800 disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-xl bg-neutral-900 text-white font-semibold hover:bg-neutral-800 disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmittingGen ? "Generating..." : "Generate PDF"}
                 </button>
@@ -923,86 +855,75 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      {/* 8. SBI DIGITAL RUPEE (e₹ / CBDC) MILESTONE INCENTIVE BOUNDARY */}
-      <div className="p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200/60">
-              <Coins className="w-5 h-5" />
+      {/* 8. SBI DIGITAL RUPEE (e₹ / CBDC) MILESTONE INCENTIVES */}
+      <div className="p-5 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/60">
+              <Coins className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-neutral-900 font-heading">
-                  SBI Digital Rupee (e₹ / CBDC) Milestone Incentive Boundary
+                <h2 className="text-sm font-bold text-neutral-900 font-heading">
+                  SBI Digital Rupee (e₹) Milestone Rewards
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-amber-100 text-amber-800 border border-amber-300">
-                  SIMULATED BOUNDARY
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                  Simulated Boundary
                 </span>
               </div>
               <p className="text-xs text-neutral-500 mt-0.5">
-                Independent incentive rail rewarding verified milestone completion with programmable e₹ vouchers.
+                Programmable e₹ incentive vouchers for verified milestone completion.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Regulatory Disclosure Alert */}
-        <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 flex items-start gap-3 text-xs text-amber-900">
-          <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <strong>Architecture Integration Boundary:</strong> CBDC milestone rewards operate completely independently of document anchoring.
-            This simulated adapter proves protocol readiness. Actual production settlement requires formal RBI / State Bank of India
-            Corporate Banking PSP API onboarding and digital wallet whitelisting.
-          </p>
-        </div>
-
-        {/* Interactive Voucher Issuance Form */}
-        <form onSubmit={handleIssueCBDC} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs items-end bg-neutral-50/70 p-4 rounded-2xl border border-neutral-200/60">
+        {/* Issuance Form */}
+        <form onSubmit={handleIssueCBDC} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs items-end bg-neutral-50/70 p-3 rounded-2xl border border-neutral-200/60">
           <div>
-            <label className="block font-semibold text-neutral-700 mb-1">Student Reference</label>
+            <label className="block font-semibold text-neutral-600 mb-1">Student Ref</label>
             <input
               type="text"
               value={cbdcStudentRef}
               onChange={(e) => setCbdcStudentRef(e.target.value)}
               placeholder="SYN-1007"
-              className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              className="w-full px-3 py-1.5 rounded-xl bg-white border border-neutral-200 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-neutral-700 mb-1">Milestone Reference</label>
+            <label className="block font-semibold text-neutral-600 mb-1">Milestone</label>
             <input
               type="text"
               value={cbdcMilestone}
               onChange={(e) => setCbdcMilestone(e.target.value)}
               placeholder="MILESTONE-W5-CHECKIN"
-              className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              className="w-full px-3 py-1.5 rounded-xl bg-white border border-neutral-200 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-neutral-700 mb-1">Reward Value (₹ e₹)</label>
+            <label className="block font-semibold text-neutral-600 mb-1">Value (₹ e₹)</label>
             <input
               type="number"
               min={1}
               max={10000}
               value={cbdcAmount}
               onChange={(e) => setCbdcAmount(parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              className="w-full px-3 py-1.5 rounded-xl bg-white border border-neutral-200 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-neutral-700 mb-1">Purpose Code</label>
+            <label className="block font-semibold text-neutral-600 mb-1">Purpose Code</label>
             <select
               value={cbdcPurpose}
               onChange={(e) => setCbdcPurpose(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 focus:outline-none"
+              className="w-full px-3 py-1.5 rounded-xl bg-white border border-neutral-200 focus:outline-none"
             >
               <option value="ACADEMIC_PERSISTENCE_REWARD">Academic Persistence (₹500)</option>
               <option value="ATTENDANCE_RECOVERY">Attendance Recovery (₹750)</option>
               <option value="PEER_TUTORING_COMPLETION">Tutoring Completion (₹1,000)</option>
-              <option value="INTERVENTION_RESOLUTION">Intervention Resolution (₹1,500)</option>
             </select>
           </div>
 
@@ -1010,44 +931,39 @@ export default function DocumentsPage() {
             <button
               type="submit"
               disabled={isIssuingCbdc}
-              className="w-full px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-all shadow-xs active:scale-[0.98] disabled:opacity-50"
+              className="w-full px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              {isIssuingCbdc ? "Issuing..." : "Issue e₹ Voucher"}
+              {isIssuingCbdc ? "Issuing..." : "Issue Voucher"}
             </button>
           </div>
         </form>
 
-        {/* Issued Vouchers List */}
+        {/* Vouchers list */}
         {vouchers.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">
-              Issued Milestone Vouchers (Session)
-            </h4>
-            <div className="divide-y divide-neutral-100 border border-neutral-200/80 rounded-2xl overflow-hidden bg-white">
-              {vouchers.map((v) => (
-                <div key={v.voucher_id} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-neutral-900">{v.voucher_id}</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                        {v.status}
-                      </span>
-                    </div>
-                    <p className="text-neutral-500 text-[11px]">
-                      Student: <strong>{v.student_ref}</strong> • Milestone: {v.milestone_ref} • Purpose: {v.purpose_code}
-                    </p>
-                  </div>
-                  <div className="text-right sm:shrink-0">
-                    <span className="text-sm font-extrabold text-neutral-900 font-heading">
-                      ₹{v.amount_inr.toFixed(2)} e₹
+          <div className="divide-y divide-neutral-100 border border-neutral-200/80 rounded-2xl overflow-hidden bg-white text-xs">
+            {vouchers.map((v) => (
+              <div key={v.voucher_id} className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-neutral-900">{v.voucher_id}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                      {v.status}
                     </span>
-                    <p className="text-[10px] text-neutral-400 font-mono">
-                      Ref: {v.transaction_reference || "N/A"}
-                    </p>
                   </div>
+                  <p className="text-neutral-500 text-[11px]">
+                    Student: <strong>{v.student_ref}</strong> • Milestone: {v.milestone_ref}
+                  </p>
                 </div>
-              ))}
-            </div>
+                <div className="text-right sm:shrink-0">
+                  <span className="text-sm font-bold text-neutral-900 font-heading">
+                    ₹{v.amount_inr.toFixed(2)} e₹
+                  </span>
+                  <p className="text-[10px] text-neutral-400 font-mono">
+                    Ref: {v.transaction_reference || "N/A"}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

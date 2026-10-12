@@ -130,7 +130,15 @@ class BaseSepoliaService:
                 raise RuntimeError("Contract artifact not initialized.")
 
             nonce = w3.eth.get_transaction_count(account.address)
-            gas_price = w3.eth.gas_price
+            try:
+                estimated_gas = contract.functions.anchorDocument(
+                    doc_ref_bytes, doc_hash_bytes
+                ).estimate_gas({"from": account.address})
+                gas_limit = int(estimated_gas * 1.25)
+            except Exception:
+                gas_limit = 150000
+
+            gas_price = int(w3.eth.gas_price * 1.15) if w3.eth.gas_price else 10000000
 
             tx = contract.functions.anchorDocument(
                 doc_ref_bytes,
@@ -139,6 +147,7 @@ class BaseSepoliaService:
                 "from": account.address,
                 "nonce": nonce,
                 "chainId": self.chain_id,
+                "gas": gas_limit,
                 "gasPrice": gas_price,
             })
 
