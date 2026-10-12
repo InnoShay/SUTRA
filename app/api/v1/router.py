@@ -8,6 +8,7 @@ from app.api.v1.students import router as students_router
 from app.api.v1.signals import router as signals_router
 from app.api.v1.interventions import router as interventions_router
 from app.api.v1.cases import router as cases_router
+from app.api.v1.ai import router as ai_router
 
 api_router = APIRouter()
 
@@ -21,3 +22,4 @@ api_router.include_router(students_router)
 api_router.include_router(signals_router)
 api_router.include_router(interventions_router)
 api_router.include_router(cases_router)
+api_router.include_router(ai_router)

@@ -111,6 +111,8 @@ const forbiddenEnvKeys = [
   "DATABASE_URL",
   "JWT_SECRET",
   "SECRET_KEY",
+  "OPENAI_API_KEY",
+  "GEMINI_API_KEY",
 ];
 
 for (const key of forbiddenEnvKeys) {
@@ -118,7 +120,75 @@ for (const key of forbiddenEnvKeys) {
     `Secret ${key} must never have a NEXT_PUBLIC_ prefix`
   );
 }
-console.log("   ✓ Verified no private keys or service-role tokens exposed to browser\n");
+console.log("   ✓ Verified no private keys, LLM credentials, or service-role tokens exposed to browser\n");
+
+// 6. Phase 6: Bounded AI Orchestration Schema & Governance
+console.log("6. Validating Phase 6 Bounded AI Orchestration Contracts...");
+function validateAIStructuredReviewBrief(brief, allowedCatalogKeys) {
+  assert(typeof brief.summary === "string" && brief.summary.length > 0, "Brief summary required");
+  assert(Array.isArray(brief.observed_facts), "observed_facts must be an array");
+  assert(Array.isArray(brief.model_predictions), "model_predictions must be an array");
+  assert(Array.isArray(brief.uncertainties), "uncertainties must be an array");
+  assert(Array.isArray(brief.review_questions), "review_questions must be an array");
+  assert(Array.isArray(brief.candidate_interventions), "candidate_interventions must be an array");
+  assert(brief.metadata && typeof brief.metadata === "object", "Metadata required");
+  assert(typeof brief.metadata.latency_ms === "number", "latency_ms required in metadata");
+
+  // Candidate interventions must strictly exist in campus catalog
+  for (const item of brief.candidate_interventions) {
+    assert(
+      allowedCatalogKeys.includes(item.intervention_key),
+      `Candidate intervention ${item.intervention_key} must belong to campus catalog`
+    );
+  }
+  return true;
+}
+
+const mockBrief = {
+  summary: "Student exhibits consecutive attendance decline across 3 modules.",
+  observed_facts: ["Attendance rate: 58%", "2 submitted assignments"],
+  model_predictions: ["day30_risk score: 0.82"],
+  uncertainties: ["Missing LMS portal activity for Week 4"],
+  review_questions: ["Has student faced scheduling conflicts?"],
+  candidate_interventions: [
+    {
+      intervention_key: "academic_tutoring_offer",
+      display_label: "Subject Tutoring Referral",
+      domain: "academic",
+      recipient_role: "faculty",
+      confidence: 0.85,
+      evidence_grounding: "Low attendance in core modules",
+      caveats: "Requires student confirmation",
+    },
+  ],
+  limitations: ["Financial records excluded per ADR-003"],
+  metadata: {
+    model_name: "sutra-mock-v1",
+    provider: "deterministic_mock",
+    latency_ms: 12.4,
+    is_mock: true,
+    timestamp: new Date().toISOString(),
+  },
+};
+
+assert.doesNotThrow(() => {
+  validateAIStructuredReviewBrief(mockBrief, catalogKeys);
+});
+
+// Rejection test for unauthorized / invented candidate intervention
+assert.throws(() => {
+  validateAIStructuredReviewBrief(
+    {
+      ...mockBrief,
+      candidate_interventions: [
+        { intervention_key: "UNAUTHORIZED_EXPULSION_ACTION" },
+      ],
+    },
+    catalogKeys
+  );
+}, /must belong to campus catalog/);
+
+console.log("   ✓ Verified bounded AI review brief schema, catalog confinement, and advisory boundaries\n");
 
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");

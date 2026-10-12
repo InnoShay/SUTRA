@@ -2,7 +2,13 @@
 
 import React, { useState } from "react";
 import { useSkillHub } from "@/lib/store";
-import { SignalDTO, SignalReviewRequest } from "@/lib/types";
+import {
+  SignalDTO,
+  SignalReviewRequest,
+  AIStructuredReviewBriefResponse,
+  AICandidateInterventionItem,
+} from "@/lib/types";
+import { api } from "@/lib/api";
 import {
   X,
   CheckCircle2,
@@ -13,6 +19,12 @@ import {
   Info,
   Layers,
   FileCheck,
+  Sparkles,
+  HelpCircle,
+  RefreshCw,
+  Check,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface SignalReviewModalProps {
@@ -39,7 +51,42 @@ export function SignalReviewModal({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Phase 6: Bounded AI Orchestration Assistant State
+  const [aiBrief, setAiBrief] = useState<AIStructuredReviewBriefResponse | null>(null);
+  const [loadingAi, setLoadingAi] = useState<boolean>(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiExpanded, setAiExpanded] = useState<boolean>(false);
+  const [adoptedKey, setAdoptedKey] = useState<string | null>(null);
+
   if (!signal) return null;
+
+  const handleGenerateAiBrief = async () => {
+    if (!signal) return;
+    setLoadingAi(true);
+    setAiError(null);
+    setAiExpanded(true);
+    try {
+      const data = await api.ai.getReviewBrief(signal.id);
+      setAiBrief(data);
+    } catch (err: any) {
+      setAiError(
+        err?.message ||
+          "AI review service unavailable or provider timed out. Proceed with manual review."
+      );
+    } finally {
+      setLoadingAi(false);
+    }
+  };
+
+  const handleAdoptIntervention = (candidate: AICandidateInterventionItem) => {
+    setSelectedInterventionKey(candidate.intervention_key);
+    if (decision === "dismiss") {
+      setDecision("approve");
+    }
+    const prefill = `AI Suggestion Adopted: ${candidate.display_label}. Grounding: ${candidate.evidence_grounding}. Caveats acknowledged: ${candidate.caveats}.`;
+    setRationale(prefill);
+    setAdoptedKey(candidate.intervention_key);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +224,232 @@ export function SignalReviewModal({
                     </span>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Phase 6: Bounded AI Review Assistant */}
+          <div className="rounded-2xl border border-indigo-100/90 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 overflow-hidden shadow-sm">
+            <div className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-neutral-900">
+                      AI Review Assistant
+                    </h4>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100/80 text-indigo-700">
+                      Advisory Only
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">
+                    Synthesize observations, isolate facts from predictions, and suggest catalogue interventions.
+                  </p>
+                </div>
+              </div>
+
+              {!aiBrief ? (
+                <button
+                  type="button"
+                  onClick={handleGenerateAiBrief}
+                  disabled={loadingAi}
+                  className="px-3.5 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-60 flex-shrink-0"
+                >
+                  {loadingAi ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Synthesizing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Prepare Review Brief</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAiExpanded(!aiExpanded)}
+                  className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-500 hover:text-neutral-800 transition-colors"
+                  title={aiExpanded ? "Collapse brief" : "Expand brief"}
+                >
+                  {aiExpanded ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Error State */}
+            {aiError && (
+              <div className="p-3 mx-4 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span>{aiError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGenerateAiBrief}
+                  className="underline text-xs font-bold hover:text-rose-900"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Loading State Banner */}
+            {loadingAi && (
+              <div className="px-4 pb-4">
+                <div className="p-3 rounded-xl bg-white border border-indigo-100 flex items-center gap-3 text-xs text-indigo-700">
+                  <RefreshCw className="w-4 h-4 animate-spin text-indigo-600 flex-shrink-0" />
+                  <span>Cross-referencing student telemetry with campus catalog & constructing bounded brief...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Generated Brief Content */}
+            {aiBrief && aiExpanded && (
+              <div className="px-4 pb-4 pt-1 space-y-3.5 text-xs border-t border-indigo-100/60">
+                {/* 1. Summary */}
+                <div className="p-3 rounded-xl bg-white/90 border border-neutral-200/60 space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-neutral-400">
+                    Evidence Summary
+                  </div>
+                  <p className="text-neutral-700 leading-relaxed text-xs">
+                    {aiBrief.summary}
+                  </p>
+                </div>
+
+                {/* 2. Observed Facts vs Model Predictions Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Observed Facts */}
+                  <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-200/60 space-y-1.5">
+                    <span className="text-[10px] uppercase font-bold text-emerald-800 flex items-center gap-1">
+                      <Check className="w-3 h-3 text-emerald-600" /> Verified Observed Facts
+                    </span>
+                    <ul className="space-y-1 text-emerald-900 text-[11px] list-disc list-inside">
+                      {aiBrief.observed_facts.map((fact, i) => (
+                        <li key={i}>{fact}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Model Predictions */}
+                  <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-200/60 space-y-1.5">
+                    <span className="text-[10px] uppercase font-bold text-purple-800 flex items-center gap-1">
+                      <Layers className="w-3 h-3 text-purple-600" /> Model Predictions
+                    </span>
+                    <ul className="space-y-1 text-purple-900 text-[11px] list-disc list-inside">
+                      {aiBrief.model_predictions.map((pred, i) => (
+                        <li key={i}>{pred}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* 3. Uncertainties & Review Questions */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Uncertainties */}
+                  <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-200/60 space-y-1.5">
+                    <span className="text-[10px] uppercase font-bold text-amber-800 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-amber-600" /> Uncertainties & Data Gaps
+                    </span>
+                    <ul className="space-y-1 text-amber-900 text-[11px] list-disc list-inside">
+                      {aiBrief.uncertainties.map((u, i) => (
+                        <li key={i}>{u}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Review Questions */}
+                  <div className="p-3 rounded-xl bg-sky-50/50 border border-sky-200/60 space-y-1.5">
+                    <span className="text-[10px] uppercase font-bold text-sky-800 flex items-center gap-1">
+                      <HelpCircle className="w-3 h-3 text-sky-600" /> Questions for Staff Investigation
+                    </span>
+                    <ul className="space-y-1 text-sky-900 text-[11px] list-disc list-inside">
+                      {aiBrief.review_questions.map((q, i) => (
+                        <li key={i}>{q}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* 4. Candidate Interventions from Campus Catalog */}
+                {aiBrief.candidate_interventions && aiBrief.candidate_interventions.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-neutral-800 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                        Candidate Interventions (Campus Catalog Verified)
+                      </span>
+                      <span className="text-[10px] text-neutral-400">
+                        Click Adopt to prefill review decision
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {aiBrief.candidate_interventions.map((item) => {
+                        const isAdopted = adoptedKey === item.intervention_key;
+                        return (
+                          <div
+                            key={item.intervention_key}
+                            className={`p-3 rounded-xl border transition-all flex items-start justify-between gap-3 ${
+                              isAdopted
+                                ? "bg-indigo-50/80 border-indigo-300 ring-1 ring-indigo-300"
+                                : "bg-white border-neutral-200/70 hover:border-neutral-300"
+                            }`}
+                          >
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-neutral-900 text-xs">
+                                  {item.display_label}
+                                </span>
+                                <span className="text-[9px] uppercase px-1.5 py-0.5 bg-neutral-100 text-neutral-600 font-bold rounded">
+                                  {item.recipient_role}
+                                </span>
+                                <span className="text-[10px] font-mono text-neutral-400">
+                                  Match: {Math.round(item.confidence * 100)}%
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-neutral-600 leading-snug">
+                                {item.evidence_grounding}
+                              </p>
+                              <div className="text-[10px] text-neutral-400 italic">
+                                Caveat: {item.caveats}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleAdoptIntervention(item)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all flex-shrink-0 ${
+                                isAdopted
+                                  ? "bg-indigo-600 text-white shadow-sm"
+                                  : "border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                              }`}
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>{isAdopted ? "Adopted" : "Adopt"}</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Audit & Disclaimer Footer */}
+                <div className="pt-2 border-t border-indigo-100/60 flex items-center justify-between text-[10px] text-neutral-400">
+                  <span className="font-mono">
+                    Model: {aiBrief.metadata.model_name} • {aiBrief.metadata.latency_ms}ms • {aiBrief.metadata.provider}
+                  </span>
+                  <span>Non-binding • Requires authorized human confirmation</span>
+                </div>
               </div>
             )}
           </div>

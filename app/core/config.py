@@ -69,6 +69,15 @@ class Settings(BaseSettings):
     ML_DECISION_THRESHOLD: float = 0.46
     IDEMPOTENCY_CACHE_TTL_SECONDS: int = 86400
 
+    # Bounded AI Orchestration Settings (Phase 6 / ADR-006)
+    AI_ENABLED: bool = True
+    AI_PROVIDER: str = "mock"  # "mock" | "openai" | "gemini"
+    AI_MODEL: str = "gpt-4o-mini"
+    OPENAI_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
+    AI_TIMEOUT_SECONDS: float = 10.0
+    AI_MAX_RETRIES: int = 2
+
     @property
     def sync_database_url(self) -> str:
         """Returns synchronous database URL suitable for Alembic migrations."""

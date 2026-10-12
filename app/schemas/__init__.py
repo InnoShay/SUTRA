@@ -39,6 +39,17 @@ from app.schemas.case import (
     CaseOverrideRequest,
     CaseReopenRequest,
 )
+from app.schemas.ai import (
+    AISummarizeEvidenceRequest,
+    AISuggestInterventionsRequest,
+    AIReviewBriefRequest,
+    AICandidateInterventionItem,
+    AIExecutionMetadata,
+    AIStructuredReviewBriefResponse,
+    AISummarizeEvidenceResponse,
+    AISuggestInterventionsResponse,
+    AIServiceStatusResponse,
+)
 from app.schemas.intervention import InterventionItem
 from app.schemas.features import (
     GenderEnum,

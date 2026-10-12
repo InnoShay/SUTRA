@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSkillHub } from "@/lib/store";
 import { api } from "@/lib/api";
-import { SupportViewResponse, SignalDTO } from "@/lib/types";
+import { SupportViewResponse, SignalDTO, AISummarizeEvidenceResponse } from "@/lib/types";
 import { SignalReviewModal } from "@/components/SignalReviewModal";
 import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
 import {
@@ -24,6 +24,9 @@ import {
   Layers,
   FileCheck,
   RefreshCw,
+  Sparkles,
+  Check,
+  X,
 } from "lucide-react";
 
 export default function StudentDetailPage() {
@@ -54,6 +57,25 @@ export default function StudentDetailPage() {
   const [loadingSupportView, setLoadingSupportView] = useState<boolean>(true);
   const [supportViewError, setSupportViewError] = useState<string | null>(null);
   const [selectedSignalForReview, setSelectedSignalForReview] = useState<SignalDTO | null>(null);
+
+  // Phase 6: AI Evidence Summarization State
+  const [aiEvidenceSummary, setAiEvidenceSummary] = useState<AISummarizeEvidenceResponse | null>(null);
+  const [loadingAiSummary, setLoadingAiSummary] = useState<boolean>(false);
+  const [aiSummaryError, setAiSummaryError] = useState<string | null>(null);
+
+  const handleGenerateEvidenceSummary = async () => {
+    if (activeRole === "leadership") return;
+    setLoadingAiSummary(true);
+    setAiSummaryError(null);
+    try {
+      const res = await api.ai.summarizeEvidence(studentId);
+      setAiEvidenceSummary(res);
+    } catch (err: any) {
+      setAiSummaryError(err?.message || "AI evidence summarization service unavailable.");
+    } finally {
+      setLoadingAiSummary(false);
+    }
+  };
 
   const [message, setMessage] = useState("");
   const [sentSuccess, setSentSuccess] = useState(false);
@@ -267,9 +289,102 @@ export default function StudentDetailPage() {
 
         {/* Observations Table */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-            Recent Multi-Domain Observations
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Recent Multi-Domain Observations
+            </h4>
+            <button
+              onClick={handleGenerateEvidenceSummary}
+              disabled={loadingAiSummary}
+              className="px-3.5 py-1.5 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold border border-indigo-200/70 transition-all flex items-center gap-1.5 disabled:opacity-50 shadow-2xs"
+            >
+              {loadingAiSummary ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Synthesizing Telemetry...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Generate Evidence Summary</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* AI Evidence Summary Panel */}
+          {aiEvidenceSummary && (
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 border border-indigo-100 space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-xs font-bold text-neutral-900">
+                    AI Evidence Synthesis
+                  </span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    Advisory • Non-Binding
+                  </span>
+                </div>
+                <button
+                  onClick={() => setAiEvidenceSummary(null)}
+                  className="p-1 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors"
+                  title="Close summary"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-neutral-700 leading-relaxed bg-white/80 p-3 rounded-xl border border-neutral-200/60">
+                {aiEvidenceSummary.summary}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-200/60 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-emerald-800 flex items-center gap-1">
+                    <Check className="w-3 h-3 text-emerald-600" /> Observed Facts
+                  </span>
+                  <ul className="space-y-1 text-emerald-900 text-[11px] list-disc list-inside">
+                    {aiEvidenceSummary.observed_facts.map((fact, idx) => (
+                      <li key={idx}>{fact}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-200/60 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-amber-800 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-amber-600" /> Uncertainties & Limitations
+                  </span>
+                  <ul className="space-y-1 text-amber-900 text-[11px] list-disc list-inside">
+                    {aiEvidenceSummary.uncertainties.concat(aiEvidenceSummary.limitations).map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-indigo-100/60 flex items-center justify-between text-[10px] text-neutral-400">
+                <span>Model: {aiEvidenceSummary.metadata.model_name} • {aiEvidenceSummary.metadata.latency_ms}ms</span>
+                <span>Financial records excluded (ADR-003) • SUTRA Policy</span>
+              </div>
+            </div>
+          )}
+
+          {aiSummaryError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>{aiSummaryError}</span>
+              </div>
+              <button
+                onClick={handleGenerateEvidenceSummary}
+                className="underline text-xs font-bold hover:text-rose-900"
+              >
+                Retry
+              </button>
+            </div>
+          )}
           <div className="border border-neutral-100 rounded-2xl overflow-hidden">
             <table className="w-full text-left text-xs">
               <thead className="bg-neutral-50 border-b border-neutral-100 text-neutral-400 uppercase text-[10px] font-bold">

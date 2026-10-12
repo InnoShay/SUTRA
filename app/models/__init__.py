@@ -9,6 +9,7 @@ from app.models.followup import FollowUp, CaseOutcome
 from app.models.outbox import NotificationOutbox
 from app.models.ml import MLInferenceLog
 from app.models.idempotency import IdempotencyRecord
+from app.models.ai import AIOrchestrationLog
 
 __all__ = [
     "Base",
@@ -32,4 +33,5 @@ __all__ = [
     "NotificationOutbox",
     "MLInferenceLog",
     "IdempotencyRecord",
+    "AIOrchestrationLog",
 ]

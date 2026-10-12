@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-red.svg)](https://www.sqlalchemy.org/)
-[![Tests](https://img.shields.io/badge/Tests-61%2F61%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-74%2F74%20Passed-brightgreen.svg)]()
 
 > **Core Product Principle:** *“No Alert Without Action.”*
 
@@ -160,6 +160,7 @@ pytest tests -v --cov=app
 ```
 
 ### Test Coverage Highlights
+- `tests/test_ai_orchestration.py` — Bounded AI review briefs, catalog filtering, prompt injection defense, ADR-003 financial data exclusion, provider fallback, and audit logging.
 - `tests/test_auth_security.py` — Supabase JWT verification, role capabilities, campus boundary isolation.
 - `tests/test_ingestion.py` — Multi-domain observation ingestion, anti-leakage validation.
 - `tests/test_policy_engine.py` — Deterministic triage evaluation, rule triggers, signal generation.
@@ -167,6 +168,21 @@ pytest tests -v --cov=app
 - `tests/test_ml_integration.py` — Day-30 25-feature schema validation, Evidence Card generation, ML audit logs.
 - `tests/test_reliability_security.py` — Idempotency replay, outbox worker exponential backoff, dead letter queue, deadline escalations.
 - `tests/test_features_schema.py` — 25-feature input validation and finite number checks.
+
+---
+
+## 🤖 Phase 6: Bounded AI Orchestration
+
+SUTRA includes an advisory, bounded AI orchestration layer behind the verified FastAPI backend (`/api/v1/ai/*`):
+
+- **Principle:** AI is strictly advisory and cannot mutate cases, execute interventions, or diagnose students. Consequential decisions require authorized human review (*"No Alert Without Action"*).
+- **Prompt Fencing & Injection Defense:** Untrusted student telemetry is enclosed in `<untrusted_student_evidence>` delimiters with delimiter stripping (`sanitize_untrusted_text`) to neutralize prompt injection attacks.
+- **Data Minimization (ADR-003):** Sensitive student financial records and direct PII are excluded from model inputs prior to prompt construction.
+- **Institutional Governance (ADR-004):** Leadership accounts are restricted from individual student review briefs and 360° views.
+- **Intervention Confinement:** Model suggestions are strictly validated against the campus-controlled `intervention_catalog`; unknown or invented keys are dropped.
+- **Deterministic Mock Fallback:** Provider timeouts and network errors automatically fall back to an offline deterministic mock provider without interrupting educator workflows.
+- **Persistent Audit Logging:** Every AI request is logged to the database table `ai_orchestration_logs` with timestamps, model name, provider, latency, and requesting educator reference.
+- **Frontend Integration:** Assistive buttons (*"Prepare Review Brief"*, *"Generate Evidence Summary"*) in `SignalReviewModal` and Student Profile allow 1-click adoption of catalog suggestions without altering the core visual identity.
 
 ---
 

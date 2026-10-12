@@ -310,3 +310,76 @@ export interface ErrorEnvelope {
     request_id?: string;
   };
 }
+
+// ==========================================
+// Phase 6: Bounded AI Orchestration Types
+// ==========================================
+
+export interface AICandidateInterventionItem {
+  intervention_key: string;
+  display_label: string;
+  domain: string;
+  recipient_role: string;
+  confidence: number;
+  evidence_grounding: string;
+  caveats: string;
+}
+
+export interface AIExecutionMetadata {
+  model_name: string;
+  provider: string;
+  latency_ms: number;
+  is_mock: boolean;
+  timestamp: string;
+}
+
+export interface AIReviewBriefRequest {
+  signal_id: string;
+}
+
+export interface AIStructuredReviewBriefResponse {
+  target_student_ref: string;
+  signal_id: string;
+  summary: string;
+  observed_facts: string[];
+  model_predictions: string[];
+  uncertainties: string[];
+  review_questions: string[];
+  candidate_interventions: AICandidateInterventionItem[];
+  limitations: string[];
+  metadata: AIExecutionMetadata;
+}
+
+export interface AISummarizeEvidenceRequest {
+  student_id: string;
+  signal_id?: string | null;
+}
+
+export interface AISummarizeEvidenceResponse {
+  target_student_ref: string;
+  summary: string;
+  observed_facts: string[];
+  uncertainties: string[];
+  limitations: string[];
+  metadata: AIExecutionMetadata;
+}
+
+export interface AISuggestInterventionsRequest {
+  student_id: string;
+  signal_id?: string | null;
+  max_suggestions?: number | null;
+}
+
+export interface AISuggestInterventionsResponse {
+  target_student_ref: string;
+  candidate_interventions: AICandidateInterventionItem[];
+  metadata: AIExecutionMetadata;
+}
+
+export interface AIServiceStatusResponse {
+  enabled: boolean;
+  provider: string;
+  model_name: string;
+  timeout_seconds: number;
+  governance_invariants: string[];
+}

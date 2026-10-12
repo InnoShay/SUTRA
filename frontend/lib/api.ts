@@ -29,6 +29,10 @@ import {
   MLPredictResponse,
   HealthResponse,
   ReadinessResponse,
+  AIStructuredReviewBriefResponse,
+  AISummarizeEvidenceResponse,
+  AISuggestInterventionsResponse,
+  AIServiceStatusResponse,
 } from './types';
 
 const API_BASE_URL =
@@ -226,6 +230,35 @@ class ApiClient {
       this.request<MLPredictResponse[]>('/ml/predict/batch', {
         method: 'POST',
         body: JSON.stringify(payload),
+      }),
+  };
+
+  // --- Bounded AI Orchestration Subsystem (Phase 6) ---
+  public ai = {
+    getStatus: () =>
+      this.request<AIServiceStatusResponse>('/ai/status'),
+    getReviewBrief: (signalId: string) =>
+      this.request<AIStructuredReviewBriefResponse>('/ai/review-brief', {
+        method: 'POST',
+        body: JSON.stringify({ signal_id: signalId }),
+      }),
+    summarizeEvidence: (studentId: string, signalId?: string | null) =>
+      this.request<AISummarizeEvidenceResponse>('/ai/summarize-evidence', {
+        method: 'POST',
+        body: JSON.stringify({ student_id: studentId, signal_id: signalId }),
+      }),
+    suggestInterventions: (
+      studentId: string,
+      signalId?: string | null,
+      maxSuggestions?: number | null
+    ) =>
+      this.request<AISuggestInterventionsResponse>('/ai/suggest-interventions', {
+        method: 'POST',
+        body: JSON.stringify({
+          student_id: studentId,
+          signal_id: signalId,
+          max_suggestions: maxSuggestions || 3,
+        }),
       }),
   };
 
