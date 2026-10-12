@@ -323,7 +323,7 @@ struct DatasetsArgs {
 
 #[derive(Subcommand)]
 enum DatasetsCommands {
-    #[command(about = "Display data provenance boundaries, schemas, and source isolation rules")]
+    #[command(about = "Display data provenance boundaries, schemas, and source isolation rules", alias = "overview")]
     Info,
 
     #[command(about = "Explicitly lookup historical research (OULAD) or synthetic demo records")]
