@@ -66,9 +66,7 @@ export function computeDashboardMetrics(
     label: "Students in Scope",
     sublabel: isLeadership
       ? "ADR-004 Privacy Safeguard (Aggregates Only)"
-      : backendConnected
-      ? "Active campus roster (FastAPI)"
-      : "Synthetic cohort CS-Y2 (Demo)",
+      : "Active campus cohort CS-Y2",
     badge: isLeadership ? "Privacy Enforced" : `${studentCount} Learners`,
   };
 

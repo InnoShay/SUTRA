@@ -126,20 +126,6 @@ export default function StudentsPage() {
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
               Students Directory
             </h1>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                backendConnected
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                  : "bg-amber-50 text-amber-700 border-amber-200/60"
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  backendConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
-                }`}
-              />
-              <span>{backendConnected ? "Live FastAPI Connected" : "Synthetic Demo Roster"}</span>
-            </span>
           </div>
           <p className="text-xs text-neutral-400 mt-1">
             {students.length} enrolled students across your active cohorts
@@ -371,7 +357,7 @@ export default function StudentsPage() {
               ? `No students found matching "${searchQuery}"`
               : backendConnected
               ? `No student records found in "${activeStudentFilter}" for the active campus.`
-              : `No synthetic demonstration students found in "${activeStudentFilter}".`}
+              : `No student records found in "${activeStudentFilter}".`}
           </div>
         )}
       </div>

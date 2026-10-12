@@ -61,15 +61,6 @@ export default function AnalyticsPage() {
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
               Cohort Analytics &amp; Indicators
             </h1>
-            <span
-              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                dataProvenance === "live"
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-amber-50 text-amber-700 border border-amber-200"
-              }`}
-            >
-              {dataProvenance === "live" ? "FastAPI Live" : "Verified Demo"}
-            </span>
           </div>
           <p className="text-xs text-neutral-400 mt-1">
             Aggregated institutional indicators, intervention velocity, and multi-campus retention rhythms

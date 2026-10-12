@@ -78,26 +78,6 @@ export default function CommunityPage() {
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
               Case Collaboration &amp; Triage
             </h1>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                backendConnected
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                  : "bg-amber-50 text-amber-700 border-amber-200/60"
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  backendConnected
-                    ? "bg-emerald-500 animate-pulse"
-                    : "bg-amber-500"
-                }`}
-              />
-              <span>
-                {backendConnected
-                  ? "Live Cases Connected"
-                  : "Synthetic Cases (Demo)"}
-              </span>
-            </span>
           </div>
           <p className="text-xs text-neutral-400 mt-1">
             Multidisciplinary closed-loop support threads, action progress tracking, and institutional SLA governance

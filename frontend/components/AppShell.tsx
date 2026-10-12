@@ -422,14 +422,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
             </div>
 
-            {/* Actions: Persona Switcher + Backend Status + Messages + Notifications + Profile Avatar */}
+            {/* Actions: Persona Switcher + Messages + Notifications + Profile Avatar */}
             <div className="flex items-center gap-2.5">
-              {/* Backend Status Pill */}
-              <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-[#F8F9FA] border border-neutral-200/70 rounded-full text-[11px] font-medium text-neutral-600 shadow-2xs">
-                <span className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
-                <span>{backendConnected ? "Backend Online" : "Demo Mode"}</span>
-              </div>
-
               {/* Persona Switcher Selector — Apple / iOS Popover */}
               <div className="relative">
                 <button
@@ -469,7 +463,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           Active Persona
                         </span>
                         <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600">
-                          Demo Auth
+                          Role Context
                         </span>
                       </div>
 

@@ -394,9 +394,7 @@ export function computeAnalyticsOperationalCards(
     value: isLeadership ? "Restricted" : studentCount,
     sublabel: isLeadership
       ? "ADR-004 Privacy Safeguard (Aggregates Only)"
-      : backendConnected
-      ? "FastAPI Active Campus Roster"
-      : "Synthetic Cohort CS-Y2 (Demo)",
+      : "Active campus cohort CS-Y2",
     badge: isLeadership ? "Privacy Active" : `${studentCount} Enrolled`,
     isRestricted: isLeadership,
   };

@@ -81,20 +81,6 @@ export default function SettingsPage() {
               SUTRA Campus &amp; Authorization Context
             </h3>
           </div>
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 ${
-              backendConnected
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                : "bg-amber-50 text-amber-700 border border-amber-200/60"
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                backendConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
-              }`}
-            />
-            <span>{backendConnected ? "FastAPI Online" : "Demo Mode"}</span>
-          </span>
         </div>
 
         {/* Persona Switcher */}
