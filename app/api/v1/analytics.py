@@ -21,8 +21,35 @@ from app.schemas.analytics import (
     MultiTierTrendPoint,
     RiskDistributionDTO,
 )
+from app.schemas.ml import ModelPerformanceResponse
+from app.ml.service import ml_service
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
+
+
+@router.get("/model-performance", response_model=ModelPerformanceResponse)
+async def get_analytics_model_performance(
+    model_version: Optional[str] = Query(default="v1.0.0"),
+    db: AsyncSession = Depends(get_db),
+    membership: CampusMembershipContext = Depends(get_campus_membership),
+):
+    """
+    Returns verified model performance metrics for the active or requested model version.
+    Includes held-out benchmark metrics, calibration tables, subgroup parity, and live telemetry.
+    """
+    current_user = membership.user
+    allowed_roles = {"leadership", "faculty", "hod", "mentor", "institution_admin", "counsellor"}
+    if not any(r in allowed_roles for r in membership.roles):
+        raise PermissionDeniedError(
+            message=f"User roles {membership.roles} are not authorized to access model performance analytics."
+        )
+
+    resp = ml_service.get_model_performance(model_version=model_version)
+    telemetry = await ml_service.get_live_monitoring_telemetry(db=db, institution_id=membership.campus_id)
+    resp.live_telemetry = telemetry
+    return resp
+
+
 
 CANONICAL_CASE_STATES = [
     "NEW",

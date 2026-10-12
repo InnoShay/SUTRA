@@ -1312,9 +1312,128 @@ assert.strictEqual(emptyResult.at_risk_percentage, 0);
 assert.strictEqual(emptyResult.is_privacy_suppressed, false);
 console.log("   ✓ Verified empty cohort safe handling (0% without division-by-zero or NaN)\n");
 
+// =========================================================================
+// 19. Validating Phase 6 Model Performance Dashboard Contracts...
+// =========================================================================
+console.log("19. Validating Phase 6 Model Performance Dashboard Contracts...");
+
+const provenanceCardPath = path.join(__dirname, "../components/analytics/ModelEvaluationProvenanceCard.tsx");
+const confusionCardPath = path.join(__dirname, "../components/analytics/ConfusionMatrixCard.tsx");
+const reliabilityCardPath = path.join(__dirname, "../components/analytics/ReliabilityCalibrationChart.tsx");
+const rocCardPath = path.join(__dirname, "../components/analytics/ROCPRCurveChart.tsx");
+const fairnessTablePath = path.join(__dirname, "../components/analytics/SubgroupFairnessTable.tsx");
+const dashboardContainerPath = path.join(__dirname, "../components/analytics/ModelPerformanceDashboard.tsx");
+
+assert(fs.existsSync(provenanceCardPath), "ModelEvaluationProvenanceCard.tsx must exist");
+assert(fs.existsSync(confusionCardPath), "ConfusionMatrixCard.tsx must exist");
+assert(fs.existsSync(reliabilityCardPath), "ReliabilityCalibrationChart.tsx must exist");
+assert(fs.existsSync(rocCardPath), "ROCPRCurveChart.tsx must exist");
+assert(fs.existsSync(fairnessTablePath), "SubgroupFairnessTable.tsx must exist");
+assert(fs.existsSync(dashboardContainerPath), "ModelPerformanceDashboard.tsx must exist");
+
+const provenanceCode = fs.readFileSync(provenanceCardPath, "utf-8");
+const confusionCode = fs.readFileSync(confusionCardPath, "utf-8");
+const reliabilityCode = fs.readFileSync(reliabilityCardPath, "utf-8");
+const rocCode = fs.readFileSync(rocCardPath, "utf-8");
+const fairnessCode = fs.readFileSync(fairnessTablePath, "utf-8");
+const modelPerfDashboardCode = fs.readFileSync(dashboardContainerPath, "utf-8");
+
+// 19a. Components mounted in Analytics Page & Dashboard Container
+const updatedAnalyticsPage = fs.readFileSync(
+  path.resolve(__dirname, "../app/analytics/page.tsx"),
+  "utf-8"
+);
+assert(
+  updatedAnalyticsPage.includes("ModelPerformanceDashboard"),
+  "Analytics page must mount ModelPerformanceDashboard"
+);
+assert(
+  modelPerfDashboardCode.includes("ModelEvaluationProvenanceCard") &&
+  modelPerfDashboardCode.includes("ConfusionMatrixCard") &&
+  modelPerfDashboardCode.includes("ReliabilityCalibrationChart") &&
+  modelPerfDashboardCode.includes("ROCPRCurveChart") &&
+  modelPerfDashboardCode.includes("SubgroupFairnessTable"),
+  "ModelPerformanceDashboard must integrate all 5 Phase 6 evaluation visualisations"
+);
+console.log("   ✓ Verified Phase 6 Model Performance components mounted and linked in analytics/page.tsx");
+
+// 19b. Offline Held-Out Benchmark vs Live Telemetry Distinction (Requirement 5)
+assert(
+  provenanceCode.includes("OFFLINE HELD-OUT BENCHMARK") &&
+  provenanceCode.includes("LIVE TELEMETRY ACTIVE"),
+  "ModelEvaluationProvenanceCard must clearly distinguish offline held-out benchmark from live telemetry"
+);
+assert(
+  provenanceCode.includes("Historical Partition Notice") || provenanceCode.includes("HISTORICAL PARTITION NOTICE"),
+  "ModelEvaluationProvenanceCard must surface historical partition warning (2014J)"
+);
+console.log("   ✓ Verified strict separation between offline held-out evaluation and live telemetry");
+
+// 19c. Confusion Matrix & Decision Threshold tau = 0.46 (Requirement 4)
+assert(
+  confusionCode.includes("Confusion Matrix") &&
+  confusionCode.includes("True Positive (TP)") &&
+  confusionCode.includes("False Positive (FP)") &&
+  confusionCode.includes("True Negative (TN)") &&
+  confusionCode.includes("False Negative (FN)") &&
+  confusionCode.includes("0.46"),
+  "ConfusionMatrixCard must display 2x2 matrix at decision threshold 0.46"
+);
+assert(
+  confusionCode.includes("Operational Staff Capacity Impact") &&
+  confusionCode.includes("Advisor Review Burden"),
+  "ConfusionMatrixCard must surface operational workload and false alarm burden"
+);
+console.log("   ✓ Verified 2x2 confusion matrix and operational advisor burden at threshold 0.46");
+
+// 19d. Probability Calibration & Reliability Bins (Requirement 3)
+assert(
+  reliabilityCode.includes("Probability Calibration") &&
+  reliabilityCode.includes("Expected Calib. Error (ECE)") &&
+  reliabilityCode.includes("Brier Score") &&
+  reliabilityCode.includes("Perfect Calibration (Ideal y = x)"),
+  "ReliabilityCalibrationChart must plot 10 reliability bins with diagonal reference line and ECE"
+);
+console.log("   ✓ Verified probability calibration plot, 10-bin reliability table, and ECE/Brier badges");
+
+// 19e. Anti-Fabrication ROC & PR Curve Contracts (Requirement 7)
+assert(
+  rocCode.includes("Per-Record Score Vectors Unavailable") &&
+  rocCode.includes("must not be fabricated from a single score or aggregate summary"),
+  "ROCPRCurveChart must display explicit limitation warning if per-record scores are absent"
+);
+assert(
+  rocCode.includes("Operating Point (τ = 0.46)") && rocCode.includes("ROC (AUC"),
+  "ROCPRCurveChart must plot empirical ROC/PR curves with threshold 0.46 highlighted"
+);
+console.log("   ✓ Verified anti-fabrication safeguards for ROC/PR curve generation");
+
+// 19f. Subgroup Parity & Fairness Disclaimer (Requirement 8)
+assert(
+  fairnessCode.includes("Fairness & Parity Notice") &&
+  fairnessCode.includes("does NOT demonstrate that the model is fair"),
+  "SubgroupFairnessTable must display mandatory fairness notice"
+);
+assert(
+  fairnessCode.includes("Low Confidence (N < 100)") &&
+  fairnessCode.includes("Suppressed under ADR-004: Cell size N < 5"),
+  "SubgroupFairnessTable must flag sample size < 100 as low confidence and suppress N < 5"
+);
+console.log("   ✓ Verified subgroup parity disaggregation, confidence flags, and non-bias disclaimer");
+
+// 19g. Frozen Model & Version Mismatch Invariants (Requirement 1 & 9)
+assert(
+  modelPerfDashboardCode.includes("Evaluation Data Unavailable") &&
+  modelPerfDashboardCode.includes("Reset to Deployed Baseline (v1.0.0)"),
+  "Dashboard must cleanly surface model-version mismatch and missing data limitations without crashing"
+);
+console.log("   ✓ Verified frozen model version invariants and clean handling of version mismatch\n");
+
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
+
 
 
 

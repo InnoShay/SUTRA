@@ -10,6 +10,7 @@ import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import { CohortRiskDistributionChart } from "@/components/analytics/CohortRiskDistributionChart";
 import { CohortComparisonTable } from "@/components/analytics/CohortComparisonTable";
 import { MultiTierTrendChart } from "@/components/analytics/MultiTierTrendChart";
+import { ModelPerformanceDashboard } from "@/components/analytics/ModelPerformanceDashboard";
 import {
   computeCaseStateDistribution,
   computeInterventionDistribution,
@@ -29,7 +30,9 @@ import {
   RefreshCw,
   Info,
   ShieldCheck,
+  Cpu,
 } from "lucide-react";
+
 
 export default function AnalyticsPage() {
   const {
@@ -46,10 +49,22 @@ export default function AnalyticsPage() {
   const timeframes = ["This Week", "This Month", "This Year"] as const;
 
   // Filter States (Requirement 5)
+  const [analyticsTab, setAnalyticsTab] = useState<"cohort" | "model_performance">("cohort");
   const [selectedCohort, setSelectedCohort] = useState<string>("");
   const [selectedRiskTier, setSelectedRiskTier] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>(new Date().toLocaleTimeString());
+
+  // Listen to ?tab=model-performance URL search parameter
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "model-performance") {
+        setAnalyticsTab("model_performance");
+      }
+    }
+  }, []);
+
 
   // Server Analytics Response State
   const [serverAnalytics, setServerAnalytics] = useState<CohortAnalyticsSummaryResponse | null>(null);
@@ -168,8 +183,40 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* 2. Interactive Filter Bar (Requirement 5) */}
-      <div className="p-3.5 bg-white rounded-2xl border border-neutral-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+      {/* View Switcher: Cohort Risk Analytics vs Model Performance Dashboard */}
+      <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">
+        <button
+          onClick={() => setAnalyticsTab("cohort")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            analyticsTab === "cohort"
+              ? "bg-neutral-900 text-white shadow-xs"
+              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70"
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Cohort Risk Analytics</span>
+        </button>
+
+        <button
+          onClick={() => setAnalyticsTab("model_performance")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            analyticsTab === "model_performance"
+              ? "bg-neutral-900 text-white shadow-xs"
+              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70"
+          }`}
+        >
+          <Cpu className="w-3.5 h-3.5" />
+          <span>Model Performance &amp; Evaluation</span>
+        </button>
+      </div>
+
+      {analyticsTab === "model_performance" ? (
+        <ModelPerformanceDashboard />
+      ) : (
+        <>
+          {/* 2. Interactive Filter Bar (Requirement 5) */}
+          <div className="p-3.5 bg-white rounded-2xl border border-neutral-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5 text-neutral-500 font-semibold">
             <Filter className="w-3.5 h-3.5 text-neutral-400" />
@@ -362,6 +409,9 @@ export default function AnalyticsPage() {
           </li>
         </ul>
       </div>
-    </div>
+    </>
+  )}
+</div>
   );
 }
+

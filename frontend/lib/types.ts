@@ -744,3 +744,128 @@ export interface CohortAnalyticsSummaryResponse {
   governance_disclaimers: string[];
 }
 
+// ==========================================
+// Phase 6: Model Performance Dashboard Domain
+// ==========================================
+
+export interface ModelDatasetProvenance {
+  dataset_label: string;
+  partition: string;
+  evaluation_date: string;
+  sample_size: number;
+  unique_students: number;
+  raw_rows_examined: number;
+  outcome_definition: string;
+  class_prevalence: number;
+  actual_at_risk_count: number;
+  actual_on_track_count: number;
+  provenance_type: 'offline_held_out_benchmark' | 'live_production_telemetry';
+  provenance_warning?: string | null;
+}
+
+export interface ConfusionMatrixDTO {
+  tp: number;
+  fp: number;
+  tn: number;
+  fn: number;
+}
+
+export interface OperationalWorkloadDTO {
+  total_alerts_fired: number;
+  alert_rate_pct: number;
+  false_alarms_advisor_burden: number;
+  missed_at_risk_students: number;
+  successful_proactive_catches: number;
+}
+
+export interface ReliabilityBinDTO {
+  bin_range: string;
+  samples_count: number;
+  mean_predicted_prob: number;
+  observed_positive_rate: number;
+  calibration_gap: number;
+}
+
+export interface SubgroupMetricDTO {
+  dimension: string;
+  subgroup: string;
+  sample_size: number;
+  confidence_flag: 'STABLE' | 'LOW_CONFIDENCE (<100)';
+  positives_count: number;
+  negatives_count: number;
+  prevalence: number;
+  true_positives: number;
+  false_positives: number;
+  true_negatives: number;
+  false_negatives: number;
+  recall: number;
+  precision: number;
+  specificity: number;
+  false_positive_rate: number;
+  f1_score: number;
+  roc_auc: number;
+  pr_auc: number;
+  is_suppressed?: boolean;
+}
+
+export interface ThresholdIndependentMetricsDTO {
+  roc_auc: number;
+  pr_auc: number;
+  brier_score: number;
+  expected_calibration_error_ece: number;
+  maximum_calibration_error_mce: number;
+}
+
+export interface ThresholdDependentMetricsDTO {
+  threshold: number;
+  accuracy: number;
+  balanced_accuracy: number;
+  precision: number;
+  recall: number;
+  specificity: number;
+  false_positive_rate: number;
+  f1_score: number;
+  confusion_matrix: ConfusionMatrixDTO;
+  operational_workload: OperationalWorkloadDTO;
+}
+
+export interface ROCCurvePointDTO {
+  fpr: number;
+  tpr: number;
+  threshold: number;
+}
+
+export interface PRCurvePointDTO {
+  precision: number;
+  recall: number;
+  threshold: number;
+}
+
+export interface LiveMonitoringTelemetryDTO {
+  total_inferences_logged: number;
+  average_latency_ms: number;
+  active_campus_count: number;
+  monitoring_window: string;
+  status: 'healthy' | 'degraded' | 'idle';
+  telemetry_notice: string;
+}
+
+export interface ModelPerformanceResponse {
+  model_name: string;
+  model_version: string;
+  operational_threshold: number;
+  evaluation_environment: 'offline_held_out_benchmark' | 'live_production_telemetry';
+  dataset_provenance: ModelDatasetProvenance;
+  threshold_independent_metrics: ThresholdIndependentMetricsDTO;
+  threshold_dependent_metrics: ThresholdDependentMetricsDTO;
+  reliability_table: ReliabilityBinDTO[];
+  roc_curve_points?: ROCCurvePointDTO[] | null;
+  pr_curve_points?: PRCurvePointDTO[] | null;
+  subgroup_metrics: SubgroupMetricDTO[];
+  live_telemetry?: LiveMonitoringTelemetryDTO | null;
+  fairness_disclaimer: string;
+  non_causal_disclaimer: string;
+  limitations: string[];
+}
+
+
