@@ -4,7 +4,9 @@ import React, { useState, useEffect } from "react";
 
 interface UserAvatarProps {
   src?: string | null;
-  name: string;
+  avatarUrl?: string | null;
+  name?: string;
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
@@ -25,29 +27,47 @@ function getInitials(name: string): string {
 
 /**
  * Renders a user avatar that:
- * - Loads `src` with referrerpolicy="no-referrer" (required for Google OAuth profile pics)
+ * - Accepts both `src` and `avatarUrl`
+ * - Supports responsive `size` variants ("sm", "md", "lg", "xl")
+ * - Loads images with referrerpolicy="no-referrer" (required for OAuth profile pictures)
  * - Automatically falls back to a colored initials circle on load error or empty src
  * - Resets load error state when src changes
  */
-export function UserAvatar({ src, name, className = "" }: UserAvatarProps) {
+export function UserAvatar({
+  src,
+  avatarUrl,
+  name = "User",
+  size,
+  className = "",
+}: UserAvatarProps) {
   const [failed, setFailed] = useState(false);
+  const effectiveSrc = src ?? avatarUrl;
 
   // Reset failure state whenever src changes
   useEffect(() => {
     setFailed(false);
-  }, [src]);
+  }, [effectiveSrc]);
 
-  const cleanSrc = src && src.trim() !== "" ? src.trim() : null;
+  const cleanSrc = effectiveSrc && effectiveSrc.trim() !== "" ? effectiveSrc.trim() : null;
   const hue = nameToHue(name || "U");
   const initials = getInitials(name || "U");
+
+  const sizeClasses = size
+    ? {
+        sm: "w-7 h-7 text-[11px]",
+        md: "w-9 h-9 text-xs",
+        lg: "w-12 h-12 text-sm",
+        xl: "w-16 h-16 text-lg",
+      }[size]
+    : "";
 
   if (!cleanSrc || failed) {
     return (
       <span
-        className={`inline-flex items-center justify-center rounded-full flex-shrink-0 font-bold select-none text-white tracking-tight ${className}`}
+        className={`inline-flex items-center justify-center rounded-full flex-shrink-0 font-bold select-none text-white tracking-tight ${sizeClasses} ${className}`}
         style={{
           background: `hsl(${hue}, 58%, 46%)`,
-          fontSize: "0.75rem",
+          fontSize: size ? undefined : "0.75rem",
         }}
         aria-label={name}
       >
@@ -62,8 +82,10 @@ export function UserAvatar({ src, name, className = "" }: UserAvatarProps) {
       src={cleanSrc}
       alt={name || "User avatar"}
       referrerPolicy="no-referrer"
-      className={`rounded-full object-cover flex-shrink-0 ${className}`}
+      className={`rounded-full object-cover flex-shrink-0 ${sizeClasses} ${className}`}
       onError={() => setFailed(true)}
     />
   );
 }
+
+export default UserAvatar;

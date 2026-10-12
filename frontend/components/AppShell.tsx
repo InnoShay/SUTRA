@@ -10,6 +10,8 @@ import { CreatePostModal } from "./CreatePostModal";
 import { StudentProfileModal } from "./StudentProfileModal";
 import { GlobalSearchModal } from "./GlobalSearchModal";
 import { NotificationPopover, MessagesDrawer } from "./TopBarActionDrawers";
+import { UserAvatar } from "./UserAvatar";
+import { AccountDialog } from "./AccountDialog";
 import {
   LayoutGrid,
   Bookmark,
@@ -29,7 +31,6 @@ import {
   Check,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
-import { UserAvatar } from "./UserAvatar";
 import { UserRole } from "@/lib/types";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -60,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
 
   const personaList: {
     role: UserRole;
@@ -162,16 +164,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </button>
 
-          {/* User Profile & Secondary Menu Action */}
+          {/* User Profile & Account Action */}
           <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-1 pl-1 cursor-pointer"
+            onClick={() => setIsAccountDialogOpen(true)}
+            className="p-1 pl-1 cursor-pointer transition-transform active:scale-95"
             title="Open Account Menu"
             aria-label="Open Account Menu"
           >
             <UserAvatar
               src={user.avatar}
-              name={user.fullName}
+              name={user.fullName || user.name}
+              size="sm"
               className="w-7 h-7 ring-2 ring-white shadow-xs"
             />
           </button>
@@ -374,37 +377,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Bottom User Profile Section */}
         <div className="pt-4 border-t border-neutral-200/60 flex-shrink-0">
-          <Link
-            href="/settings"
-            className={`group flex items-center transition-all duration-150 rounded-2xl hover:bg-neutral-200/40 ${sidebarCollapsed
+          <button
+            type="button"
+            onClick={() => setIsAccountDialogOpen(true)}
+            className={`group w-full flex items-center transition-all duration-150 rounded-2xl hover:bg-neutral-200/40 cursor-pointer ${sidebarCollapsed
               ? "justify-center p-2 mx-auto"
-              : "justify-center lg:justify-start p-2 lg:px-3.5 lg:py-2.5 lg:gap-3"
+              : "justify-center lg:justify-start p-2 lg:px-3 lg:py-2.5 lg:gap-3"
               }`}
-            title="View Profile Settings"
+            title="Account details and settings"
+            aria-label="Open Account Dialog"
           >
             <UserAvatar
               src={user.avatar}
-              name={user.fullName}
+              name={user.fullName || user.name}
+              size="md"
               className="w-9 h-9"
             />
             {!sidebarCollapsed && (
-              <div className="min-w-0 flex-1 hidden lg:block">
+              <div className="min-w-0 flex-1 hidden lg:block text-left">
                 <p className="text-xs font-semibold text-neutral-900 truncate group-hover:text-neutral-950">
-                  {user.fullName}
+                  {user.fullName || user.name || "Educator"}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      supabaseSession ? "bg-emerald-500 animate-pulse" : "bg-amber-400"
+                      supabaseSession ? "bg-emerald-500 animate-pulse" : "bg-neutral-400"
                     }`}
                   />
                   <p className="text-[10px] text-neutral-400 truncate font-medium">
-                    {supabaseSession ? (user.email || "Google SSO") : "Demo Persona"}
+                    Account &amp; Settings
                   </p>
                 </div>
               </div>
             )}
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -573,18 +579,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </button>
 
-              {/* Profile Avatar */}
-              <Link
-                href="/settings"
+              {/* Profile Avatar / Account Dialog Trigger */}
+              <button
+                type="button"
+                onClick={() => setIsAccountDialogOpen(true)}
                 className="flex items-center gap-2 pl-1 cursor-pointer group"
                 title={`${user.fullName || currentPersona.name} (${user.role || currentPersona.title})`}
+                aria-label="Open Account Dialog"
               >
                 <UserAvatar
                   src={user.avatar || currentPersona.avatar}
                   name={user.fullName || currentPersona.name}
+                  size="md"
                   className="w-10 h-10 ring-2 ring-neutral-100 group-hover:ring-neutral-300 shadow-sm transition-all"
                 />
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -646,7 +655,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-3">
                 <UserAvatar
                   src={user.avatar}
-                  name={user.fullName}
+                  name={user.fullName || user.name}
+                  size="lg"
                   className="w-11 h-11 ring-2 ring-neutral-100 shadow-sm"
                 />
                 <div>
@@ -711,6 +721,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <GlobalSearchModal />
       <NotificationPopover />
       <MessagesDrawer />
+      <AccountDialog
+        isOpen={isAccountDialogOpen}
+        onClose={() => setIsAccountDialogOpen(false)}
+      />
     </div>
   );
 }

@@ -358,8 +358,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Check backend health
-      await api.health.check();
-      setBackendConnected(true);
+      const healthRes: any = await api.health.check();
+      if (healthRes?.environment === 'demo-fallback' || healthRes?.status === 'offline') {
+        setBackendConnected(false);
+      } else {
+        setBackendConnected(true);
+      }
 
       // 1. Fetch ML model info & interventions
       try {
@@ -499,35 +503,42 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     // Check existing Supabase session on startup
     supabaseAuth.getSession().then((session) => {
       if (session && session.access_token && isMounted) {
-        syncUserFromSessionRef.current(session).then(() => {
-          if (isMounted) refreshBackendDataRef.current();
-        });
+        syncUserFromSessionRef.current(session)
+          .then(() => {
+            if (isMounted) refreshBackendDataRef.current().catch(console.warn);
+          })
+          .catch(console.warn);
       } else if (isMounted) {
-        refreshBackendDataRef.current();
+        refreshBackendDataRef.current().catch(console.warn);
       }
-    });
+    }).catch(console.warn);
 
     // Listen to real-time auth events (Sign In, Token Refreshed, Sign Out)
     // Subscribe ONCE — refs ensure we always call the latest function
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
-          await syncUserFromSessionRef.current(session);
-          refreshBackendDataRef.current();
-        } else if (event === "SIGNED_OUT") {
-          setSupabaseSession(null);
-          setSupabaseUser(null);
-          api.setToken(null);
-          api.setCampusId(null);
-          const defaultPersona = DEMO_PERSONAS[activeRole] || DEMO_PERSONAS.faculty;
-          setUser({
-            ...CURRENT_USER,
-            name: defaultPersona.name.split(" ")[0],
-            fullName: defaultPersona.name,
-            role: defaultPersona.title,
-            avatar: defaultPersona.avatar,
-          });
-          refreshBackendDataRef.current();
+        if (!isMounted) return;
+        try {
+          if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
+            await syncUserFromSessionRef.current(session);
+            await refreshBackendDataRef.current();
+          } else if (event === "SIGNED_OUT") {
+            setSupabaseSession(null);
+            setSupabaseUser(null);
+            api.setToken(null);
+            api.setCampusId(null);
+            const defaultPersona = DEMO_PERSONAS[activeRole] || DEMO_PERSONAS.faculty;
+            setUser({
+              ...CURRENT_USER,
+              name: defaultPersona.name.split(" ")[0],
+              fullName: defaultPersona.name,
+              role: defaultPersona.title,
+              avatar: defaultPersona.avatar,
+            });
+            await refreshBackendDataRef.current();
+          }
+        } catch (authErr) {
+          console.warn("Auth state change error:", authErr);
         }
       }
     );
@@ -539,47 +550,213 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Mount-only: refs handle latest function versions
 
-  // Workflow Handlers
+  // Workflow Handlers with offline demo safety
   const reviewSignal = async (id: string, req: SignalReviewRequest): Promise<SignalReviewResponse> => {
-    const res = await api.signals.review(id, req);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.signals.review(id, req);
+      await refreshBackendData();
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; processing signal review in local demo state:", err);
+      const targetSignal = signals.find((s) => s.id === id);
+      const newCaseId = `CASE-${targetSignal?.student_id || "DEMO"}-${Date.now().toString().slice(-4)}`;
+
+      // Update signal in local store
+      setSignals((prev) =>
+        prev.map((s) =>
+          s.id === id
+            ? {
+                ...s,
+                reviewed_decision: req.decision,
+                reviewed_at: new Date().toISOString(),
+                selected_intervention_key: req.selected_intervention_key,
+              }
+            : s
+        )
+      );
+
+      // If approved or modified, create or update case in local store
+      if (req.decision === "approve" || req.decision === "modify") {
+        const newCase: CaseDetailDTO = {
+          id: newCaseId,
+          institution_id: targetSignal?.institution_id || "overclocked-demo",
+          student_id: targetSignal?.student_id || "SYN-1007",
+          external_student_ref: targetSignal?.external_student_ref || "SYN-1007",
+          student_display_name: targetSignal?.student_display_name || "Asha",
+          originating_signal_id: id,
+          selected_intervention_key: req.selected_intervention_key || "mentor_check_in",
+          state: "ASSIGNED",
+          primary_owner_user_id: currentPersona?.name || "11111111-1111-1111-1111-111111111111",
+          due_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+          is_escalated: false,
+          version: 1,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          tasks: [],
+          events: [
+            {
+              id: `EVT-${Date.now()}`,
+              event_type: "CASE_CREATED_FROM_SIGNAL",
+              actor_user_id: currentPersona?.name || "11111111-1111-1111-1111-111111111111",
+              actor_kind: "user",
+              from_state: "NEW",
+              to_state: "ASSIGNED",
+              event_metadata: {},
+              created_at: new Date().toISOString(),
+            },
+          ],
+          follow_ups: [],
+        };
+
+        setCases((prev) => {
+          const filtered = prev.filter((c) => c.originating_signal_id !== id);
+          return [newCase, ...filtered];
+        });
+      }
+
+      return {
+        signal_id: id,
+        review_status: req.decision,
+        case_id: req.decision !== "dismiss" ? newCaseId : undefined,
+        case_state: req.decision !== "dismiss" ? "ASSIGNED" : undefined,
+        reviewed_at: new Date().toISOString(),
+      };
+    }
   };
 
   const assignCase = async (id: string, req: CaseAssignmentRequest): Promise<CaseDetailDTO> => {
-    const res = await api.cases.assign(id, req);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.cases.assign(id, req);
+      await refreshBackendData();
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; processing assignment in local demo state:", err);
+      let updatedCase: CaseDetailDTO | null = null;
+      setCases((prev) =>
+        prev.map((c) => {
+          if (c.id === id) {
+            updatedCase = {
+              ...c,
+              state: "ASSIGNED",
+              primary_owner_user_id: req.primary_owner_user_id,
+            };
+            return updatedCase;
+          }
+          return c;
+        })
+      );
+      if (updatedCase) return updatedCase;
+      throw err;
+    }
   };
 
   const acceptCase = async (id: string, req?: AcceptAssignmentRequest): Promise<CaseDetailDTO> => {
-    const res = await api.cases.accept(id, req);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.cases.accept(id, req);
+      await refreshBackendData();
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; processing accept in local demo state:", err);
+      let updatedCase: CaseDetailDTO | null = null;
+      setCases((prev) =>
+        prev.map((c) => {
+          if (c.id === id) {
+            updatedCase = {
+              ...c,
+              state: "ACCEPTED",
+              accepted_at: new Date().toISOString(),
+            };
+            return updatedCase;
+          }
+          return c;
+        })
+      );
+      if (updatedCase) return updatedCase;
+      throw err;
+    }
   };
 
   const transitionCase = async (id: string, req: CaseTransitionRequest): Promise<CaseDetailDTO> => {
-    const res = await api.cases.transition(id, req);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.cases.transition(id, req);
+      await refreshBackendData();
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; processing transition in local demo state:", err);
+      let updatedCase: CaseDetailDTO | null = null;
+      setCases((prev) =>
+        prev.map((c) => {
+          if (c.id === id) {
+            updatedCase = { ...c, state: req.to_state };
+            return updatedCase;
+          }
+          return c;
+        })
+      );
+      if (updatedCase) return updatedCase;
+      throw err;
+    }
   };
 
   const createCaseTask = async (id: string, req: CreateTaskRequest): Promise<CaseTaskDTO> => {
-    const res = await api.cases.createTask(id, req);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.cases.createTask(id, req);
+      await refreshBackendData().catch(console.warn);
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; creating task in local demo state:", err);
+      const newTask: CaseTaskDTO = {
+        id: `TASK-${Date.now().toString().slice(-4)}`,
+        domain: req.domain || "academic",
+        generic_label: req.generic_label || "Academic Support Task",
+        state: "OPEN",
+        assignee_user_id: req.assignee_user_id || null,
+        due_at: req.due_at || new Date(Date.now() + 86400000 * 2).toISOString(),
+        deadline_version: 1,
+      };
+      return newTask;
+    }
   };
 
   const recordCaseFollowUp = async (id: string, req: FollowUpRequest): Promise<FollowUpDTO> => {
-    const res = await api.cases.recordFollowUp(id, req);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.cases.recordFollowUp(id, req);
+      await refreshBackendData().catch(console.warn);
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; recording follow-up in local demo state:", err);
+      const newFollowUp: FollowUpDTO = {
+        id: `FU-${Date.now().toString().slice(-4)}`,
+        follow_up_type: req.follow_up_type,
+        contact_status: req.contact_status || "completed",
+        proof_kind: req.proof_kind || "verification_note",
+        occurred_at: req.occurred_at || new Date().toISOString(),
+        recorded_by: "USR-DEMO",
+        sanitized_note: req.note || null,
+        proof_ref: req.proof_ref || "local_proof",
+        created_at: new Date().toISOString(),
+      };
+      return newFollowUp;
+    }
   };
 
   const recordCaseOutcome = async (id: string, req: OutcomeRequest): Promise<CaseOutcomeDTO> => {
-    const res = await api.cases.recordOutcome(id, req);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.cases.recordOutcome(id, req);
+      await refreshBackendData().catch(console.warn);
+      return res;
+    } catch (err: any) {
+      console.warn("Backend API offline; recording outcome in local demo state:", err);
+      const newOutcome: CaseOutcomeDTO = {
+        id: `OUT-${Date.now().toString().slice(-4)}`,
+        outcome_status: req.outcome_status,
+        rationale: req.rationale,
+        evidence_kind: req.evidence_kind || "staff_review",
+        recorded_by: "USR-DEMO",
+        recorded_at: new Date().toISOString(),
+      };
+      return newOutcome;
+    }
   };
 
   const updateUser = (data: Partial<typeof CURRENT_USER>) => {

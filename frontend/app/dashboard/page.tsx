@@ -193,7 +193,7 @@ export default function DashboardPage() {
                   : "text-neutral-500 hover:text-neutral-900"
               }`}
             >
-              <span>Operational Triage</span>
+              <span>Review Alerts</span>
               {pendingSignals.length > 0 && (
                 <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold">
                   {pendingSignals.length}
@@ -208,7 +208,7 @@ export default function DashboardPage() {
               className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Triage Signal ({pendingSignals.length})</span>
+              <span>Review Alert ({pendingSignals.length})</span>
             </button>
           ) : (
             <button
@@ -216,7 +216,7 @@ export default function DashboardPage() {
               className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
             >
               <Activity className="w-4 h-4 text-emerald-400" />
-              <span>Telemetry Queue</span>
+              <span>Review Queue</span>
             </button>
           )}
         </div>
@@ -232,7 +232,7 @@ export default function DashboardPage() {
               {/* Header with interactive dropdown */}
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-                  Triage &amp; Retention Overview
+                  Alerts &amp; Retention Overview
                 </h3>
                 <div className="relative">
                   <button
@@ -271,7 +271,7 @@ export default function DashboardPage() {
                   {sutraOverviewStats.cohortScope}
                 </span>
                 <span className="text-xs text-neutral-400 font-medium block mt-0.5">
-                  Students in Cohort Scope ({growthTimeframe})
+                  Students in assigned cohort ({growthTimeframe})
                 </span>
               </div>
 
@@ -282,7 +282,7 @@ export default function DashboardPage() {
                     {sutraOverviewStats.triagedCount}
                   </span>
                   <span className="text-[11px] text-neutral-400 block mt-0.5">
-                    Signals Triaged
+                    Alerts Reviewed
                   </span>
                 </div>
                 <div className="text-right">
@@ -296,7 +296,11 @@ export default function DashboardPage() {
               </div>
 
               {/* Signature Dual-Layer Gradient Tick Bar */}
-              <div className="pt-2">
+              <div className="pt-2 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-500">
+                  <span>Alert Review Rate</span>
+                  <span className="font-mono text-neutral-900 font-bold">{sutraOverviewStats.progress}%</span>
+                </div>
                 <SkillHubProgressBar progress={sutraOverviewStats.progress} heightClass="h-5" />
               </div>
             </div>
@@ -307,7 +311,7 @@ export default function DashboardPage() {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
-                      Next Actionable Milestone
+                      Next Support Milestone
                     </span>
                   </div>
                   <h3 className="text-base font-semibold text-neutral-900 tracking-tight mt-0.5">
@@ -364,7 +368,7 @@ export default function DashboardPage() {
                 {/* Active SLA / State badge */}
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 border border-emerald-100 text-emerald-700">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Active SLA</span>
+                  <span>On Track</span>
                 </span>
               </div>
             </div>
@@ -377,7 +381,7 @@ export default function DashboardPage() {
               {/* Header with interactive timeframe dropdown */}
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-                  Operational Analytics
+                  Support Analytics
                 </h3>
                 <div className="relative">
                   <button
@@ -429,7 +433,7 @@ export default function DashboardPage() {
                 {/* Sub-card 2: SLA Response Time */}
                 <div className="skill-card-subtle p-4 bg-neutral-50/80 border border-neutral-100">
                   <span className="text-[11px] font-medium text-neutral-400 block">
-                    Triage Velocity
+                    Average Review Time
                   </span>
                   <span className="text-xl font-extrabold text-neutral-900 mt-2 block">
                     {sutraTelemetryStats.avgTriageTime}
@@ -443,7 +447,7 @@ export default function DashboardPage() {
                 {/* Sub-card 3: Action Rate */}
                 <div className="skill-card-subtle p-4 bg-neutral-50/80 border border-neutral-100">
                   <span className="text-[11px] font-medium text-neutral-400 block">
-                    Triage Action Rate
+                    Alert Action Rate
                   </span>
                   <span className="text-xl font-extrabold text-neutral-900 mt-2 block">
                     {sutraTelemetryStats.triageRate}
@@ -457,7 +461,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 2: Student Engagement & Signal Trend linked to active timeframe */}
-            <EngagementChart timeframe={analyticsTimeframe} title="Institutional Telemetry & Signal Trend" />
+            <EngagementChart timeframe={analyticsTimeframe} title="Alert Activity &amp; Trend" />
           </div>
         </div>
       )}
@@ -465,56 +469,56 @@ export default function DashboardPage() {
       {/* 3. OPERATIONAL TRIAGE TAB: SUTRA "No Alert Without Action" WORKFLOWS */}
       {activeTab === "triage" && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          {/* SUTRA Operational Summary Bar */}
-          <div className="skill-card p-5 bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white rounded-3xl shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
+          {/* Summary Card: How SUTRA Works */}
+          <div className="skill-card p-6 sm:p-7 bg-white border border-neutral-200/80 rounded-3xl shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-xl">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    SUTRA Principle
-                  </span>
-                  <span className="text-xs font-bold text-neutral-200">
-                    No Alert Without Action
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                    HOW SUTRA WORKS
                   </span>
                 </div>
-                <p className="text-xs text-neutral-400">
-                  Deterministic early-warning policy signals with mandatory human rationale capture and 48-hour SLA case tracking.
+                <h2 className="text-lg sm:text-xl font-bold text-neutral-900 tracking-tight font-heading">
+                  Every alert should lead to action.
+                </h2>
+                <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
+                  SUTRA helps staff review student concerns, assign support, and track follow-ups.
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-center min-w-[90px]">
-                  <span className="block text-[10px] uppercase font-bold text-neutral-300">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
+                <div className="p-3 sm:px-4 sm:py-3 rounded-2xl bg-neutral-50/90 border border-neutral-200/70 text-center min-w-[95px]">
+                  <span className="block text-[11px] uppercase font-bold text-neutral-500 tracking-wide">
                     Signals Pending
                   </span>
-                  <span className="text-lg font-extrabold text-amber-300">
+                  <span className="text-xl sm:text-2xl font-extrabold text-amber-600 mt-1 block">
                     {pendingSignals.length}
                   </span>
                 </div>
 
-                <div className="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-center min-w-[90px]">
-                  <span className="block text-[10px] uppercase font-bold text-neutral-300">
+                <div className="p-3 sm:px-4 sm:py-3 rounded-2xl bg-neutral-50/90 border border-neutral-200/70 text-center min-w-[95px]">
+                  <span className="block text-[11px] uppercase font-bold text-neutral-500 tracking-wide">
                     Open Cases
                   </span>
-                  <span className="text-lg font-extrabold text-white">
+                  <span className="text-xl sm:text-2xl font-extrabold text-neutral-900 mt-1 block">
                     {openCases.length}
                   </span>
                 </div>
 
-                <div className="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-center min-w-[90px]">
-                  <span className="block text-[10px] uppercase font-bold text-neutral-300">
+                <div className="p-3 sm:px-4 sm:py-3 rounded-2xl bg-neutral-50/90 border border-neutral-200/70 text-center min-w-[95px]">
+                  <span className="block text-[11px] uppercase font-bold text-neutral-500 tracking-wide">
                     Escalations
                   </span>
-                  <span className="text-lg font-extrabold text-rose-300">
+                  <span className="text-xl sm:text-2xl font-extrabold text-rose-600 mt-1 block">
                     {escalatedCases.length}
                   </span>
                 </div>
 
-                <div className="px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-center min-w-[90px]">
-                  <span className="block text-[10px] uppercase font-bold text-neutral-300">
+                <div className="p-3 sm:px-4 sm:py-3 rounded-2xl bg-neutral-50/90 border border-neutral-200/70 text-center min-w-[95px]">
+                  <span className="block text-[11px] uppercase font-bold text-neutral-500 tracking-wide">
                     Action Rate
                   </span>
-                  <span className="text-lg font-extrabold text-emerald-300">
+                  <span className="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-1 block">
                     {triageActionRate}%
                   </span>
                 </div>
@@ -530,10 +534,10 @@ export default function DashboardPage() {
               </div>
               <div className="space-y-1 text-center sm:text-left flex-1">
                 <h4 className="text-sm font-bold text-neutral-900">
-                  Institutional Privacy Protection (ADR-004)
+                  Student Privacy Protection (ADR-004)
                 </h4>
                 <p className="text-xs text-neutral-500 leading-relaxed">
-                  Executive leadership accounts are restricted to anonymized cohort indicators and cannot inspect individual student records or operational review queues.
+                  Leadership accounts view high-level cohort summaries and cannot inspect individual student records or alerts.
                 </p>
               </div>
               <Link
@@ -545,19 +549,19 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              {/* Priority Review Queue: Signals Pending Evaluation */}
-              <div className="space-y-3">
+              {/* Priority Signal Review Queue: Alerts to Review */}
+              <div className="space-y-3" aria-label="Priority Signal Review Queue">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-neutral-900 tracking-tight font-heading">
-                      Priority Signal Review Queue
+                      Alerts to Review
                     </h2>
-                    <p className="text-xs text-neutral-400 mt-0.5">
-                      Signals awaiting authorized human evaluation &amp; rationale
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Review these alerts and decide what action is needed.
                     </p>
                   </div>
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
-                    {pendingSignals.length} Pending Actions
+                    {pendingSignals.length} Alerts Pending
                   </span>
                 </div>
 
@@ -565,8 +569,8 @@ export default function DashboardPage() {
                   {signals.length === 0 ? (
                     <div className="p-12 text-center text-xs text-neutral-400 space-y-2">
                       <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                      <p className="font-semibold text-neutral-800">All alerts triaged!</p>
-                      <p>No policy signals pending evaluation at this moment.</p>
+                      <p className="font-semibold text-neutral-800">All alerts reviewed</p>
+                      <p>No student alerts need review right now.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -574,11 +578,11 @@ export default function DashboardPage() {
                         <thead className="bg-neutral-50 border-b border-neutral-100 text-neutral-400 uppercase text-[10px] font-bold tracking-wider">
                           <tr>
                             <th className="py-3 px-4">Student</th>
-                            <th className="py-3 px-4">Signal Title</th>
-                            <th className="py-3 px-4">Risk Confidence</th>
-                            <th className="py-3 px-4">Primary Trigger</th>
-                            <th className="py-3 px-4">SLA Deadline</th>
-                            <th className="py-3 px-4 text-right">Review Action</th>
+                            <th className="py-3 px-4">Alert</th>
+                            <th className="py-3 px-4">Confidence</th>
+                            <th className="py-3 px-4">Reason</th>
+                            <th className="py-3 px-4">Due Date</th>
+                            <th className="py-3 px-4 text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
@@ -590,34 +594,34 @@ export default function DashboardPage() {
                                 <td className="py-3.5 px-4 font-semibold text-neutral-900">
                                   {sig.student_display_name}
                                 </td>
-                                <td className="py-3.5 px-4 text-neutral-600 font-medium capitalize">
+                                <td className="py-3.5 px-4 text-neutral-700 font-medium capitalize">
                                   {sig.rule_key.replace(/_/g, " ")}
                                 </td>
                                 <td className="py-3.5 px-4">
                                   <span
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                                       conf >= 75
-                                        ? "bg-rose-50 text-rose-700"
+                                        ? "bg-rose-50 text-rose-700 border border-rose-200/60"
                                         : conf >= 50
-                                        ? "bg-amber-50 text-amber-700"
-                                        : "bg-emerald-50 text-emerald-700"
+                                        ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                                        : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
                                     }`}
                                   >
                                     {conf}% Confidence
                                   </span>
                                 </td>
-                                <td className="py-3.5 px-4 text-neutral-500 font-mono text-[11px]">
+                                <td className="py-3.5 px-4 text-neutral-600 font-mono text-[11px]">
                                   {trigger}
                                 </td>
-                                <td className="py-3.5 px-4 text-neutral-400 text-[11px]">
-                                  48h SLA
+                                <td className="py-3.5 px-4 text-neutral-500 text-[11px]">
+                                  Within 48h
                                 </td>
                                 <td className="py-3.5 px-4 text-right">
                                   <button
                                     onClick={() => setSelectedSignalForReview(sig)}
-                                    className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-2xs transition-all active:scale-[0.98]"
+                                    className="px-3.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-2xs transition-all active:scale-[0.98]"
                                   >
-                                    Review Signal
+                                    Review Alert
                                   </button>
                                 </td>
                               </tr>
@@ -630,19 +634,19 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Active Case Lifecycle Tracker: 10-State Cases */}
-              <div className="space-y-3 pt-2">
+              {/* Active Case Closed-Loop Tracker: Cases Being Handled */}
+              <div className="space-y-3 pt-2" aria-label="Active Case Closed-Loop Tracker">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-neutral-900 tracking-tight font-heading">
-                      Active Case Closed-Loop Tracker
+                      Cases Being Handled
                     </h2>
-                    <p className="text-xs text-neutral-400 mt-0.5">
-                      10-State closed-loop cases governed by institutional service level agreements
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Track each case from assignment to resolution.
                     </p>
                   </div>
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
-                    {cases.length} Tracked Cases
+                    {cases.length} Total Cases
                   </span>
                 </div>
 
@@ -651,7 +655,7 @@ export default function DashboardPage() {
                     <div className="p-12 text-center text-xs text-neutral-400 space-y-2">
                       <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                       <p className="font-semibold text-neutral-800">No active cases</p>
-                      <p>All student support requests have reached verified resolution.</p>
+                      <p>All student support cases have been resolved.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -659,11 +663,11 @@ export default function DashboardPage() {
                         <thead className="bg-neutral-50 border-b border-neutral-100 text-neutral-400 uppercase text-[10px] font-bold tracking-wider">
                           <tr>
                             <th className="py-3 px-4">Student</th>
-                            <th className="py-3 px-4">Current State</th>
-                            <th className="py-3 px-4">Intervention Match</th>
-                            <th className="py-3 px-4">Case Owner</th>
-                            <th className="py-3 px-4">Status &amp; SLA</th>
-                            <th className="py-3 px-4 text-right">Progress Case</th>
+                            <th className="py-3 px-4">Status</th>
+                            <th className="py-3 px-4">Support Assigned</th>
+                            <th className="py-3 px-4">Assigned To</th>
+                            <th className="py-3 px-4">Deadline</th>
+                            <th className="py-3 px-4 text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
@@ -686,7 +690,7 @@ export default function DashboardPage() {
                               <td className="py-3.5 px-4">
                                 {c.is_escalated ? (
                                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                    Escalated
+                                    Needs Attention
                                   </span>
                                 ) : (
                                   <span className="text-neutral-500 text-[11px]">
@@ -720,9 +724,9 @@ export default function DashboardPage() {
                                       reason_code: "progressed_triage",
                                     });
                                   }}
-                                  className="px-3 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-full text-xs font-medium transition-colors"
+                                  className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-full text-xs font-medium transition-colors"
                                 >
-                                  Advance State →
+                                  Update Case
                                 </button>
                               </td>
                             </tr>
