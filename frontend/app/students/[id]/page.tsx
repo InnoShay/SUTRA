@@ -727,11 +727,24 @@ export default function StudentDetailPage() {
         onSelectTab={(tab) => {
           setActiveTab(tab);
           setIsTechnicalDossierOpen(true);
+          setTimeout(() => {
+            const targetMap: Record<string, string> = {
+              observations: "observations-table",
+              ml_risk: "ml-risk-section",
+              evidence: "evidence-ledger-section",
+              scenarios: "scenario-panel-section",
+              guidance: "guidance-section",
+              all: "technical-dossier",
+            };
+            const targetId = targetMap[tab] || "technical-dossier";
+            const el = document.getElementById(targetId) || document.getElementById("technical-dossier");
+            el?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 80);
         }}
       />
 
       {/* Collapsible Technical Governance Dossier & Deep Telemetry Section (Dropdown, Not Shown First) */}
-      <div className="border border-neutral-200 bg-white rounded-2xl overflow-hidden shadow-2xs transition-all">
+      <div id="technical-dossier" className="border border-neutral-200 bg-white rounded-2xl overflow-hidden shadow-2xs transition-all scroll-mt-6">
         {/* Dropdown Disclosure Header */}
         <button
           type="button"
@@ -946,7 +959,7 @@ export default function StudentDetailPage() {
                 const isFresh = predictionSource === "fresh_live";
 
                 return (
-                  <div className="p-6 md:p-7 rounded-2xl bg-white border border-neutral-200 shadow-2xs space-y-6">
+                  <div id="ml-risk-section" className="p-6 md:p-7 rounded-2xl bg-white border border-neutral-200 shadow-2xs space-y-6 scroll-mt-6">
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-200">
                       <div className="flex items-center gap-3">
@@ -1168,30 +1181,34 @@ export default function StudentDetailPage() {
 
             {/* SUTRA 5-Tier Evidence Architecture & Model Input Completeness Ledger */}
             {(activeTab === "all" || activeTab === "evidence") && (
-              <StudentEvidenceLedger
-                studentId={studentId}
-                readiness={studentReadiness}
-                loadingReadiness={loadingReadiness}
-                supportView={supportView}
-                mlPrediction={mlPrediction || supportView?.ml_prediction || null}
-                signals={studentSignals}
-                verifiedThreshold={verifiedThreshold}
-              />
+              <div id="evidence-ledger-section" className="scroll-mt-6">
+                <StudentEvidenceLedger
+                  studentId={studentId}
+                  readiness={studentReadiness}
+                  loadingReadiness={loadingReadiness}
+                  supportView={supportView}
+                  mlPrediction={mlPrediction || supportView?.ml_prediction || null}
+                  signals={studentSignals}
+                  verifiedThreshold={verifiedThreshold}
+                />
+              </div>
             )}
 
             {/* Governed What-If Scenario Exploration Panel (Phase 8) */}
             {(activeTab === "all" || activeTab === "scenarios") && (
-              <GovernedScenarioPanel
-                studentId={studentId}
-                externalStudentRef={externalRef}
-                initialPrediction={mlPrediction || supportView?.ml_prediction || null}
-                verifiedThreshold={verifiedThreshold}
-                onPlanSupport={() => {
-                  setActiveTab("observations");
-                  const el = document.getElementById("observations-table");
-                  if (el) el.scrollIntoView({ behavior: "smooth" });
-                }}
-              />
+              <div id="scenario-panel-section" className="scroll-mt-6">
+                <GovernedScenarioPanel
+                  studentId={studentId}
+                  externalStudentRef={externalRef}
+                  initialPrediction={mlPrediction || supportView?.ml_prediction || null}
+                  verifiedThreshold={verifiedThreshold}
+                  onPlanSupport={() => {
+                    setActiveTab("observations");
+                    const el = document.getElementById("observations-table");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                  }}
+                />
+              </div>
             )}
 
             {/* Multi-Domain Observations Ledger with Live Filter & Search */}
@@ -1459,7 +1476,7 @@ export default function StudentDetailPage() {
 
             {/* Direct Student Guidance & Quick Action Chips */}
             {(activeTab === "all" || activeTab === "guidance") && (
-              <div className="pt-4 border-t border-neutral-200 space-y-4">
+              <div id="guidance-section" className="pt-4 border-t border-neutral-200 space-y-4 scroll-mt-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <label className="text-xs font-bold text-neutral-900 block">

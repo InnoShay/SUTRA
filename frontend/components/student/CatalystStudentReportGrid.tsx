@@ -8,6 +8,17 @@ import {
   Filter,
   Calendar,
   ChevronDown,
+  X,
+  Check,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  Activity,
+  Layers,
+  ShieldCheck,
+  ArrowUpRight,
+  Clock,
+  Database,
 } from "lucide-react";
 import { MLPredictResponse, SupportViewResponse, ObservationDTO, SignalDTO } from "@/lib/types";
 
@@ -51,6 +62,26 @@ export function CatalystStudentReportGrid({
 }: CatalystStudentReportGridProps) {
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1W");
   const [selectedTerm, setSelectedTerm] = useState("Fall 2026 Term");
+  const [activeKpiModal, setActiveKpiModal] = useState<
+    "engagement" | "risk" | "assessments" | "channels" | "attendance" | "competencies" | null
+  >(null);
+  const [isTermDropdownOpen, setIsTermDropdownOpen] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+
+  const academicTerms = [
+    "Fall 2026 Term",
+    "Spring 2026 Term",
+    "Summer 2026 Session",
+    "Academic Year 2025-26",
+  ];
+
+  const filterDomainOptions = [
+    { key: "all", label: "All Telemetry Domains" },
+    { key: "coursework", label: "LMS Coursework & Velocity" },
+    { key: "faculty", label: "Faculty & Mentor Evaluations" },
+    { key: "lab", label: "Lab Practicum Telemetry" },
+    { key: "attendance", label: "Attendance & Consistency" },
+  ];
 
   // -------------------------------------------------------------
   // DYNAMIC COMPUTATIONS BASED ON CURRENT STUDENT TELEMETRY
@@ -460,27 +491,90 @@ export function CatalystStudentReportGrid({
           <div className="relative">
             <button
               type="button"
-              className="px-3 py-1.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-xl text-xs font-semibold text-neutral-700 flex items-center gap-2 transition-all shadow-2xs"
+              onClick={() => {
+                setIsTermDropdownOpen((prev) => !prev);
+                setIsFilterDropdownOpen(false);
+              }}
+              className="px-3 py-1.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-xl text-xs font-semibold text-neutral-700 flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
             >
               <Calendar className="w-3.5 h-3.5 text-neutral-500" />
               <span>{selectedTerm}</span>
-              <ChevronDown className="w-3 h-3 text-neutral-400" />
+              <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform ${isTermDropdownOpen ? "rotate-180" : ""}`} />
             </button>
+
+            {isTermDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setIsTermDropdownOpen(false)}
+                />
+                <div className="absolute left-0 mt-1.5 w-52 bg-white rounded-xl shadow-lg border border-neutral-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-150">
+                  <span className="px-3 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                    Academic Term
+                  </span>
+                  {academicTerms.map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTerm(term);
+                        setIsTermDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-50 flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <span className={selectedTerm === term ? "font-bold text-neutral-900" : ""}>
+                        {term}
+                      </span>
+                      {selectedTerm === term && <Check className="w-3.5 h-3.5 text-neutral-900" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Filter button */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab("observations");
-              const el = document.getElementById("observations-table");
-              if (el) el.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="px-3 py-1.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-xl text-xs font-semibold text-neutral-700 flex items-center gap-1.5 transition-all shadow-2xs"
-          >
-            <Filter className="w-3.5 h-3.5 text-neutral-500" />
-            <span>Filter by</span>
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setIsFilterDropdownOpen((prev) => !prev);
+                setIsTermDropdownOpen(false);
+              }}
+              className="px-3 py-1.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-xl text-xs font-semibold text-neutral-700 flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+            >
+              <Filter className="w-3.5 h-3.5 text-neutral-500" />
+              <span>Filter by</span>
+              <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform ${isFilterDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {isFilterDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setIsFilterDropdownOpen(false)}
+                />
+                <div className="absolute right-0 mt-1.5 w-60 bg-white rounded-xl shadow-lg border border-neutral-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-150">
+                  <span className="px-3 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                    Telemetry Domain Filter
+                  </span>
+                  {filterDomainOptions.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => {
+                        setIsFilterDropdownOpen(false);
+                        onSelectTab("observations");
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-50 flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Primary Catalyst Orange Action Button */}
           <button
@@ -510,8 +604,8 @@ export function CatalystStudentReportGrid({
               </span>
               <button
                 type="button"
-                onClick={() => onSelectTab("observations")}
-                className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 border border-neutral-200/80 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setActiveKpiModal("engagement")}
+                className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 hover:border-neutral-300 bg-white hover:bg-neutral-50 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
               >
                 Report
               </button>
@@ -653,8 +747,8 @@ export function CatalystStudentReportGrid({
               </span>
               <button
                 type="button"
-                onClick={() => onSelectTab("ml_risk")}
-                className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 border border-neutral-200/80 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setActiveKpiModal("risk")}
+                className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 hover:border-neutral-300 bg-white hover:bg-neutral-50 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
               >
                 Report
               </button>
@@ -741,8 +835,8 @@ export function CatalystStudentReportGrid({
               </span>
               <button
                 type="button"
-                onClick={() => onSelectTab("evidence")}
-                className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 border border-neutral-200/80 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setActiveKpiModal("assessments")}
+                className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 hover:border-neutral-300 bg-white hover:bg-neutral-50 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
               >
                 Details
               </button>
@@ -846,8 +940,8 @@ export function CatalystStudentReportGrid({
               </span>
               <button
                 type="button"
-                onClick={() => onSelectTab("observations")}
-                className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 border border-neutral-200/80 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setActiveKpiModal("channels")}
+                className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 hover:border-neutral-300 bg-white hover:bg-neutral-50 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
               >
                 Details
               </button>
@@ -925,7 +1019,7 @@ export function CatalystStudentReportGrid({
           <div className="text-center pt-2 border-t border-neutral-100">
             <button
               type="button"
-              onClick={() => onSelectTab("observations")}
+              onClick={() => setActiveKpiModal("channels")}
               className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer"
             >
               View telemetry ledger →
@@ -944,8 +1038,8 @@ export function CatalystStudentReportGrid({
               </span>
               <button
                 type="button"
-                onClick={() => onSelectTab("evidence")}
-                className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 border border-neutral-200/80 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setActiveKpiModal("attendance")}
+                className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 hover:border-neutral-300 bg-white hover:bg-neutral-50 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
               >
                 Details
               </button>
@@ -1013,8 +1107,8 @@ export function CatalystStudentReportGrid({
               </span>
               <button
                 type="button"
-                onClick={() => onSelectTab("scenarios")}
-                className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 border border-neutral-200/80 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setActiveKpiModal("competencies")}
+                className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 hover:border-neutral-300 bg-white hover:bg-neutral-50 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
               >
                 Details
               </button>
@@ -1131,6 +1225,354 @@ export function CatalystStudentReportGrid({
           </div>
         </div>
       </div>
+
+      {/* ============================================================== */}
+      {/* 3. INTERACTIVE KPI DEEP REPORT & TELEMETRY AUDIT MODAL         */}
+      {/* ============================================================== */}
+      {activeKpiModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setActiveKpiModal(null)}
+        >
+          <div
+            className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center shadow-2xs flex-shrink-0">
+                  {activeKpiModal === "engagement" && <Activity className="w-5 h-5 text-white" />}
+                  {activeKpiModal === "risk" && <AlertCircle className="w-5 h-5 text-white" />}
+                  {activeKpiModal === "assessments" && <FileText className="w-5 h-5 text-white" />}
+                  {activeKpiModal === "channels" && <Database className="w-5 h-5 text-white" />}
+                  {activeKpiModal === "attendance" && <Calendar className="w-5 h-5 text-white" />}
+                  {activeKpiModal === "competencies" && <Layers className="w-5 h-5 text-white" />}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-neutral-900 tracking-tight">
+                    {activeKpiModal === "engagement" && "Academic Velocity & Engagement Report"}
+                    {activeKpiModal === "risk" && "Day-30 Early Warning Risk Telemetry Report"}
+                    {activeKpiModal === "assessments" && "Assessment Funnel & Milestone Completion Details"}
+                    {activeKpiModal === "channels" && "Signal Provenance Channels & Telemetry Integrity"}
+                    {activeKpiModal === "attendance" && "Term Consistency & Attendance Matrix Details"}
+                    {activeKpiModal === "competencies" && "Holistic Competency Radar & Multi-Axis Mastery"}
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    {activeKpiModal === "engagement" && "Detailed breakdown of LMS coursework, lab practicum, and formative study velocity."}
+                    {activeKpiModal === "risk" && "Calibrated attrition probability, institutional threshold verification, and domain attribution."}
+                    {activeKpiModal === "assessments" && "Module completion progression, submission funnel stages, and practicum clearance."}
+                    {activeKpiModal === "channels" && "Audit trail of multi-domain signal provenance ingested into campus outbox."}
+                    {activeKpiModal === "attendance" && "12-week attendance matrix, consistency density, and temporal presence."}
+                    {activeKpiModal === "competencies" && "Multi-dimensional skill evaluation indexed against cohort benchmarks."}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveKpiModal(null)}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              {/* ENGAGEMENT MODAL BODY */}
+              {activeKpiModal === "engagement" && (
+                <>
+                  <div className="p-4 bg-neutral-50 border border-neutral-200/80 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-neutral-500 font-medium">Logged Engagement Time</span>
+                      <div className="text-2xl font-bold text-neutral-900 mt-0.5">
+                        {sparklineData.hours}
+                      </div>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${sparklineData.isHigh ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+                      {sparklineData.delta} vs Previous Term Cycle
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60">
+                      <span className="text-[10px] text-neutral-500 font-semibold uppercase">LMS Coursework</span>
+                      <div className="text-base font-bold text-neutral-900 mt-1">{lmsHours} hrs</div>
+                      <span className="text-[10px] text-emerald-600 font-medium">↑ +4.5% velocity</span>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60">
+                      <span className="text-[10px] text-neutral-500 font-semibold uppercase">Lab Practicum</span>
+                      <div className="text-base font-bold text-neutral-900 mt-1">{labHours} hrs</div>
+                      <span className="text-[10px] text-neutral-500 font-medium">Verified active sessions</span>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60">
+                      <span className="text-[10px] text-neutral-500 font-semibold uppercase">Formative Modules</span>
+                      <div className="text-base font-bold text-neutral-900 mt-1">{formativeHours} hrs</div>
+                      <span className="text-[10px] text-neutral-500 font-medium">Curriculum assignments</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 space-y-1.5">
+                    <span className="font-semibold text-neutral-900">Curriculum Lesson Progression</span>
+                    <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-neutral-900 h-2 rounded-full"
+                        style={{ width: `${Math.round(lessonRatio * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] text-neutral-500">
+                      <span>{student.completedLessons ?? 6} lessons completed</span>
+                      <span>{student.totalLessons ?? 18} total syllabus lessons</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* RISK MODAL BODY */}
+              {activeKpiModal === "risk" && (
+                <>
+                  <div className="p-4 bg-neutral-50 border border-neutral-200/80 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-neutral-500 font-medium">Calibrated Attrition Risk</span>
+                      <div className="text-2xl font-bold text-neutral-900 mt-0.5">
+                        {riskPercent}% Probability
+                      </div>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${isAtRisk ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
+                      {isAtRisk ? "Elevated Attrition Risk" : "Standard Trajectory"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 text-center">
+                      <span className="text-[10px] text-neutral-500 font-semibold uppercase">Academic Deficit</span>
+                      <div className="text-lg font-bold text-neutral-900 mt-1">{academicDeficit}%</div>
+                      <span className="text-[10px] text-neutral-500">Coursework gap</span>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 text-center">
+                      <span className="text-[10px] text-neutral-500 font-semibold uppercase">Attendance Gaps</span>
+                      <div className="text-lg font-bold text-neutral-900 mt-1">{attendanceGaps}%</div>
+                      <span className="text-[10px] text-neutral-500">Classroom variance</span>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 text-center">
+                      <span className="text-[10px] text-neutral-500 font-semibold uppercase">LMS Velocity Lag</span>
+                      <div className="text-lg font-bold text-neutral-900 mt-1">{lmsLag}%</div>
+                      <span className="text-[10px] text-neutral-500">Submission pace</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-neutral-50 border border-neutral-200/60 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-neutral-800">Operational Decision Threshold</span>
+                      <span className="font-mono font-bold text-neutral-900 bg-white border border-neutral-200 px-2 py-0.5 rounded-md text-[11px]">
+                        {thresholdPercent}% (Backend Verified)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-500 leading-relaxed">
+                      SUTRA calibrated probability is compared directly against the verified campus operating threshold. Students at or above this threshold trigger human triage evaluation per institutional governance guidelines.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* ASSESSMENTS MODAL BODY */}
+              {activeKpiModal === "assessments" && (
+                <>
+                  <div className="p-4 bg-neutral-50 border border-neutral-200/80 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-neutral-500 font-medium">Curricular Completion</span>
+                      <div className="text-2xl font-bold text-neutral-900 mt-0.5">
+                        {completionPercent}% Cleared
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-neutral-100 text-neutral-800 border border-neutral-200">
+                      Evaluated Grade: {student.grade || "B"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-neutral-800 block">Registered Course Modules</span>
+                        <span className="text-[11px] text-neutral-500">Academic curriculum enrollment</span>
+                      </div>
+                      <span className="font-mono font-bold text-neutral-900">{registeredModulesCount} / 6</span>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-neutral-800 block">Formative Submissions</span>
+                        <span className="text-[11px] text-neutral-500">Quizzes, assessments &amp; assignments</span>
+                      </div>
+                      <span className="font-mono font-bold text-neutral-900">{formativeSubmissionsCount} / {totalLessonsCount}</span>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-neutral-800 block">Practicum Cleared</span>
+                        <span className="text-[11px] text-neutral-500">Laboratory hands-on evaluations</span>
+                      </div>
+                      <span className="font-mono font-bold text-neutral-900">{practicumClearedCount} / {totalPracticumCount}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* CHANNELS MODAL BODY */}
+              {activeKpiModal === "channels" && (
+                <>
+                  <div className="p-4 bg-neutral-50 border border-neutral-200/80 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-neutral-500 font-medium">Provenance Integrity Index</span>
+                      <div className="text-2xl font-bold text-neutral-900 mt-0.5">
+                        {integrityIndex}% Verified
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Zero Temporal Outbox Leakage
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-neutral-800 block">Canvas LMS Coursework</span>
+                        <span className="text-[11px] text-neutral-500">Automated LMS log sync</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono font-bold text-neutral-900 block">{canvasLmsCount.toLocaleString()} events</span>
+                        <span className="text-[10px] text-neutral-400">48% of total volume</span>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-neutral-800 block">Faculty &amp; Mentor Evaluations</span>
+                        <span className="text-[11px] text-neutral-500">In-class observations and qualitative reviews</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono font-bold text-neutral-900 block">{facultyCount.toLocaleString()} observations</span>
+                        <span className="text-[10px] text-neutral-400">28% of total volume</span>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-neutral-800 block">Lab Practicum Telemetry</span>
+                        <span className="text-[11px] text-neutral-500">Hardware and computing terminal session logs</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono font-bold text-neutral-900 block">{labCount.toLocaleString()} events</span>
+                        <span className="text-[10px] text-neutral-400">24% of total volume</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ATTENDANCE MODAL BODY */}
+              {activeKpiModal === "attendance" && (
+                <>
+                  <div className="p-4 bg-neutral-50 border border-neutral-200/80 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-neutral-500 font-medium">Cumulative Term Attendance</span>
+                      <div className="text-2xl font-bold text-neutral-900 mt-0.5">
+                        {attendanceNum}%
+                      </div>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${attendanceNum >= 75 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+                      {attendanceNum >= 75 ? "Meets Institutional Minimum (75%)" : "Below Minimum Requirement"}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200/60 space-y-2">
+                    <span className="font-semibold text-neutral-800 block">12-Week Attendance Consistency Matrix</span>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((wk) => {
+                        const alpha = Math.max(0.2, Math.min(1.0, (attendanceNum / 100) * (0.8 + (wk % 3) * 0.1)));
+                        return (
+                          <div key={wk} className="flex-1 text-center">
+                            <div
+                              className="h-8 rounded-md bg-neutral-900 transition-opacity"
+                              style={{ opacity: alpha }}
+                              title={`Week ${wk}: ${Math.round(alpha * 100)}% density`}
+                            />
+                            <span className="text-[9px] text-neutral-400 font-mono mt-1 block">W{wk}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/60 text-neutral-600">
+                    <p className="text-[11px] leading-relaxed">
+                      All attendance sessions are verified against classroom turnstile and LMS session logs. Unexcused absences trigger advisory review if 3 consecutive sessions are missed.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* COMPETENCIES MODAL BODY */}
+              {activeKpiModal === "competencies" && (
+                <>
+                  <div className="p-4 bg-neutral-50 border border-neutral-200/80 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-neutral-500 font-medium">Holistic Competency Composite</span>
+                      <div className="text-2xl font-bold text-neutral-900 mt-0.5">
+                        {compositeScore} / 100
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-neutral-100 text-neutral-800 border border-neutral-200">
+                      Cohort Baseline: 70.0
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-neutral-100 border border-neutral-200/60 rounded-xl overflow-hidden bg-neutral-50/50">
+                    {radarDimensions.map((row) => (
+                      <div key={row.label} className="p-2.5 px-3.5 flex items-center justify-between text-xs">
+                        <span className="font-medium text-neutral-800">{row.label}</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-neutral-500 text-[11px]">Cohort: {Math.round(row.cohort * 100)}%</span>
+                          <span className="font-mono font-bold text-neutral-900">Student: {Math.round(row.student * 100)}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setActiveKpiModal(null)}
+                className="px-4 py-2 border border-neutral-200 text-neutral-700 hover:bg-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const targetTab =
+                    activeKpiModal === "risk"
+                      ? "ml_risk"
+                      : activeKpiModal === "assessments" || activeKpiModal === "attendance"
+                      ? "evidence"
+                      : activeKpiModal === "competencies"
+                      ? "scenarios"
+                      : "observations";
+                  setActiveKpiModal(null);
+                  onSelectTab(targetTab);
+                }}
+                className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Jump to Technical Dossier &amp; Ledger</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
