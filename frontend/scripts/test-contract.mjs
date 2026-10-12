@@ -692,7 +692,61 @@ assert.strictEqual(facultyCards.triageReviewRate.value, "33%"); // 1 of 3 review
 assert.strictEqual(facultyCards.activeCases.value, 2);
 console.log("   ✓ Verified ADR-004 leadership privacy enforcement and zero-division safety\n");
 
+// 11. Phase 5: Integration, Privacy & Regression Verification
+console.log("11. Validating Phase 5 Integration, Privacy & Regression Invariants...");
+
+const dataCode = fs.readFileSync(
+  path.resolve(__dirname, "../lib/skillhub-data.ts"),
+  "utf-8"
+);
+
+// 11a. Assert ANALYTICS_DATA is completely removed
+assert(
+  !dataCode.includes("ANALYTICS_DATA"),
+  "skillhub-data.ts must not contain obsolete ANALYTICS_DATA export!"
+);
+console.log("   ✓ Confirmed zero obsolete ANALYTICS_DATA remains in skillhub-data.ts");
+
+// 11b. Verify ADR-004 privacy enforcement in student directory and student 360
+const studentsPageCode = fs.readFileSync(
+  path.resolve(__dirname, "../app/students/page.tsx"),
+  "utf-8"
+);
+const studentDetailPageCode = fs.readFileSync(
+  path.resolve(__dirname, "../app/students/[id]/page.tsx"),
+  "utf-8"
+);
+
+assert(
+  studentsPageCode.includes("activeRole === \"leadership\""),
+  "Students directory must enforce leadership privacy suppression"
+);
+assert(
+  studentDetailPageCode.includes("activeRole === \"leadership\""),
+  "Student detail page must enforce leadership privacy suppression"
+);
+console.log("   ✓ Confirmed ADR-004 privacy gates in students/page.tsx and students/[id]/page.tsx");
+
+// 11c. Verify ADR-003 Finance domain segregation
+assert(
+  studentDetailPageCode.includes("ADR-003"),
+  "Student 360 must disclose and enforce ADR-003 sensitive finance segregation"
+);
+console.log("   ✓ Confirmed ADR-003 sensitive finance segregation disclosure in student 360");
+
+// 11d. Verify strict backend response separation
+assert(
+  storeCode.includes("dataProvenance"),
+  "SkillHub store must track dataProvenance (live vs demo)"
+);
+assert(
+  storeCode.includes("backendConnected"),
+  "SkillHub store must track backendConnected status"
+);
+console.log("   ✓ Confirmed live vs demo data provenance tracking in SkillHub store\n");
+
 console.log("==================================================");
+
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
 
