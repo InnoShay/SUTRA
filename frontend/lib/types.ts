@@ -539,3 +539,111 @@ export interface CreateCallRequestInput {
   preferred_time_slot: 'morning' | 'afternoon' | 'flexible';
   student_notes?: string;
 }
+
+// --- Document Integrity & Blockchain Anchoring Subsystem ---
+export interface DocumentDTO {
+  id: string;
+  institution_id: string;
+  document_ref: string;
+  title: string;
+  doc_type: string;
+  file_name: string;
+  file_size_bytes: number;
+  mime_type: string;
+  sha256_hash: string;
+  status: 'draft' | 'finalized' | 'anchored' | 'anchor_failed';
+  created_by: string;
+  finalized_by?: string | null;
+  finalized_at?: string | null;
+  chain_id: number;
+  contract_address?: string | null;
+  tx_hash?: string | null;
+  block_number?: number | null;
+  anchored_at?: string | null;
+  anchoring_mode: 'simulated' | 'onchain';
+  last_verified_at?: string | null;
+  verification_status?: 'verified_match' | 'mismatch' | 'unverified' | null;
+  explorer_url?: string | null;
+  metadata_payload?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentCreateRequest {
+  title: string;
+  doc_type?: string;
+  student_ref?: string;
+  student_name?: string;
+  content_text?: string;
+  metadata_payload?: Record<string, any>;
+}
+
+export interface DocumentFinalizeResponse {
+  id: string;
+  document_ref: string;
+  sha256_hash: string;
+  status: string;
+  finalized_at: string;
+  message: string;
+}
+
+export interface DocumentAnchorResponse {
+  id: string;
+  document_ref: string;
+  sha256_hash: string;
+  status: string;
+  chain_id: number;
+  contract_address?: string | null;
+  tx_hash?: string | null;
+  explorer_url?: string | null;
+  anchoring_mode: 'simulated' | 'onchain';
+  anchored_at: string;
+  message: string;
+}
+
+export interface DocumentVerifyResponse {
+  id: string;
+  document_ref: string;
+  anchored_hash: string;
+  candidate_hash: string;
+  is_match: boolean;
+  verification_status: 'verified_match' | 'mismatch';
+  verified_at: string;
+  chain_id: number;
+  contract_address?: string | null;
+  tx_hash?: string | null;
+  explorer_url?: string | null;
+  anchoring_mode: string;
+  legal_disclaimer: string;
+}
+
+export interface DocumentListResponse {
+  documents: DocumentDTO[];
+  total: number;
+  network: string;
+}
+
+// --- SBI Digital Rupee (e₹ / CBDC) Incentive Subsystem ---
+export interface CBDCVoucherIssueRequest {
+  student_ref: string;
+  amount_inr: number;
+  purpose_code: string;
+  milestone_ref: string;
+  campus_id: string;
+}
+
+export interface CBDCVoucherRecord {
+  voucher_id: string;
+  student_ref: string;
+  amount_inr: number;
+  currency: string;
+  purpose_code: string;
+  milestone_ref: string;
+  campus_id: string;
+  status: 'SIMULATED_ISSUED' | 'SIMULATED_REDEEMED' | 'PENDING_PSP_CLEARING';
+  is_simulated: boolean;
+  disclaimer: string;
+  issued_at: string;
+  redeemed_at?: string | null;
+  transaction_reference?: string | null;
+}

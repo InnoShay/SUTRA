@@ -1,0 +1,158 @@
+{
+  "contractName": "SutraDocumentRegistry",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "InvalidHash",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "originalTimestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "AlreadyAnchored",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "documentHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "anchoredBy",
+          "type": "address"
+        }
+      ],
+      "name": "DocumentAnchored",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "documentHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "anchorDocument",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getDocumentAnchor",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "documentHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "anchoredAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "anchoredBy",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "isAnchored",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "docRefHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "candidateHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "verifyDocument",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "isMatch",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "anchoredAt",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalAnchored",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "608060405234801561001057600080fd5b5061031b806100206000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c80638e68d7b0146100515780638fa9a8ce14610084578063a212e36f146100ba578063ba5674c8146100dc575b600080fd5b610064600480360381019061005f91906101d2565b610103565b60405161007b9493929190610214565b60405180910390f35b6100a760048036038101906100a291906101ed565b610156565b6040516100b1929190610250565b60405180910390f35b6100c2610193565b6040516100d3919061026d565b60405180910390f35b6100f360048036038101906100ee91906101ed565b610199565b6040516100fa9190610288565b60405180910390f3"
+}

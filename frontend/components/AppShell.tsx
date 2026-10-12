@@ -34,6 +34,7 @@ import {
   HeartHandshake,
   MessageCircle,
   Briefcase,
+  ShieldCheck,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -192,6 +193,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       href: "/messages",
       icon: MessageCircle,
     },
+    {
+      name: t("nav.documents", "Document Integrity"),
+      shortName: t("nav.documents_short", "Documents"),
+      href: "/documents",
+      icon: ShieldCheck,
+    },
   ];
 
   const teacherNavItems = [
@@ -224,6 +231,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       shortName: t("nav.courses_short", "Protocols"),
       href: "/courses",
       icon: Bookmark,
+    },
+    {
+      name: t("nav.documents", "Document Integrity"),
+      shortName: t("nav.documents_short", "Documents"),
+      href: "/documents",
+      icon: ShieldCheck,
     },
   ];
 
@@ -263,6 +276,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       shortName: t("nav.analytics_short", "Analytics"),
       href: "/analytics",
       icon: BarChart2,
+    },
+    {
+      name: t("nav.documents", "Document Integrity"),
+      shortName: t("nav.documents_short", "Documents"),
+      href: "/documents",
+      icon: ShieldCheck,
     },
   ];
 

@@ -40,6 +40,14 @@ import {
   EscalationRecordDTO,
   CounselorCallRequestDTO,
   CreateCallRequestInput,
+  DocumentDTO,
+  DocumentCreateRequest,
+  DocumentFinalizeResponse,
+  DocumentAnchorResponse,
+  DocumentVerifyResponse,
+  DocumentListResponse,
+  CBDCVoucherIssueRequest,
+  CBDCVoucherRecord,
 } from './types';
 import {
   DEMO_SIGNALS,
@@ -482,10 +490,13 @@ class ApiClient {
   ): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       Accept: 'application/json',
       ...(options.headers as Record<string, string>),
     };
+
+    if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
@@ -726,6 +737,53 @@ class ApiClient {
     ) =>
       this.request<{ id: string; status: string }>(`/counselors/call-requests/${id}`, {
         method: 'PATCH',
+        body: JSON.stringify(payload),
+      }),
+  };
+
+  // --- Document Integrity & Base Sepolia Anchoring Subsystem ---
+  public documents = {
+    list: (params?: { doc_type?: string; status?: string; student_ref?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.doc_type) q.append('doc_type', params.doc_type);
+      if (params?.status) q.append('status', params.status);
+      if (params?.student_ref) q.append('student_ref', params.student_ref);
+      const qs = q.toString();
+      return this.request<DocumentListResponse>(`/documents${qs ? `?${qs}` : ''}`);
+    },
+    get: (id: string) => this.request<DocumentDTO>(`/documents/${id}`),
+    generate: (payload: DocumentCreateRequest, finalizeImmediately: boolean = false) =>
+      this.request<DocumentDTO>(
+        `/documents/generate${finalizeImmediately ? '?finalize_immediately=true' : ''}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }
+      ),
+    finalize: (id: string) =>
+      this.request<DocumentFinalizeResponse>(`/documents/${id}/finalize`, {
+        method: 'POST',
+      }),
+    anchor: (id: string) =>
+      this.request<DocumentAnchorResponse>(`/documents/${id}/anchor`, {
+        method: 'POST',
+      }),
+    verify: (id: string, file: File) => {
+      const formData = new FormData();
+      formData.append('candidate_file', file);
+      return this.request<DocumentVerifyResponse>(`/documents/${id}/verify`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+    getDownloadUrl: (id: string) => `${API_BASE_URL}/documents/${id}/download`,
+  };
+
+  // --- SBI Digital Rupee (e₹ / CBDC) Incentive Subsystem ---
+  public cbdc = {
+    issueVoucher: (payload: CBDCVoucherIssueRequest) =>
+      this.request<CBDCVoucherRecord>('/documents/cbdc/issue-voucher', {
+        method: 'POST',
         body: JSON.stringify(payload),
       }),
   };
