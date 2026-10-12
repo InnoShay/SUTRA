@@ -33,8 +33,10 @@ import {
   HeartHandshake,
   PhoneCall,
 } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const {
     user,
     students,
@@ -163,7 +165,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
-            Welcome back, {user.name}!
+            {t("nav.welcome", "Welcome back")}, {user.name}!
           </h1>
           <p className="text-xs text-neutral-400 mt-0.5 flex flex-wrap items-center gap-2">
             <span>
@@ -202,7 +204,7 @@ export default function DashboardPage() {
                   : "text-neutral-500 hover:text-neutral-900"
               }`}
             >
-              Overview
+              {t("dash.overview", "Overview")}
             </button>
             <button
               onClick={() => setActiveTab("triage")}
@@ -212,7 +214,7 @@ export default function DashboardPage() {
                   : "text-neutral-500 hover:text-neutral-900"
               }`}
             >
-              <span>Review Alerts</span>
+              <span>{t("dash.triage", "Review Alerts")}</span>
               {pendingSignals.length > 0 && (
                 <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold">
                   {pendingSignals.length}
@@ -224,10 +226,10 @@ export default function DashboardPage() {
           {pendingSignals.length > 0 && activeRole !== "leadership" ? (
             <button
               onClick={() => setSelectedSignalForReview(pendingSignals[0])}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Review Alert ({pendingSignals.length})</span>
+              <span>{t("dash.triage_signal", "Review Alert")} ({pendingSignals.length})</span>
             </button>
           ) : (
             <button

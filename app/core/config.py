@@ -84,6 +84,10 @@ class Settings(BaseSettings):
     AI_TIMEOUT_SECONDS: float = 10.0
     AI_MAX_RETRIES: int = 2
 
+    # Sarvam AI Indic Regional Language Translation Settings
+    SARVAM_API_KEY: Optional[str] = None
+    SARVAM_API_URL: str = "https://api.sarvam.ai/translate"
+
     @property
     def sync_database_url(self) -> str:
         """Returns synchronous database URL suitable for Alembic migrations."""

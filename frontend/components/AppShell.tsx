@@ -32,9 +32,12 @@ import {
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
+import { LanguageSelector } from "./LanguageSelector";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const {
     user,
     activeRole,
@@ -118,28 +121,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const mainNavItems = [
-    { name: "Overview", shortName: "Overview", href: "/dashboard", icon: LayoutGrid },
-    { name: "Interventions & Protocols", shortName: "Protocols", href: "/courses", icon: Bookmark },
-    { name: "Student Directory", shortName: "Students", href: "/students", icon: GraduationCap },
-    { name: "Case Management", shortName: "Cases", href: "/community", icon: Users },
-    { name: "Institutional Analytics", shortName: "Analytics", href: "/analytics", icon: BarChart2 },
+    { name: t("nav.dashboard", "Overview"), shortName: t("nav.dashboard_short", "Overview"), href: "/dashboard", icon: LayoutGrid },
+    { name: t("nav.courses", "Interventions & Protocols"), shortName: t("nav.courses_short", "Protocols"), href: "/courses", icon: Bookmark },
+    { name: t("nav.students", "Student Directory"), shortName: t("nav.students_short", "Students"), href: "/students", icon: GraduationCap },
+    { name: t("nav.community", "Case Management"), shortName: t("nav.community_short", "Cases"), href: "/community", icon: Users },
+    { name: t("nav.analytics", "Institutional Analytics"), shortName: t("nav.analytics_short", "Analytics"), href: "/analytics", icon: BarChart2 },
   ];
 
   const othersNavItems = [
-    { name: "Settings", href: "/settings", icon: Settings },
-    { name: "Help & Support", href: "/help", icon: HelpCircle },
-    { name: "Logout", href: "/login", icon: LogOut },
+    { name: t("nav.settings", "Settings"), href: "/settings", icon: Settings },
+    { name: t("nav.help", "Help & Support"), href: "/help", icon: HelpCircle },
+    { name: t("nav.logout", "Sign Out"), href: "/login", icon: LogOut },
   ];
 
   return (
     <div className="min-h-screen lg:h-screen lg:max-h-screen bg-[#ECEFF3] flex flex-col md:flex-row overflow-x-hidden md:overflow-hidden selection:bg-neutral-900 selection:text-white">
       {/* 0. MOBILE TOP APP BAR (Apple-inspired header for viewports < 768px) */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-3.5 py-2.5 bg-[#ECEFF3]/95 backdrop-blur-md border-b border-neutral-200/50">
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-3 py-2 bg-[#ECEFF3]/95 backdrop-blur-md border-b border-neutral-200/50">
         <div className="flex items-center gap-2">
           <SkillHubLogo />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          {/* Indic Language Selector */}
+          <LanguageSelector />
+
           {/* Messages Action */}
           <button
             onClick={() => setIsMessagesOpen(!isMessagesOpen)}
@@ -424,13 +430,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Search className="w-4 h-4 text-neutral-400 shrink-0" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={t("action.search", "Search...")}
                 className="w-full bg-transparent text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
               />
             </div>
 
-            {/* Actions: Persona Switcher + Messages + Notifications + Profile Avatar */}
+            {/* Actions: Indic Language (Sarvam AI) + Persona Switcher + Messages + Notifications + Profile Avatar */}
             <div className="flex items-center gap-2.5">
+              {/* Indic Regional Language Selector (Powered by Sarvam AI) */}
+              <LanguageSelector />
+
               {/* Persona Switcher Selector — Apple / iOS Popover */}
               <div className="relative">
                 <button

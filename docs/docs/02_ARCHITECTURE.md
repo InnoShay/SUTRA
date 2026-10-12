@@ -115,6 +115,13 @@ flowchart TD
 8. **`app.modules.ai` (Bounded AI Orchestrator - Optional):**
    - Optional, bounded helper endpoints for evidence summarization, catalogue-restricted intervention suggestion, and outreach note drafting.
    - Strictly read-only; zero direct database mutation permissions.
+9. **`app.modules.localization` & Client Localization Subsystem (Indic Neural Localization & Sarvam AI Gateway):**
+   - Integrates **Sarvam AI** sovereign Indic neural translation foundation (`https://api.sarvam.ai/translate`) for 12 official regional languages of India (Hindi, Bengali, Telugu, Marathi, Tamil, Gujarati, Kannada, Malayalam, Odia, Punjabi, Assamese, English).
+   - Zero-trust server boundary: `SARVAM_API_KEY` is isolated server-side, accessed via authenticated Next.js `/api/translate` and FastAPI `/api/v1/translate` proxies.
+   - 4-Tier Zero-Cost Caching: Pre-compiled static dictionary, client `localStorage`, and server global cache (`globalThis.__sutraTranslationCache`).
+   - Flight-Control & Request Coalescing: In-flight Promise deduplication eliminates thundering-herd API stampedes across concurrent UI components.
+   - Automatic Client DOM Translation Engine with React reconciliation rollback interceptor; synchronous click updates apply immediately without requiring page refresh.
+   - Fully specified in [ADR-007](file:///Users/yash/cooks/SUTRA/docs/decisions/ADR-007-sarvam-ai-indic-neural-translation.md) and [Deep Architecture: Indic Neural Language Orchestration](file:///Users/yash/cooks/SUTRA/docs/architecture/indic_language_orchestration_and_sarvam_ai.md).
 
 ---
 

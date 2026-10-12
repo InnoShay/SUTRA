@@ -13,9 +13,23 @@ import {
   ShieldCheck,
   AlertCircle,
   HeartHandshake,
+  Languages,
+  Sparkles,
+  Globe2,
+  Send,
+  Loader2,
 } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 export default function SettingsPage() {
+  const {
+    currentLanguage,
+    setLanguage,
+    languages,
+    translateText,
+    isTranslating,
+  } = useLanguage();
+
   const {
     user,
     updateUser,
@@ -34,6 +48,31 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
+  // Sarvam AI Live Translation Sandbox states
+  const [testInput, setTestInput] = useState(
+    "Student attendance dropped below 75% threshold in Digital Electronics course. Immediate counselor outreach requested."
+  );
+  const [testOutput, setTestOutput] = useState("");
+  const [testTranslating, setTestTranslating] = useState(false);
+  const [testLatency, setTestLatency] = useState<number | null>(null);
+
+  const handleTestTranslate = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!testInput.trim()) return;
+
+    setTestTranslating(true);
+    const start = performance.now();
+    try {
+      const res = await translateText(testInput, currentLanguage.code);
+      setTestOutput(res);
+      setTestLatency(Math.round(performance.now() - start));
+    } catch {
+      setTestOutput(testInput);
+    } finally {
+      setTestTranslating(false);
+    }
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     updateUser({ fullName: name, role });
@@ -50,6 +89,180 @@ export default function SettingsPage() {
         <p className="text-xs text-neutral-400 mt-1">
           Manage your account and preferences.
         </p>
+      </div>
+
+      {/* Indic Regional Languages & Sarvam AI Translation Engine */}
+      <div className="skill-card bg-white p-5 sm:p-6 md:p-8 space-y-6 border border-neutral-200/80 rounded-3xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Languages className="w-5 h-5 text-neutral-900" />
+            <div>
+              <h3 className="text-base font-bold text-neutral-900 font-heading">
+                Indic Regional Languages
+              </h3>
+              <p className="text-xs text-neutral-400">
+                Institutional interface translated into 12 scheduled Indian languages using Sarvam AI
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200/60 font-mono">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              Powered by Sarvam AI
+            </span>
+          </div>
+        </div>
+
+        {/* Language Grid */}
+        <div>
+          <label className="text-xs font-bold text-neutral-800 block mb-2.5">
+            Select Active Regional Language (Instant App-wide Translation)
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+            {languages.map((lang) => {
+              const isSelected = currentLanguage.code === lang.code;
+              return (
+                <button
+                  type="button"
+                  key={lang.code}
+                  onClick={() => setLanguage(lang)}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer relative ${
+                    isSelected
+                      ? "bg-neutral-900 text-white border-neutral-900 shadow-md ring-2 ring-neutral-900/10"
+                      : "bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border-neutral-200/60"
+                  }`}
+                >
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm font-bold">{lang.nativeName}</span>
+                    {isSelected && (
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    )}
+                  </div>
+                  <div
+                    className={`text-xs font-medium mt-0.5 ${
+                      isSelected ? "text-neutral-300" : "text-neutral-700"
+                    }`}
+                  >
+                    {lang.name}
+                  </div>
+                  <div
+                    className={`text-[10px] mt-1 truncate ${
+                      isSelected ? "text-neutral-400" : "text-neutral-400"
+                    }`}
+                  >
+                    {lang.region}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Live Translation Playground for Sarvam AI Manual Testing */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe2 className="w-4 h-4 text-neutral-700" />
+              <span className="text-xs font-bold text-neutral-900">
+                Live Sarvam AI Neural Translation Sandbox
+              </span>
+            </div>
+            {testLatency !== null && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-200/60 text-neutral-700 font-semibold">
+                Latency: {testLatency}ms
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-neutral-500">
+            Type any academic notice, intervention alert, or counseling message in English below to test real-time translation into <span className="font-semibold text-neutral-800">{currentLanguage.name} ({currentLanguage.nativeName})</span>.
+          </p>
+
+          <form onSubmit={handleTestTranslate} className="space-y-3">
+            <div>
+              <textarea
+                rows={2}
+                value={testInput}
+                onChange={(e) => setTestInput(e.target.value)}
+                placeholder="Enter text in English to translate..."
+                className="w-full px-3.5 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 transition-all resize-none"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTestInput(
+                      "Student attendance dropped below 75% threshold in Digital Electronics course. Immediate counselor outreach requested."
+                    )
+                  }
+                  className="text-[10px] px-2.5 py-1 rounded-lg bg-neutral-200/50 hover:bg-neutral-200 text-neutral-700 transition-colors"
+                >
+                  Prompt 1: Attendance Alert
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTestInput(
+                      "Midterm examination rescheduled to next Monday. Please confirm your lab evaluation timetable."
+                    )
+                  }
+                  className="text-[10px] px-2.5 py-1 rounded-lg bg-neutral-200/50 hover:bg-neutral-200 text-neutral-700 transition-colors"
+                >
+                  Prompt 2: Exam Timetable
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTestInput(
+                      "No Alert Without Action: Every flagged signal must be resolved within the 48-hour institutional SLA."
+                    )
+                  }
+                  className="text-[10px] px-2.5 py-1 rounded-lg bg-neutral-200/50 hover:bg-neutral-200 text-neutral-700 transition-colors"
+                >
+                  Prompt 3: Sutra Principle
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={testTranslating || !testInput.trim()}
+                className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ml-auto"
+              >
+                {testTranslating ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Translating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Translate with Sarvam AI</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* Translation Result Output Box */}
+          {testOutput && (
+            <div className="p-3.5 rounded-xl bg-white border border-emerald-200/80 space-y-1.5 shadow-2xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-emerald-800 flex items-center gap-1">
+                  <Check className="w-3 h-3 text-emerald-600" /> Translated to {currentLanguage.nativeName} ({currentLanguage.name})
+                </span>
+                <span className="text-[10px] text-neutral-400 font-mono">
+                  sarvam-translate • {currentLanguage.code}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-neutral-900 font-medium leading-relaxed">
+                {testOutput}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Profile Card */}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SkillHubProvider } from "@/lib/store";
+import { LanguageProvider } from "@/lib/language-context";
 import { AppShell } from "@/components/AppShell";
 import { PwaRegistrar } from "@/components/PwaRegistrar";
 
@@ -40,8 +41,10 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-[#F4F5F7] text-neutral-900 selection:bg-neutral-900 selection:text-white">
         <SkillHubProvider>
-          <AppShell>{children}</AppShell>
-          <PwaRegistrar />
+          <LanguageProvider>
+            <AppShell>{children}</AppShell>
+            <PwaRegistrar />
+          </LanguageProvider>
         </SkillHubProvider>
       </body>
     </html>
