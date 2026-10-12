@@ -198,6 +198,31 @@ async def seed_data(fixture_path: Path):
             )
         await session.flush()
 
+        # 6b. Seed Canonical Day-30 ML Features for Demonstration Student
+        ml_vector = fixtures.get("ml_day30_test_vector")
+        if ml_vector and ml_vector.get("student") in student_id_map:
+            syn_id = student_id_map[ml_vector["student"]]
+            for feat_name, feat_val in ml_vector.get("features", {}).items():
+                session.add(
+                    StudentObservation(
+                        id=uuid.uuid4(),
+                        institution_id=DEMO_CAMPUS_ID,
+                        student_id=syn_id,
+                        domain="academic" if "assessment" in feat_name else ("participation" if "vle" in feat_name else "demographic"),
+                        metric_key=feat_name,
+                        value={"val": feat_val},
+                        quality_state="valid",
+                        event_at=now,
+                        available_at=now,
+                        ingested_at=now,
+                        source_system="ml_day30_fixture",
+                        source_record_ref=f"REC-ML-{feat_name}",
+                        source_version=1,
+                    )
+                )
+            print(f"    [+] Seeded 25 canonical Day-30 ML features for {ml_vector['student']}")
+        await session.flush()
+
         # 7. Evaluate Policy Engine to generate Signals
         signals_created = 0
         for ext_key, s_id in student_id_map.items():

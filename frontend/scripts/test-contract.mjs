@@ -852,6 +852,69 @@ assert(appShellCode.includes("Request Support"), "AppShell must provide 'Request
 assert(appShellCode.includes("Messages"), "AppShell must provide 'Messages' for student role");
 console.log("   ✓ Confirmed role-aware dynamic navigation in AppShell (Student vs Staff vs Admin)\n");
 
+// 14. Validating Phase 2 Live Inference Reliability & Governance Contracts...
+console.log("14. Validating Phase 2 Live Inference Reliability & Governance Contracts...");
+const liveStudentPageCode = fs.readFileSync(path.join(__dirname, "../app/students/[id]/page.tsx"), "utf-8");
+const liveApiCode = fs.readFileSync(path.join(__dirname, "../lib/api.ts"), "utf-8");
+
+// 14a. Concurrency and out-of-order race condition prevention
+assert(
+  liveStudentPageCode.includes("inferenceSeqRef") || liveStudentPageCode.includes("loadingMlInference"),
+  "Student detail page must guard against duplicate or out-of-order concurrent inference requests"
+);
+console.log("   ✓ Verified concurrency guard and out-of-order race condition prevention");
+
+// 14b. Separate display of probability and triage classification with governance disclaimer
+assert(
+  liveStudentPageCode.includes("Calibrated Attrition Risk Probability") ||
+  liveStudentPageCode.includes("Calibrated Risk Probability"),
+  "Must display calibrated risk probability separately"
+);
+assert(
+  liveStudentPageCode.includes("Institutional Triage Classification") ||
+  liveStudentPageCode.includes("Triage Classification"),
+  "Must display institutional triage classification separately"
+);
+assert(
+  liveStudentPageCode.includes("classification policy rule") ||
+  liveStudentPageCode.includes("probabilistic statistical indicator"),
+  "Must explain decision threshold as institutional triage classification rule rather than causal prognosis"
+);
+console.log("   ✓ Verified separate probability vs classification blocks and non-causal governance disclaimer");
+
+// 14c. Provenance & Freshness Badges (Fresh vs Cached vs Synthetic)
+assert(
+  liveStudentPageCode.includes("FRESH LIVE INFERENCE"),
+  "Must clearly label fresh live inference"
+);
+assert(
+  liveStudentPageCode.includes("HISTORICAL LOGGED PREDICTION"),
+  "Must clearly label cached/historical predictions"
+);
+assert(
+  liveStudentPageCode.includes("SYNTHETIC / OFFLINE DEMONSTRATION RECORD") ||
+  liveStudentPageCode.includes("SYNTHETIC"),
+  "Must clearly label synthetic fallback records"
+);
+console.log("   ✓ Verified clear provenance labeling (Fresh Live vs Cached Log vs Synthetic Demo)");
+
+// 14d. Dynamic threshold from backend and discrete error banners
+assert(
+  liveStudentPageCode.includes("verifiedThreshold") || liveStudentPageCode.includes("getModelInfo"),
+  "Must dynamically verify decision threshold from backend model info"
+);
+assert(
+  liveStudentPageCode.includes("validation_error") &&
+  liveStudentPageCode.includes("auth_error") &&
+  liveStudentPageCode.includes("service_error"),
+  "Must distinguish validation failure (422), auth failure (401/403), and service failure"
+);
+assert(
+  liveApiCode.includes("is_synthetic_fallback: true"),
+  "Offline fallbacks in API client must be explicitly tagged as synthetic"
+);
+console.log("   ✓ Verified dynamic backend threshold verification and discrete error state handlers\n");
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");

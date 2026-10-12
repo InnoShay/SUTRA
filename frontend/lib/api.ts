@@ -216,6 +216,8 @@ class ApiClient {
           risk_probability: riskProbability,
           threshold: 0.46,
           classification: classification,
+          processed_at: new Date().toISOString(),
+          is_synthetic_fallback: true,
           evidence_card: {
             card_type: 'ml_early_warning_evidence',
             model_name: 'logistic_regression_baseline',
@@ -261,6 +263,8 @@ class ApiClient {
         risk_probability: riskProbability,
         threshold: 0.46,
         classification: classification,
+        processed_at: new Date().toISOString(),
+        is_synthetic_fallback: true,
         evidence_card: {
           card_type: 'ml_early_warning_evidence',
           model_name: 'logistic_regression_baseline',

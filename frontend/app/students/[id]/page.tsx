@@ -83,7 +83,17 @@ export default function StudentDetailPage() {
   // ML Day-30 Early Warning State
   const [mlPrediction, setMlPrediction] = useState<MLPredictResponse | null>(null);
   const [loadingMlInference, setLoadingMlInference] = useState<boolean>(false);
+  const [mlInferenceStatus, setMlInferenceStatus] = useState<
+    "idle" | "loading" | "success" | "validation_error" | "auth_error" | "service_error"
+  >("idle");
   const [mlInferenceError, setMlInferenceError] = useState<string | null>(null);
+  const [predictionSource, setPredictionSource] = useState<
+    "fresh_live" | "cached_historical" | "synthetic_offline" | null
+  >(null);
+  const [predictionTimestamp, setPredictionTimestamp] = useState<string | null>(null);
+  const [verifiedThreshold, setVerifiedThreshold] = useState<number>(0.46);
+  const [thresholdVerifiedFromBackend, setThresholdVerifiedFromBackend] = useState<boolean>(false);
+  const inferenceSeqRef = React.useRef<number>(0);
 
   const currentStudent =
     students.find(
@@ -151,6 +161,26 @@ export default function StudentDetailPage() {
   const [message, setMessage] = useState("");
   const [sentSuccess, setSentSuccess] = useState(false);
 
+  // Dynamically verify decision threshold from backend ML model info
+  useEffect(() => {
+    let isMounted = true;
+    api.ml.getModelInfo()
+      .then((info) => {
+        if (!isMounted) return;
+        const thresh = info?.decision_threshold ?? info?.threshold;
+        if (typeof thresh === "number") {
+          setVerifiedThreshold(thresh);
+          setThresholdVerifiedFromBackend(true);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not query /api/v1/ml/model-info to verify threshold:", err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Fetch 360° Support View from backend
   const fetchSupportView = async () => {
     if (activeRole === "leadership") return;
@@ -161,6 +191,16 @@ export default function StudentDetailPage() {
       setSupportView(data);
       if (data?.ml_prediction) {
         setMlPrediction(data.ml_prediction);
+        if (data.ml_prediction.is_synthetic_fallback) {
+          setPredictionSource("synthetic_offline");
+        } else {
+          setPredictionSource("cached_historical");
+        }
+        setPredictionTimestamp(data.ml_prediction.processed_at || new Date().toISOString());
+        if (typeof data.ml_prediction.threshold === "number") {
+          setVerifiedThreshold(data.ml_prediction.threshold);
+          setThresholdVerifiedFromBackend(true);
+        }
       }
     } catch (err: any) {
       console.warn("Could not load backend support view:", err);
@@ -172,17 +212,57 @@ export default function StudentDetailPage() {
 
   const handleRunMlInference = async () => {
     if (activeRole === "leadership") return;
+    if (loadingMlInference) return; // Prevent duplicate concurrent requests
+
+    const seq = ++inferenceSeqRef.current;
     setLoadingMlInference(true);
+    setMlInferenceStatus("loading");
     setMlInferenceError(null);
+
     try {
       const res = await api.students.predict(studentId);
+      // Discard older out-of-order response if a newer request was dispatched
+      if (seq !== inferenceSeqRef.current) return;
+
       setMlPrediction(res);
-      await fetchSupportView();
+      if (res.is_synthetic_fallback) {
+        setPredictionSource("synthetic_offline");
+      } else {
+        setPredictionSource("fresh_live");
+      }
+      setPredictionTimestamp(res.processed_at || new Date().toISOString());
+      if (typeof res.threshold === "number") {
+        setVerifiedThreshold(res.threshold);
+        setThresholdVerifiedFromBackend(true);
+      }
+      setMlInferenceStatus("success");
     } catch (err: any) {
+      if (seq !== inferenceSeqRef.current) return;
+
       console.warn("Live ML inference failed:", err);
-      setMlInferenceError(err?.message || "Failed to execute live ML inference.");
+      const status = err?.status || err?.statusCode || 0;
+      const errMsg = err?.message || "Failed to execute live ML inference.";
+
+      if (status === 401 || status === 403) {
+        setMlInferenceStatus("auth_error");
+        setMlInferenceError(
+          "Authentication / Authorization Required: You must be authenticated as an authorized educator (faculty, mentor, counselor) to run live inference. Individual telemetry access is restricted for leadership per ADR-004."
+        );
+      } else if (status === 422) {
+        setMlInferenceStatus("validation_error");
+        setMlInferenceError(
+          errMsg.includes("insufficient") || errMsg.includes("Missing")
+            ? errMsg
+            : `Feature Incompleteness (HTTP 422): ${errMsg}`
+        );
+      } else {
+        setMlInferenceStatus("service_error");
+        setMlInferenceError(`Service Error: ${errMsg}`);
+      }
     } finally {
-      setLoadingMlInference(false);
+      if (seq === inferenceSeqRef.current) {
+        setLoadingMlInference(false);
+      }
     }
   };
 
@@ -387,9 +467,17 @@ export default function StudentDetailPage() {
             pred?.evidence_card?.top_attributions ||
             pred?.evidence_card?.attributions ||
             [];
+          const thresholdVal = pred?.threshold ?? verifiedThreshold;
+          const thresholdPercent = Math.round(thresholdVal * 100);
           const riskPercent = pred ? Math.round(pred.risk_probability * 100) : 68;
-          const thresholdPercent = pred ? Math.round(pred.threshold * 100) : 46;
           const isAtRisk = pred ? pred.classification === "At_Risk" : riskPercent >= thresholdPercent;
+
+          const isSynthetic =
+            predictionSource === "synthetic_offline" ||
+            Boolean(pred?.is_synthetic_fallback) ||
+            !backendConnected;
+
+          const isFresh = predictionSource === "fresh_live";
 
           const riskDrivers = attributions.filter(
             (a) => a.direction === "increases_risk" || (a.attribution && a.attribution > 0)
@@ -433,66 +521,157 @@ export default function StudentDetailPage() {
                 </div>
               </div>
 
-              {mlInferenceError && (
-                <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800/80 text-xs text-rose-300 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-400" />
-                  <span>{mlInferenceError}</span>
+              {/* Provenance & Freshness Source Badge */}
+              <div className="flex flex-wrap items-center gap-2">
+                {isSynthetic ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-300 text-[11px] font-medium shadow-sm">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                    <span>SYNTHETIC / OFFLINE DEMONSTRATION RECORD • Not Live Institutional Data</span>
+                  </div>
+                ) : isFresh ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-[11px] font-medium shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                    <span>
+                      FRESH LIVE INFERENCE • Scored just now at{" "}
+                      {predictionTimestamp ? new Date(predictionTimestamp).toLocaleTimeString() : "recently"}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-950/80 border border-sky-500/50 text-sky-300 text-[11px] font-medium shadow-sm">
+                    <Clock className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
+                    <span>
+                      HISTORICAL LOGGED PREDICTION • Evaluated at{" "}
+                      {predictionTimestamp ? new Date(predictionTimestamp).toLocaleTimeString() : "previously"}
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-[10px] text-neutral-400 font-mono ml-auto">
+                  Configured Threshold: {thresholdPercent}% {thresholdVerifiedFromBackend ? "(Backend Verified)" : ""}
+                </div>
+              </div>
+
+              {/* Status & Error Banners */}
+              {loadingMlInference && (
+                <div className="p-3 rounded-xl bg-violet-950/40 border border-violet-800/60 text-xs text-violet-200 flex items-center gap-2 animate-pulse">
+                  <RefreshCw className="w-4 h-4 text-violet-400 animate-spin" />
+                  <span>Executing server-side inference on 25 canonical Day-30 student observations...</span>
                 </div>
               )}
 
-              {/* Probability & Threshold Bar */}
-              <div className="p-4 rounded-xl bg-neutral-900/90 border border-neutral-800 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              {mlInferenceStatus === "validation_error" && mlInferenceError && (
+                <div className="p-3.5 rounded-xl bg-amber-950/80 border border-amber-600/70 text-xs text-amber-200 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-400 mt-0.5" />
                   <div>
-                    <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold block">
-                      Day-30 Academic Risk Probability
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className={`text-2xl font-black ${isAtRisk ? "text-rose-400" : "text-emerald-400"}`}>
-                        {riskPercent}%
-                      </span>
-                      <span className="text-xs text-neutral-400 font-medium">
-                        (Operational Review Threshold: {thresholdPercent}%)
-                      </span>
-                    </div>
+                    <span className="font-bold text-amber-300 block">Feature Incompleteness / Validation Failure (HTTP 422)</span>
+                    <span className="text-amber-100/90 leading-relaxed block mt-0.5">{mlInferenceError}</span>
                   </div>
+                </div>
+              )}
 
+              {mlInferenceStatus === "auth_error" && mlInferenceError && (
+                <div className="p-3.5 rounded-xl bg-violet-950/80 border border-violet-600/70 text-xs text-violet-200 flex items-start gap-2.5">
+                  <Lock className="w-4 h-4 flex-shrink-0 text-violet-400 mt-0.5" />
                   <div>
+                    <span className="font-bold text-violet-300 block">Authentication / Role Policy Failure</span>
+                    <span className="text-violet-100/90 leading-relaxed block mt-0.5">{mlInferenceError}</span>
+                  </div>
+                </div>
+              )}
+
+              {mlInferenceStatus === "service_error" && mlInferenceError && (
+                <div className="p-3.5 rounded-xl bg-rose-950/80 border border-rose-600/70 text-xs text-rose-200 flex items-start gap-2.5">
+                  <X className="w-4 h-4 flex-shrink-0 text-rose-400 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-rose-300 block">Inference Service Unavailable</span>
+                    <span className="text-rose-100/90 leading-relaxed block mt-0.5">{mlInferenceError}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Probability & Risk Classification Blocks (Displayed Separately) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-neutral-900/90 border border-neutral-800">
+                {/* 1. Probability Block */}
+                <div className="space-y-1">
+                  <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold block">
+                    1. Calibrated Attrition Risk Probability
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className={`text-3xl font-black ${isAtRisk ? "text-rose-400" : "text-emerald-400"}`}>
+                      {riskPercent}%
+                    </span>
+                    <span className="text-xs text-neutral-400 font-mono">
+                      (P = {(pred ? pred.risk_probability : 0.68).toFixed(4)})
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-neutral-400 block mt-1 leading-normal">
+                    Estimated probability of course non-completion based on Day-30 LMS activity and course posture.
+                  </span>
+                </div>
+
+                {/* 2. Classification Block */}
+                <div className="space-y-1">
+                  <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold block">
+                    2. Institutional Triage Classification
+                  </span>
+                  <div className="mt-1">
                     {isAtRisk ? (
-                      <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1.5 shadow-sm">
+                      <span className="inline-flex px-3 py-1.5 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 items-center gap-1.5 shadow-sm">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                        <span>AT RISK • REVIEW RECOMMENDED</span>
+                        <span>HIGH_RISK • PROACTIVE ADVISOR REVIEW</span>
                       </span>
                     ) : (
-                      <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm">
+                      <span className="inline-flex px-3 py-1.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 items-center gap-1.5 shadow-sm">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>ON TRACK • STANDARD MONITORING</span>
+                        <span>STANDARD • ROUTINE MONITORING</span>
                       </span>
                     )}
                   </div>
+                  <span className="text-[10px] text-neutral-400 block mt-1 leading-normal">
+                    Assigned via institutional cutoff rule: Risk ≥ {thresholdPercent}%.
+                  </span>
                 </div>
+              </div>
 
-                {/* Progress bar with threshold marker */}
-                <div className="relative pt-2 pb-5">
-                  <div className="w-full h-3 rounded-full bg-neutral-800 overflow-hidden relative">
+              {/* Progress bar with verified dynamic threshold marker */}
+              <div className="p-4 rounded-xl bg-neutral-900/60 border border-neutral-800 space-y-2">
+                <div className="flex items-center justify-between text-xs text-neutral-400 font-medium">
+                  <span>Probability Distribution vs Decision Threshold</span>
+                  <span>{riskPercent}% / 100%</span>
+                </div>
+                <div className="relative pt-2 pb-6">
+                  <div className="w-full h-3.5 rounded-full bg-neutral-800 overflow-hidden relative">
                     <div
                       className={`h-full transition-all duration-500 rounded-full ${
-                        isAtRisk ? "bg-gradient-to-r from-amber-500 to-rose-500" : "bg-gradient-to-r from-teal-500 to-emerald-500"
+                        isAtRisk
+                          ? "bg-gradient-to-r from-amber-500 to-rose-500"
+                          : "bg-gradient-to-r from-teal-500 to-emerald-500"
                       }`}
                       style={{ width: `${Math.min(riskPercent, 100)}%` }}
                     />
                   </div>
-                  {/* Threshold Marker Indicator */}
+                  {/* Dynamic Threshold Marker Indicator */}
                   <div
                     className="absolute top-0 flex flex-col items-center pointer-events-none -translate-x-1/2"
                     style={{ left: `${thresholdPercent}%` }}
                   >
                     <div className="w-0.5 h-5 bg-amber-400 shadow-sm" />
-                    <span className="text-[9px] font-mono font-bold text-amber-300 bg-neutral-900 px-1 rounded mt-0.5 border border-amber-400/40 whitespace-nowrap">
+                    <span className="text-[9px] font-mono font-bold text-amber-300 bg-neutral-900 px-1.5 py-0.5 rounded mt-0.5 border border-amber-400/50 whitespace-nowrap shadow-sm">
                       Threshold {thresholdPercent}%
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Governance Clarification Callout (Requirement 7) */}
+              <div className="p-3.5 rounded-xl bg-neutral-900/80 border border-neutral-800 text-[11px] text-neutral-300 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-violet-300">
+                  <Shield className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
+                  <span>Institutional Governance Notice &amp; Classification Rule Policy</span>
+                </div>
+                <p className="text-neutral-400 leading-relaxed text-[10px]">
+                  The <strong>{thresholdPercent}% decision threshold</strong> is an institutional classification policy rule (calibrated for high recall at Day 30) established to allocate supportive counselor capacity. It is a probabilistic statistical indicator, <strong>NOT a causal diagnosis or deterministic guarantee of student outcome</strong>. Authorized educators must review underlying attributions and student circumstances before taking action.
+                </p>
               </div>
 
               {/* Attribution Decomposition (Risk Drivers vs Protective Factors) */}

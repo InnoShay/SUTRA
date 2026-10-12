@@ -295,6 +295,8 @@ export interface MLPredictResponse {
   threshold: number;
   classification: 'At_Risk' | 'On_Track';
   evidence_card: EvidenceCardDTO;
+  processed_at?: string;
+  is_synthetic_fallback?: boolean;
 }
 
 export interface HealthResponse {

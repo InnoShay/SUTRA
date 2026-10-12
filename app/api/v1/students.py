@@ -596,7 +596,7 @@ async def predict_student_single(
     features_dict = {}
     for feat in DAY30_REQUIRED_FEATURES:
         obs = obs_by_key[feat]
-        val = obs.value.get("val") if isinstance(obs.value, dict) and "val" in obs.value else obs.value
+        val = obs.value.get("val") if isinstance(obs.value, dict) and "val" in obs.value else (obs.value.get("value") if isinstance(obs.value, dict) and "value" in obs.value else obs.value)
         features_dict[feat] = val
 
     # Anti-leakage verification
