@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSkillHub } from "@/lib/store";
 import { SkillHubLogo, SkillHubLogoIcon } from "./SkillHubLogo";
 import { NewCourseModal } from "./NewCourseModal";
@@ -26,9 +26,11 @@ import {
   PanelLeftOpen,
   X,
 } from "lucide-react";
+import { supabaseAuth } from "@/lib/supabase";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const {
     user,
     activeRole,
@@ -261,6 +263,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      onClick={async (e) => {
+                        if (item.name === "Logout") {
+                          e.preventDefault();
+                          await supabaseAuth.signOut();
+                          router.push("/login");
+                        }
+                      }}
                       className={`group relative flex items-center transition-all duration-150 ${
                         sidebarCollapsed
                           ? "w-11 h-11 justify-center mx-auto rounded-2xl"
@@ -496,7 +505,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={async (e) => {
+                    setIsMobileMenuOpen(false);
+                    if (item.name === "Logout") {
+                      e.preventDefault();
+                      await supabaseAuth.signOut();
+                      router.push("/login");
+                    }
+                  }}
                   className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
                 >
                   <item.icon className="w-4 h-4 text-neutral-500" />

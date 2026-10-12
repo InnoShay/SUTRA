@@ -8,10 +8,14 @@
  * 3. The browser does NOT query tables directly; all business workflows proxy through FastAPI.
  */
 
+import { createClient } from "@supabase/supabase-js";
 import { api } from "./api";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dwhwnnvdyrxmnamgicga.supabase.co";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dwhwnnvdyrxmnamgicga.supabase.co";
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3aHdubnZkeXJ4bW5hbWdpY2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NTA5OTQsImV4cCI6MjEwNzMyNjk5NH0.L4PhVrP3rLFItZFQmwi2JduCmB58FT5C_NtjEn9uw1E";
 
 export interface SupabaseUser {
   id: string;
@@ -35,164 +39,151 @@ export interface AuthResponse {
   error?: string | null;
 }
 
+/**
+ * Single canonical Supabase client instance
+ */
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  },
+});
+
 class SupabaseAuthClient {
-  private url: string;
-  private anonKey: string;
-
-  constructor() {
-    this.url = SUPABASE_URL;
-    this.anonKey = SUPABASE_ANON_KEY;
-  }
+  public client = supabase;
 
   /**
-   * Signs in a user with email and password via Supabase Auth REST endpoint.
+   * Initiates Google OAuth authentication via Supabase Auth
    */
-  async signInWithPassword(email: string, password: string): Promise<AuthResponse> {
-    if (!this.url || !this.anonKey) {
-      return {
-        session: null,
-        user: null,
-        error: "Supabase client credentials not configured in environment.",
-      };
-    }
-
+  async signInWithGoogle(redirectTo?: string): Promise<{ data: any; error: string | null }> {
     try {
-      const response = await fetch(`${this.url}/auth/v1/token?grant_type=password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: this.anonKey,
+      const redirectUrl =
+        redirectTo ||
+        (typeof window !== "undefined"
+          ? `${window.location.origin}/dashboard`
+          : undefined);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
-        body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          session: null,
-          user: null,
-          error: data.error_description || data.msg || data.message || "Failed to authenticate with Supabase.",
-        };
+      if (error) {
+        return { data: null, error: error.message };
       }
 
-      const session: SupabaseSession = {
-        access_token: data.access_token,
-        token_type: data.token_type,
-        expires_in: data.expires_in,
-        expires_at: data.expires_at || Math.floor(Date.now() / 1000) + data.expires_in,
-        refresh_token: data.refresh_token,
-        user: data.user,
-      };
-
-      // Set token in localStorage and configure FastAPI ApiClient
-      if (typeof window !== "undefined") {
-        localStorage.setItem("sutra_auth_token", session.access_token);
-        localStorage.setItem("sutra_refresh_token", session.refresh_token);
-        api.setToken(session.access_token);
-      }
-
-      return { session, user: session.user, error: null };
+      return { data, error: null };
     } catch (err: any) {
-      return {
-        session: null,
-        user: null,
-        error: err.message || "Network error connecting to Supabase Auth.",
-      };
+      return { data: null, error: err.message || "Failed to initiate Google sign-in." };
     }
   }
 
   /**
-   * Signs up a new user via Supabase Auth REST endpoint.
-   */
-  async signUp(email: string, password: string): Promise<AuthResponse> {
-    if (!this.url || !this.anonKey) {
-      return {
-        session: null,
-        user: null,
-        error: "Supabase client credentials not configured in environment.",
-      };
-    }
-
-    try {
-      const response = await fetch(`${this.url}/auth/v1/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: this.anonKey,
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          session: null,
-          user: null,
-          error: data.error_description || data.msg || data.message || "Sign up failed.",
-        };
-      }
-
-      const session = data.access_token
-        ? {
-            access_token: data.access_token,
-            token_type: data.token_type,
-            expires_in: data.expires_in,
-            refresh_token: data.refresh_token,
-            user: data.user,
-          }
-        : null;
-
-      if (session && typeof window !== "undefined") {
-        localStorage.setItem("sutra_auth_token", session.access_token);
-        api.setToken(session.access_token);
-      }
-
-      return { session, user: data.user || null, error: null };
-    } catch (err: any) {
-      return {
-        session: null,
-        user: null,
-        error: err.message || "Network error connecting to Supabase Auth.",
-      };
-    }
-  }
-
-  /**
-   * Signs out the current user and clears local tokens.
+   * Signs out the current user, invalidates Supabase session, and clears tokens
    */
   async signOut(): Promise<void> {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Ignore network errors on sign out
+    }
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("sutra_auth_token");
-      if (token && this.url && this.anonKey) {
-        try {
-          await fetch(`${this.url}/auth/v1/logout`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: this.anonKey,
-              Authorization: `Bearer ${token}`,
-            },
-          });
-        } catch {
-          // Ignore network errors on logout
-        }
-      }
       localStorage.removeItem("sutra_auth_token");
       localStorage.removeItem("sutra_refresh_token");
+      localStorage.removeItem("sutra_user_profile");
       api.setToken(null);
     }
   }
 
   /**
-   * Retrieves the current stored session token.
+   * Retrieves current session token
+   */
+  async getSession(): Promise<SupabaseSession | null> {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return null;
+
+    return {
+      access_token: data.session.access_token,
+      token_type: data.session.token_type,
+      expires_in: data.session.expires_in,
+      expires_at: data.session.expires_at,
+      refresh_token: data.session.refresh_token,
+      user: {
+        id: data.session.user.id,
+        email: data.session.user.email || "",
+        user_metadata: data.session.user.user_metadata,
+        app_metadata: data.session.user.app_metadata,
+      },
+    };
+  }
+
+  /**
+   * Backward-compatible token retrieval
    */
   getToken(): string | null {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sutra_auth_token");
     }
     return null;
+  }
+
+  /**
+   * Legacy password login fallback if needed
+   */
+  async signInWithPassword(email: string, password: string): Promise<AuthResponse> {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      return { session: null, user: null, error: error.message };
+    }
+    if (!data.session) {
+      return { session: null, user: null, error: "No session returned." };
+    }
+    const session: SupabaseSession = {
+      access_token: data.session.access_token,
+      token_type: data.session.token_type,
+      expires_in: data.session.expires_in,
+      expires_at: data.session.expires_at,
+      refresh_token: data.session.refresh_token,
+      user: {
+        id: data.user.id,
+        email: data.user.email || "",
+        user_metadata: data.user.user_metadata,
+        app_metadata: data.user.app_metadata,
+      },
+    };
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sutra_auth_token", session.access_token);
+      localStorage.setItem("sutra_refresh_token", session.refresh_token);
+      api.setToken(session.access_token);
+    }
+    return { session, user: session.user, error: null };
+  }
+
+  /**
+   * Legacy sign-up fallback if needed
+   */
+  async signUp(email: string, password: string): Promise<AuthResponse> {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      return { session: null, user: null, error: error.message };
+    }
+    const user: SupabaseUser | null = data.user
+      ? {
+          id: data.user.id,
+          email: data.user.email || "",
+          user_metadata: data.user.user_metadata,
+          app_metadata: data.user.app_metadata,
+        }
+      : null;
+    return { session: null, user, error: null };
   }
 }
 

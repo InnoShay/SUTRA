@@ -30,6 +30,7 @@ import {
 } from "./types";
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
 import { api } from "./api";
+import { supabase, supabaseAuth } from "./supabase";
 
 export interface NotificationItem {
   id: string;
@@ -250,8 +251,18 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingBackend(true);
     setBackendError(null);
     try {
-      api.setToken(currentPersona.token);
-      api.setCampusId(DEMO_CAMPUS_ID);
+      const storedToken =
+        (typeof window !== "undefined"
+          ? localStorage.getItem("sutra_auth_token")
+          : null) || api.getToken();
+      const tokenToUse = storedToken || currentPersona.token;
+      api.setToken(tokenToUse);
+
+      const storedCampus =
+        (typeof window !== "undefined"
+          ? localStorage.getItem("sutra_active_campus_id")
+          : null) || api.getCampusId();
+      api.setCampusId(storedCampus || DEMO_CAMPUS_ID);
 
       // Check health
       await api.health.check();
@@ -344,6 +355,93 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshBackendData();
   }, [activeRole]);
+
+  // Synchronize Supabase Auth Session (Google OAuth & SSO)
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncSession = async (session: any) => {
+      if (!session || !session.access_token) return;
+
+      api.setToken(session.access_token);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sutra_auth_token", session.access_token);
+      }
+
+      // Update user state with Google OAuth profile info
+      const metadata = session.user?.user_metadata || {};
+      const fullName =
+        metadata.full_name ||
+        metadata.name ||
+        session.user?.email?.split("@")[0] ||
+        "Faculty Member";
+      const firstName = fullName.split(" ")[0];
+      const avatarUrl =
+        metadata.avatar_url ||
+        metadata.picture ||
+        "/assets/avatar-sarah.jpg";
+
+      setUser((prev) => ({
+        ...prev,
+        name: firstName,
+        fullName: fullName,
+        email: session.user?.email || prev.email,
+        avatar: avatarUrl,
+        role: "Faculty Mentor",
+      }));
+
+      // Call /api/v1/auth/me to get institutional campus memberships
+      try {
+        const authMe = await api.auth.getMe();
+        if (authMe.memberships && authMe.memberships.length > 0) {
+          const primaryCampus = authMe.memberships[0];
+          api.setCampusId(primaryCampus.institution_id);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("sutra_active_campus_id", primaryCampus.institution_id);
+          }
+          if (primaryCampus.roles && primaryCampus.roles.length > 0) {
+            const role = primaryCampus.roles[0] as UserRole;
+            setActiveRoleState(role);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not query /auth/me for campus memberships:", e);
+      }
+
+      if (isMounted) {
+        refreshBackendData();
+      }
+    };
+
+    // Check existing Supabase session on mount
+    supabaseAuth.getSession().then((session) => {
+      if (session) {
+        syncSession(session);
+      }
+    });
+
+    // Listen to Supabase Auth state changes (Google sign-in, token refresh, sign-out)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
+        if (session) {
+          syncSession(session);
+        }
+      } else if (event === "SIGNED_OUT") {
+        api.setToken(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("sutra_auth_token");
+          localStorage.removeItem("sutra_active_campus_id");
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Workflow Handlers
   const reviewSignal = async (id: string, req: SignalReviewRequest): Promise<SignalReviewResponse> => {
