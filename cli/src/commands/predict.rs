@@ -208,13 +208,39 @@ pub async fn run_predict(client: &SutraApiClient, file_path: &Path) -> Result<()
     let response = client.predict(&req_dto).await?;
 
     // 5. Render results
-    render_prediction_response(&response);
+    render_prediction_response(&response, "Validated Local Feature File (Canonical 25 Day-30 vector)");
+
+    Ok(())
+}
+
+/// Executes authorized student-specific ML scoring against server-side aggregated telemetry.
+pub async fn execute_student_predict_flow(
+    client: &SutraApiClient,
+    student_id_or_ref: &str,
+) -> Result<(), String> {
+    let clean_id = student_id_or_ref.trim();
+    if clean_id.is_empty() {
+        return Err("Validation Error: Student identifier cannot be empty.".to_string());
+    }
+
+    println!("{}", "=== SUTRA Student-Specific Early Warning Prediction ===".bold());
+    println!("Target Student:      {}", clean_id.cyan().bold());
+    if let Some(campus_id) = client.config.campus_id {
+        println!("Campus Tenancy:      {}", campus_id.to_string().cyan());
+    }
+    println!("Source Policy:       Server-side observation ledger aggregation only");
+    println!("Evaluation Cutoff:   Strict Day 30 post-enrollment");
+
+    println!("\nRequesting authorized inference from backend server...");
+    let response = client.predict_student(clean_id).await?;
+
+    render_prediction_response(&response, "Authorized Campus Operational Ledger (Server-side aggregated)");
 
     Ok(())
 }
 
 /// Formats and renders the ML early-warning prediction and Evidence Card in the terminal.
-pub fn render_prediction_response(resp: &MLPredictResponseDto) {
+pub fn render_prediction_response(resp: &MLPredictResponseDto, source_type: &str) {
     let separator = "=".repeat(80);
     println!("\n{}", separator.dimmed());
     println!(
@@ -223,6 +249,7 @@ pub fn render_prediction_response(resp: &MLPredictResponseDto) {
     );
     println!("{}", separator.dimmed());
 
+    println!("Data Source:         {}", source_type.yellow().bold());
     println!("Record Reference:    {}", resp.external_student_ref.cyan().bold());
 
     if let Some(ref card) = resp.evidence_card {
