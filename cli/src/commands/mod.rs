@@ -5,3 +5,6 @@ pub mod catalogue;
 pub mod health;
 pub mod predict;
 pub mod signals;
+pub mod students;
+pub mod datasets;
+

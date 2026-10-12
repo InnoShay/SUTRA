@@ -267,3 +267,144 @@ pub struct MLPredictResponseDto {
     #[serde(default)]
     pub evidence_card: Option<MLEvidenceCardDto>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StudentSummaryDto {
+    pub id: Uuid,
+    pub external_ref: String,
+    pub display_name: String,
+    #[serde(default)]
+    pub cohort_code: Option<String>,
+    pub enrollment_status: String,
+    #[serde(default)]
+    pub created_at: Option<String>,
+    #[serde(default)]
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FreshnessMetricsDto {
+    pub total_observations: i64,
+    #[serde(default)]
+    pub domains_represented: Vec<String>,
+    #[serde(default)]
+    pub last_observation_event_at: Option<String>,
+    #[serde(default)]
+    pub last_observation_available_at: Option<String>,
+    #[serde(default)]
+    pub is_stale: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StudentSupportViewDto {
+    pub student: StudentSummaryDto,
+    pub freshness_metrics: FreshnessMetricsDto,
+    pub active_signals_count: i64,
+    pub active_cases_count: i64,
+    #[serde(default)]
+    pub recent_observations: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DataSourceProvenanceDto {
+    pub name: String,
+    pub description: String,
+    pub entity_type: String,
+    pub key_schema: String,
+    #[serde(default)]
+    pub record_count: Option<i64>,
+    pub storage_location: String,
+    pub purpose: String,
+    pub licensing: String,
+    pub isolation_rule: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProvenanceOverviewDto {
+    pub status: String,
+    pub governance_framework: String,
+    pub sources: HashMap<String, DataSourceProvenanceDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ResearchRecordDto {
+    pub source: String,
+    pub record_identifier: String,
+    pub entity_type: String,
+    pub provenance_label: String,
+    pub licensing: String,
+    pub purpose: String,
+    pub disclaimer: String,
+    #[serde(default)]
+    pub enrollment_context: Option<HashMap<String, serde_json::Value>>,
+    pub features: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub is_synthetic: bool,
+    #[serde(default)]
+    pub is_research: bool,
+    #[serde(default)]
+    pub is_institutional: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ObservationDto {
+    pub id: Uuid,
+    pub domain: String,
+    pub metric_key: String,
+    pub value: serde_json::Value,
+    #[serde(default)]
+    pub unit: Option<String>,
+    pub quality_state: String,
+    pub event_at: String,
+    #[serde(default)]
+    pub available_at: Option<String>,
+    pub ingested_at: String,
+    pub source_system: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FeatureReadinessItemDto {
+    pub feature_name: String,
+    pub category: String,
+    pub status: String,
+    #[serde(default)]
+    pub observed_value: Option<serde_json::Value>,
+    #[serde(default)]
+    pub source_domain: Option<String>,
+    pub derivation_note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ObservationTelemetryAuditDto {
+    pub total_observations: i64,
+    pub domains_present: Vec<String>,
+    pub quality_state_counts: HashMap<String, i64>,
+    #[serde(default)]
+    pub last_event_at: Option<String>,
+    #[serde(default)]
+    pub last_available_at: Option<String>,
+    #[serde(default)]
+    pub is_stale: bool,
+    pub unsupported_sources: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StudentReadinessDto {
+    pub student: StudentSummaryDto,
+    pub model_name: String,
+    pub model_version: String,
+    pub target_cutoff: String,
+    pub is_ready_for_inference: bool,
+    pub applicability_status: String,
+    pub applicability_rationale: String,
+    pub features_total_required: i64,
+    pub features_available_count: i64,
+    pub features_missing_count: i64,
+    pub features_underivable_count: i64,
+    pub features_stale_count: i64,
+    pub features: Vec<FeatureReadinessItemDto>,
+    pub telemetry_audit: ObservationTelemetryAuditDto,
+    pub governance_disclaimer: String,
+}
+
+

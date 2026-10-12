@@ -15,6 +15,9 @@ from app.schemas.student import (
     FreshnessMetricsDTO,
     SupportViewResponse,
     FinanceViewResponse,
+    FeatureReadinessItem,
+    ObservationTelemetryAudit,
+    StudentReadinessResponse,
 )
 from app.schemas.signal import (
     EvidenceCardDTO,
