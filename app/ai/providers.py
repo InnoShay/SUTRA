@@ -46,7 +46,8 @@ class DeterministicMockProvider(BaseAIProvider):
         # Filter out finance domain per ADR-003
         safe_obs = [
             o for o in observations
-            if o.get("domain", "").lower() not in ("finance", "billing", "fee", "financial_aid", "scholarship")
+            if o.get("domain", "").lower() not in ("financial", "finance", "billing", "fee", "fees", "financial_aid", "scholarship")
+            and not o.get("domain", "").lower().startswith("financ")
         ]
 
         obs_map = {o.get("metric_key", ""): o for o in safe_obs}

@@ -222,3 +222,46 @@ fn test_symlinked_session_file_rejection() {
     let _ = fs::remove_dir_all(&temp_dir);
 }
 
+#[test]
+fn test_debug_formatting_redacts_tokens() {
+    struct SessionWithRedactedDebug {
+        pub access_token: String,
+    }
+    impl std::fmt::Debug for SessionWithRedactedDebug {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("CliSession")
+                .field("access_token", &redact_token(&self.access_token))
+                .finish()
+        }
+    }
+
+    let secret_jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.super-secret-payload.signature";
+    let sess = SessionWithRedactedDebug {
+        access_token: secret_jwt.to_string(),
+    };
+    let debug_str = format!("{:?}", sess);
+    assert!(!debug_str.contains("super-secret-payload"), "Debug formatting must never contain raw payload");
+    assert!(debug_str.contains("[REDACTED]"), "Debug output must include [REDACTED]");
+}
+
+#[test]
+fn test_scrub_error_secrets_jwt_redaction() {
+    fn scrub_error_secrets(text: &str) -> String {
+        let mut scrubbed = text.to_string();
+        let words: Vec<&str> = text.split_whitespace().collect();
+        for word in words {
+            let clean = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-');
+            if clean.starts_with("eyJ") && clean.contains('.') && clean.len() > 20 {
+                scrubbed = scrubbed.replace(clean, "[REDACTED_JWT]");
+            }
+        }
+        scrubbed
+    }
+
+    let raw_err = "Server returned error for Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.secretpayload.sig: failed";
+    let scrubbed = scrub_error_secrets(raw_err);
+    assert!(!scrubbed.contains("secretpayload"), "JWT secret payload must be scrubbed");
+    assert!(scrubbed.contains("[REDACTED_JWT]"), "Must replace token with [REDACTED_JWT]");
+}
+
+

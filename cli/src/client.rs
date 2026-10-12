@@ -5,11 +5,24 @@ use reqwest::Client;
 use std::time::Duration;
 use uuid::Uuid;
 
+pub fn scrub_error_secrets(text: &str) -> String {
+    let mut scrubbed = text.to_string();
+    let words: Vec<&str> = text.split_whitespace().collect();
+    for word in words {
+        let clean = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-');
+        if clean.starts_with("eyJ") && clean.contains('.') && clean.len() > 20 {
+            scrubbed = scrubbed.replace(clean, "[REDACTED_JWT]");
+        }
+    }
+    scrubbed
+}
+
 fn format_api_error(status: reqwest::StatusCode, body: &str, context: &str) -> String {
     if status == reqwest::StatusCode::UNAUTHORIZED {
         return "HTTP 401 Unauthorized: Valid session or Bearer token required. Please run `sutra auth login`.".to_string();
     }
-    if let Ok(v) = serde_json::from_str::<serde_json::Value>(body) {
+    let sanitized_body = scrub_error_secrets(body);
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&sanitized_body) {
         if let Some(msg) = v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()) {
             let code = v.get("error").and_then(|e| e.get("code")).and_then(|c| c.as_str()).unwrap_or("");
             return if code.is_empty() {
@@ -22,10 +35,10 @@ fn format_api_error(status: reqwest::StatusCode, body: &str, context: &str) -> S
             return format!("HTTP {} {}: {}", status.as_u16(), status.canonical_reason().unwrap_or("Error"), detail);
         }
     }
-    if body.trim().is_empty() {
+    if sanitized_body.trim().is_empty() {
         format!("HTTP {} {}: {}", status.as_u16(), status.canonical_reason().unwrap_or("Error"), context)
     } else {
-        format!("HTTP {} {}: {}", status.as_u16(), context, body)
+        format!("HTTP {} {}: {}", status.as_u16(), context, sanitized_body)
     }
 }
 
@@ -33,6 +46,14 @@ fn format_api_error(status: reqwest::StatusCode, body: &str, context: &str) -> S
 pub struct SutraApiClient {
     client: Client,
     pub config: CliConfig,
+}
+
+impl std::fmt::Debug for SutraApiClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SutraApiClient")
+            .field("config", &self.config)
+            .finish()
+    }
 }
 
 impl SutraApiClient {

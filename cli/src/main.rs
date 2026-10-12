@@ -511,9 +511,12 @@ async fn main() {
 
     if let Err(e) = result {
         eprintln!("\nError: {}", e);
-        if e.contains("401") || e.contains("403") || e.contains("Unauthorized") || e.contains("Forbidden") {
+        if e.contains("401") || e.contains("403") || e.contains("Unauthorized") || e.contains("Permission Denied") {
             std::process::exit(3);
-        } else if e.contains("Invalid") || e.contains("Validation") || e.contains("Policy Violation") || e.contains("Usage") {
+        } else if e.contains("400") || e.contains("404") || e.contains("409") || e.contains("422")
+            || e.contains("Invalid") || e.contains("Validation") || e.contains("Policy Violation")
+            || e.contains("Usage") || e.contains("Unprocessable") || e.contains("Conflict") || e.contains("Not Found")
+            || e.contains("Anti-leakage") || e.contains("forbidden") || e.contains("Forbidden") {
             std::process::exit(2);
         } else {
             std::process::exit(1);

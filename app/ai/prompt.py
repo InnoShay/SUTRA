@@ -60,7 +60,8 @@ def build_review_brief_prompt(
     # Data minimization: filter out sensitive financial records per ADR-003
     safe_obs = [
         o for o in observations
-        if o.get("domain", "").lower() not in ("finance", "billing", "fee", "financial_aid", "scholarship")
+        if o.get("domain", "").lower() not in ("financial", "finance", "billing", "fee", "fees", "financial_aid", "scholarship")
+        and not o.get("domain", "").lower().startswith("financ")
     ]
 
     obs_lines = []
