@@ -45,6 +45,8 @@ export interface Student {
   completedLessons: number;
   totalLessons: number;
   bio?: string;
+  cohort_code?: string;
+  external_ref?: string;
 }
 
 export interface CommunityDiscussion {
@@ -1185,4 +1187,5 @@ export const INITIAL_CALENDAR_EVENTS: CounselorCalendarEvent[] = [
     notes: "Re-engagement debrief, stress coping mechanisms, and weekend routine check.",
   },
 ];
+
 

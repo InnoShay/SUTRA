@@ -1,6 +1,6 @@
 import time
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,7 @@ from app.schemas.ml import (
     MLPredictBatchRequest,
     MLPredictRequest,
     MLPredictResponse,
+    ModelPerformanceResponse,
 )
 
 router = APIRouter(prefix="/ml", tags=["ML"])
@@ -30,6 +31,24 @@ async def get_model_info(
 ):
     """Returns baseline model governance metadata and current readiness status."""
     return ml_service.get_metadata()
+
+
+@router.get("/performance", response_model=ModelPerformanceResponse)
+async def get_model_performance_endpoint(
+    model_version: Optional[str] = "v1.0.0",
+    db: AsyncSession = Depends(get_db),
+    user: AuthenticatedUser = Depends(
+        require_role("leadership", "faculty", "hod", "mentor", "institution_admin", "counsellor")
+    ),
+):
+    """
+    Returns verified evaluation metrics for the specified model version.
+    Distinguishes offline held-out benchmark evaluation from live production telemetry.
+    """
+    resp = ml_service.get_model_performance(model_version=model_version)
+    telemetry = await ml_service.get_live_monitoring_telemetry(db=db)
+    resp.live_telemetry = telemetry
+    return resp
 
 
 @router.post("/predict", response_model=MLPredictResponse)

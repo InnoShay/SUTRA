@@ -1,29 +1,39 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useSkillHub } from "@/lib/store";
+import { api } from "@/lib/api";
+import { CohortAnalyticsSummaryResponse } from "@/lib/types";
 import { LearningProgressChart } from "@/components/LearningProgressChart";
-import { EngagementChart } from "@/components/EngagementChart";
 import { RadialProgressGauge } from "@/components/RadialProgressGauge";
 import { ActivityHeatmap } from "@/components/ActivityHeatmap";
+import { CohortRiskDistributionChart } from "@/components/analytics/CohortRiskDistributionChart";
+import { CohortComparisonTable } from "@/components/analytics/CohortComparisonTable";
+import { MultiTierTrendChart } from "@/components/analytics/MultiTierTrendChart";
+import { ModelPerformanceDashboard } from "@/components/analytics/ModelPerformanceDashboard";
 import {
   computeCaseStateDistribution,
   computeInterventionDistribution,
-  computeSignalTimeline,
   computeRiskAttributions,
   computeAnalyticsOperationalCards,
+  computeCohortRiskDistribution,
+  computeCohortBreakdown,
 } from "@/lib/analytics-selectors";
 import {
   Users,
   CheckCircle2,
-  TrendingUp,
   Layers,
   Activity,
   Lock,
   Download,
-  AlertTriangle,
+  Filter,
+  RefreshCw,
+  Info,
+  ShieldCheck,
+  Cpu,
 } from "lucide-react";
 import CounselorAnalyticsPage from "../counselor/analytics/page";
+
 
 export default function AnalyticsPage() {
   const {
@@ -43,36 +53,103 @@ export default function AnalyticsPage() {
 
   const timeframes = ["This Week", "This Month", "This Year"] as const;
 
+  // Filter States (Requirement 5)
+  const [analyticsTab, setAnalyticsTab] = useState<"cohort" | "model_performance">("cohort");
+  const [selectedCohort, setSelectedCohort] = useState<string>("");
+  const [selectedRiskTier, setSelectedRiskTier] = useState<string>("all");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string>(new Date().toLocaleTimeString());
+
+  // Listen to ?tab=model-performance URL search parameter
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "model-performance") {
+        setAnalyticsTab("model_performance");
+      }
+    }
+  }, []);
+
+
+  // Server Analytics Response State
+  const [serverAnalytics, setServerAnalytics] = useState<CohortAnalyticsSummaryResponse | null>(null);
+
+  // Available cohorts list derived dynamically from enrolled students
+  const availableCohorts = Array.from(
+    new Set(students.map((s) => s.cohort_code || (s as any).course).filter((c): c is string => Boolean(c)))
+  ).sort();
+
+  // Fetch verified cohort analytics from backend API
+  const fetchCohortAnalytics = async () => {
+    setIsRefreshing(true);
+    try {
+      const summary = await api.analytics.getCohortSummary({
+        cohort: selectedCohort || undefined,
+        timeframe: analyticsTimeframe.toLowerCase().replace(" ", "_"),
+      });
+      setServerAnalytics(summary);
+      setLastRefreshedAt(new Date().toLocaleTimeString());
+    } catch (err) {
+      console.warn("Could not fetch server cohort analytics, using client selector engine:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCohortAnalytics();
+  }, [selectedCohort, analyticsTimeframe, backendConnected]);
+
+  if (activeRole === "counselor") {
+    return <CounselorAnalyticsPage />;
+  }
+
+  const isLeadership = activeRole === "leadership";
+
+  // Filter students by selected cohort for client-side fallback/context
+  const scopedStudents = selectedCohort
+    ? students.filter((s) => (s.cohort_code || (s as any).course) === selectedCohort)
+    : students;
+
   // Compute verified operational metrics through deterministic selector engine
+  const clientRiskDist = computeCohortRiskDistribution(scopedStudents, [], isLeadership);
+  const clientCohortBreakdown = computeCohortBreakdown(students, [], isLeadership);
   const caseDistribution = computeCaseStateDistribution(cases);
   const interventionDistribution = computeInterventionDistribution(cases);
-  const signalTimeline = computeSignalTimeline(signals, analyticsTimeframe);
   const riskAttributions = computeRiskAttributions(signals);
   const operationalCards = computeAnalyticsOperationalCards(
     signals,
     cases,
-    students,
+    scopedStudents,
     activeRole,
     backendConnected,
     analyticsTimeframe
   );
 
+  // Effective aggregated risk data (server response preferred, fallback to client engine)
+  const effectiveRiskDistribution = serverAnalytics?.risk_distribution || clientRiskDist;
+  const effectiveCohortBreakdown = serverAnalytics?.cohort_breakdown || clientCohortBreakdown;
+  const effectiveTimeline = serverAnalytics?.trend_timeline || [];
+
   return (
     <div className="space-y-6">
-      {/* 1. Header with Timeframe Pill Switcher & Export */}
+      {/* 1. Header with Controls, Filters & Export */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
-              Cohort Analytics &amp; Indicators
+              Cohort Risk Analytics &amp; Indicators
             </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
+              {dataProvenance === "live" ? "Live Telemetry" : "Demo Snapshot"}
+            </span>
           </div>
-          <p className="text-xs text-neutral-400 mt-1">
-            Aggregated institutional indicators, intervention velocity, and multi-campus retention rhythms
+          <p className="text-xs text-neutral-500 mt-1">
+            Aggregated institutional indicators, cohort risk distribution, and support workflow trends
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Timeframe Pill Switcher */}
           <div className="flex items-center p-1 bg-neutral-100 rounded-full border border-neutral-200/50">
             {timeframes.map((tf) => (
@@ -80,8 +157,8 @@ export default function AnalyticsPage() {
                 key={tf}
                 onClick={() => setAnalyticsTimeframe(tf)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${analyticsTimeframe === tf
-                    ? "bg-white text-neutral-900 shadow-sm"
-                    : "text-neutral-500 hover:text-neutral-800"
+                  ? "bg-white text-neutral-900 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-800"
                   }`}
               >
                 {tf}
@@ -89,125 +166,258 @@ export default function AnalyticsPage() {
             ))}
           </div>
 
+          {/* Refresh Button */}
+          <button
+            onClick={fetchCohortAnalytics}
+            disabled={isRefreshing}
+            title={`Last refreshed at ${lastRefreshedAt}`}
+            className="p-2 rounded-full border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-neutral-900" : ""}`} />
+          </button>
+
+          {/* Print / Export Report */}
           <button
             onClick={() => {
               if (typeof window !== "undefined") {
                 window.print();
               }
             }}
-            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[40px]"
+            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[36px]"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Export Audit Report</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Institutional Privacy Safeguard Badge (ADR-004) */}
-      {activeRole === "leadership" && (
-        <div className="p-4 bg-white rounded-3xl border border-neutral-200/80 flex items-center gap-3 text-xs shadow-xs">
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0">
-            <Lock className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="font-bold text-neutral-900">
-              Institutional Privacy Mode Active (ADR-004)
+      {/* View Switcher: Cohort Risk Analytics vs Model Performance Dashboard */}
+      <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">
+        <button
+          onClick={() => setAnalyticsTab("cohort")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${analyticsTab === "cohort"
+            ? "bg-neutral-900 text-white shadow-xs"
+            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70"
+            }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Cohort Risk Analytics</span>
+        </button>
+
+        <button
+          onClick={() => setAnalyticsTab("model_performance")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${analyticsTab === "model_performance"
+            ? "bg-neutral-900 text-white shadow-xs"
+            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70"
+            }`}
+        >
+          <Cpu className="w-3.5 h-3.5" />
+          <span>Model Performance &amp; Evaluation</span>
+        </button>
+      </div>
+
+      {analyticsTab === "model_performance" ? (
+        <ModelPerformanceDashboard />
+      ) : (
+        <>
+          {/* 2. Interactive Filter Bar (Requirement 5) */}
+          <div className="p-3.5 bg-white rounded-2xl border border-neutral-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 text-neutral-500 font-semibold">
+                <Filter className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Scope Filters:</span>
+              </div>
+
+              {/* Cohort Dropdown */}
+              <select
+                value={selectedCohort}
+                onChange={(e) => setSelectedCohort(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-neutral-400"
+              >
+                <option value="">All Enrolled Cohorts ({students.length} students)</option>
+                {availableCohorts.map((c) => (
+                  <option key={c} value={c}>
+                    Cohort: {c}
+                  </option>
+                ))}
+              </select>
+
+              {/* Risk Tier Filter */}
+              <select
+                value={selectedRiskTier}
+                onChange={(e) => setSelectedRiskTier(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-neutral-400"
+              >
+                <option value="all">All Risk Tiers</option>
+                <option value="at_risk">At-Risk Only (≥ 0.46)</option>
+                <option value="on_track">On-Track Only (&lt; 0.46)</option>
+              </select>
             </div>
-            <div className="text-neutral-500 text-[11px]">
-              You are viewing anonymized aggregate cohort indicators. Individual student rosters, student 360 views, and operational triage queues are suppressed.
+
+            {/* Reporting Metadata */}
+            <div className="text-[11px] text-neutral-400 flex items-center gap-3">
+              <span>Reporting as-of: <strong className="text-neutral-700">{lastRefreshedAt}</strong></span>
+              <span>Scope: <strong className="text-neutral-700">{selectedCohort ? selectedCohort : "Campus-Wide"}</strong></span>
             </div>
           </div>
-        </div>
+
+          {/* 3. Institutional Privacy Safeguard Badge (ADR-004, Requirement 8) */}
+          {isLeadership && (
+            <div className="p-4 bg-white rounded-3xl border border-amber-200/80 flex items-center gap-3 text-xs shadow-xs">
+              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="font-bold text-neutral-900 flex items-center gap-1.5">
+                  <span>Institutional Privacy Mode Active (ADR-004)</span>
+                  <span className="px-2 py-0.2 rounded text-[10px] font-mono bg-amber-100 text-amber-800 font-semibold">
+                    k &ge; 5 Small-Group Protection
+                  </span>
+                </div>
+                <div className="text-neutral-500 text-[11px] mt-0.5">
+                  You are viewing anonymized aggregate indicators. Individual student rosters, student 360 profiles, and operational triage queues are suppressed. Subgroups with fewer than 5 students are automatically masked.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 4. Verified Dynamic Operational Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Card 1: Students in Scope */}
+            <div className="skill-card bg-white p-4 space-y-1">
+              <div className="flex items-center justify-between text-neutral-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  {operationalCards.studentsInScope.label}
+                </span>
+                <Users className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
+                {serverAnalytics?.total_students_in_scope ?? operationalCards.studentsInScope.value}
+              </div>
+              <p className="text-[10px] text-neutral-500 font-medium">
+                {serverAnalytics ? `${serverAnalytics.evaluated_students_count} evaluated (${serverAnalytics.coverage_percentage}%)` : operationalCards.studentsInScope.sublabel}
+              </p>
+            </div>
+
+            {/* Card 2: Generated Signals */}
+            <div className="skill-card bg-white p-4 space-y-1">
+              <div className="flex items-center justify-between text-neutral-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  {operationalCards.signalsGenerated.label}
+                </span>
+                <Activity className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
+                {operationalCards.signalsGenerated.value}
+              </div>
+              <p className="text-[10px] text-neutral-500 font-medium">
+                {operationalCards.signalsGenerated.sublabel}
+              </p>
+            </div>
+
+            {/* Card 3: Closed-Loop Action Rate */}
+            <div className="skill-card bg-white p-4 space-y-1">
+              <div className="flex items-center justify-between text-neutral-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  {operationalCards.triageReviewRate.label}
+                </span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
+                {operationalCards.triageReviewRate.value}
+              </div>
+              <p className="text-[10px] text-neutral-500 font-medium">
+                {operationalCards.triageReviewRate.sublabel}
+              </p>
+            </div>
+
+            {/* Card 4: Active Support Cases */}
+            <div className="skill-card bg-white p-4 space-y-1">
+              <div className="flex items-center justify-between text-neutral-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  {operationalCards.activeCases.label}
+                </span>
+                <Layers className="w-3.5 h-3.5 text-blue-600" />
+              </div>
+              <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
+                {operationalCards.activeCases.value}
+              </div>
+              <p className="text-[10px] text-neutral-500 font-medium">
+                {operationalCards.activeCases.sublabel}
+              </p>
+            </div>
+          </div>
+
+          {/* 5. Phase 5 Primary Visualizations Row 1: Cohort Risk Distribution & Multi-Tier Trends */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-start">
+            {/* Cohort Risk Distribution (Requirements 1, 6 & 7) */}
+            <CohortRiskDistributionChart
+              riskDistribution={effectiveRiskDistribution}
+              totalStudents={serverAnalytics?.total_students_in_scope ?? scopedStudents.length}
+              evaluatedStudents={serverAnalytics?.evaluated_students_count ?? clientRiskDist.evaluatedStudentsCount}
+              coveragePercentage={serverAnalytics?.coverage_percentage ?? clientRiskDist.coveragePercentage}
+              totalPredictionRuns={serverAnalytics?.total_prediction_runs ?? clientRiskDist.totalPredictionRuns}
+            />
+
+            {/* Multi-Tier Trends: Predictions vs Signals vs Cases vs Outcomes (Requirement 3) */}
+            <MultiTierTrendChart
+              timeline={effectiveTimeline}
+              timeframe={analyticsTimeframe}
+            />
+          </div>
+
+          {/* 6. Phase 5 Secondary Visualizations Row 2: Cohort Comparison & Case Machine Lifecycle */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-start">
+            {/* Cohort Comparison Table with ADR-004 small-group masking (Requirements 2 & 8) */}
+            <CohortComparisonTable
+              cohorts={effectiveCohortBreakdown}
+              selectedCohort={selectedCohort}
+              onSelectCohort={(cohortCode) => {
+                setSelectedCohort(selectedCohort === cohortCode ? "" : cohortCode);
+              }}
+            />
+
+            {/* 10-State Case Machine Lifecycle Distribution (Requirement 4) */}
+            <LearningProgressChart distribution={caseDistribution} />
+          </div>
+
+          {/* 7. Tertiary Visualizations Row 3: Intervention Allocation & Observation Ingestion */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-start">
+            {/* Intervention Protocol Allocation Gauge across 4 canonical keys (Requirement 4) */}
+            <RadialProgressGauge distribution={interventionDistribution} />
+
+            {/* Policy Triggers & Observation Ingestion Audit */}
+            <ActivityHeatmap
+              attributions={riskAttributions}
+              backendConnected={backendConnected}
+            />
+          </div>
+
+          {/* 8. Mandatory Non-Causal Governance Disclaimers Banner */}
+          <div className="p-4 bg-neutral-50 rounded-3xl border border-neutral-200/80 space-y-2 text-xs text-neutral-600">
+            <div className="flex items-center gap-2 font-bold text-neutral-900">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>SUTRA Governance Mandates &amp; Non-Causal Disclaimers</span>
+            </div>
+            <ul className="list-disc pl-5 space-y-1 text-[11px] text-neutral-500 leading-relaxed">
+              <li>
+                <strong>Accuracy Disclaimer:</strong> Case counts reflect proactive educator support workflow velocity and must <em>never</em> be interpreted as a measure of model accuracy.
+              </li>
+              <li>
+                <strong>Efficacy Disclaimer:</strong> Intervention counts reflect assigned student support protocols and do <em>not</em> prove causal treatment effectiveness without randomized control trials.
+              </li>
+              <li>
+                <strong>Statistical Disclaimer:</strong> Early-warning scores represent statistical disengagement likelihood from Day-30 OULAD features, not student character, intelligence, or academic capability.
+              </li>
+              <li>
+                <strong>Privacy Safeguard:</strong> Cells or subgroups with fewer than 5 students are automatically masked under ADR-004 k-anonymity rules in aggregate views.
+              </li>
+            </ul>
+          </div>
+        </>
       )}
-
-      {/* 3. Verified Dynamic Operational Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Card 1: Students in Scope */}
-        <div className="skill-card bg-white p-4 space-y-1">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              {operationalCards.studentsInScope.label}
-            </span>
-            <Users className="w-3.5 h-3.5" />
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
-            {operationalCards.studentsInScope.value}
-          </div>
-          <p className="text-[10px] text-neutral-500 font-medium">
-            {operationalCards.studentsInScope.sublabel}
-          </p>
-        </div>
-
-        {/* Card 2: Generated Signals */}
-        <div className="skill-card bg-white p-4 space-y-1">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              {operationalCards.signalsGenerated.label}
-            </span>
-            <Activity className="w-3.5 h-3.5" />
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
-            {operationalCards.signalsGenerated.value}
-          </div>
-          <p className="text-[10px] text-neutral-500 font-medium">
-            {operationalCards.signalsGenerated.sublabel}
-          </p>
-        </div>
-
-        {/* Card 3: Closed-Loop Action Rate */}
-        <div className="skill-card bg-white p-4 space-y-1">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              {operationalCards.triageReviewRate.label}
-            </span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
-            {operationalCards.triageReviewRate.value}
-          </div>
-          <p className="text-[10px] text-neutral-500 font-medium">
-            {operationalCards.triageReviewRate.sublabel}
-          </p>
-        </div>
-
-        {/* Card 4: Active Support Cases */}
-        <div className="skill-card bg-white p-4 space-y-1">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              {operationalCards.activeCases.label}
-            </span>
-            <Layers className="w-3.5 h-3.5 text-blue-600" />
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
-            {operationalCards.activeCases.value}
-          </div>
-          <p className="text-[10px] text-neutral-500 font-medium">
-            {operationalCards.activeCases.sublabel}
-          </p>
-        </div>
-      </div>
-
-      {/* 4. 2x2 Grid with Operational Visualizations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-start">
-        {/* Top Left: 10-State Case Lifecycle Distribution */}
-        <LearningProgressChart distribution={caseDistribution} />
-
-        {/* Top Right: Signal Generation Velocity & Telemetry */}
-        <EngagementChart
-          timeline={signalTimeline}
-          timeframe={analyticsTimeframe}
-          title="Signal Generation & Evaluation Velocity"
-        />
-
-        {/* Bottom Left: Intervention Protocol Allocation */}
-        <RadialProgressGauge distribution={interventionDistribution} />
-
-        {/* Bottom Right: Observation Ingestion & Policy Risk Drivers */}
-        <ActivityHeatmap
-          attributions={riskAttributions}
-          backendConnected={backendConnected}
-        />
-      </div>
     </div>
   );
 }
+

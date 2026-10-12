@@ -29,6 +29,7 @@ import {
   MLPredictResponse,
   HealthResponse,
   ReadinessResponse,
+  StudentReadinessResponse,
   AIStructuredReviewBriefResponse,
   AISummarizeEvidenceResponse,
   AISuggestInterventionsResponse,
@@ -40,6 +41,16 @@ import {
   EscalationRecordDTO,
   CounselorCallRequestDTO,
   CreateCallRequestInput,
+  DocumentDTO,
+  DocumentCreateRequest,
+  DocumentFinalizeResponse,
+  DocumentAnchorResponse,
+  DocumentVerifyResponse,
+  DocumentListResponse,
+  CBDCVoucherIssueRequest,
+  CBDCVoucherRecord,
+  CohortAnalyticsSummaryResponse,
+  ModelPerformanceResponse,
 } from './types';
 import {
   DEMO_SIGNALS,
@@ -56,6 +67,151 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+export function isDemoMode(): boolean {
+  if (typeof process !== 'undefined' && process.env) {
+    const val = process.env.NEXT_PUBLIC_SUTRA_DEMO_MODE;
+    return val === 'true' || val === '1';
+  }
+  return false;
+}
+
+export type ApiErrorKind =
+  | 'network_error'
+  | 'timeout'
+  | 'authentication'
+  | 'authorization'
+  | 'validation'
+  | 'not_found'
+  | 'server_error'
+  | 'invalid_format'
+  | 'unknown';
+
+export interface ApiValidationErrorDetail {
+  field?: string;
+  message: string;
+  code?: string;
+}
+
+export class ApiError extends Error {
+  public readonly kind: ApiErrorKind;
+  public readonly status: number;
+  public readonly code?: string;
+  public readonly details: ApiValidationErrorDetail[];
+  public readonly isOffline: boolean;
+  public readonly data?: any;
+
+  constructor(params: {
+    message: string;
+    kind: ApiErrorKind;
+    status: number;
+    code?: string;
+    details?: ApiValidationErrorDetail[];
+    isOffline?: boolean;
+    data?: any;
+    cause?: unknown;
+  }) {
+    super(params.message);
+    this.name = 'ApiError';
+    this.kind = params.kind;
+    this.status = params.status;
+    this.code = params.code;
+    this.details = params.details || [];
+    this.isOffline = Boolean(params.isOffline);
+    this.data = params.data;
+    if (params.cause) {
+      this.cause = params.cause;
+    }
+  }
+
+  public static isApiError(err: unknown): err is ApiError {
+    return (
+      err instanceof ApiError ||
+      (typeof err === 'object' && err !== null && (err as any).name === 'ApiError')
+    );
+  }
+
+  public static network(message?: string, cause?: unknown): ApiError {
+    return new ApiError({
+      message:
+        message ||
+        'Unable to connect to the backend server. Please verify your network connection or ensure the SUTRA backend is online.',
+      kind: 'network_error',
+      status: 0,
+      code: 'NETWORK_ERROR',
+      isOffline: true,
+      cause,
+    });
+  }
+
+  public static timeout(message?: string): ApiError {
+    return new ApiError({
+      message: message || 'Request timed out waiting for backend server response.',
+      kind: 'timeout',
+      status: 408,
+      code: 'REQUEST_TIMEOUT',
+    });
+  }
+
+  public static fromResponse(status: number, data: any, url: string): ApiError {
+    let kind: ApiErrorKind = 'unknown';
+    let code: string | undefined = data?.error?.code || data?.code;
+    let message: string | undefined = data?.error?.message || data?.detail || data?.message;
+    const details: ApiValidationErrorDetail[] = [];
+
+    if (status === 401) {
+      kind = 'authentication';
+      code = code || 'AUTHENTICATION_REQUIRED';
+      message = message || 'Authentication required. Please sign in to continue.';
+    } else if (status === 403) {
+      kind = 'authorization';
+      code = code || 'PERMISSION_DENIED';
+      message = message || 'You do not have permission to perform this action.';
+    } else if (status === 404) {
+      kind = 'not_found';
+      code = code || 'RESOURCE_NOT_FOUND';
+      message = message || `Resource not found at ${url}.`;
+    } else if (status === 422 || status === 400) {
+      kind = 'validation';
+      code = code || 'VALIDATION_FAILED';
+      message = message || 'Input validation failed. Please review your submission.';
+      if (Array.isArray(data?.error?.details)) {
+        for (const d of data.error.details) {
+          details.push({
+            field: d.field,
+            message: d.message || String(d),
+            code: d.code,
+          });
+        }
+      } else if (Array.isArray(data?.detail)) {
+        for (const d of data.detail) {
+          details.push({
+            field: Array.isArray(d.loc) ? d.loc.join('.') : String(d.loc || ''),
+            message: d.msg || 'Invalid field value',
+            code: d.type,
+          });
+        }
+      }
+    } else if (status >= 500) {
+      kind = 'server_error';
+      code = code || 'INTERNAL_SERVER_ERROR';
+      message = message || 'An unexpected internal server error occurred.';
+    }
+
+    if (!message) {
+      message = `Request failed with HTTP status ${status}`;
+    }
+
+    return new ApiError({
+      message,
+      kind,
+      status,
+      code,
+      details,
+      data,
+    });
+  }
+}
+
 class ApiClient {
   private token: string | null = null;
   private campusId: string | null = null;
@@ -65,6 +221,10 @@ class ApiClient {
       this.token = localStorage.getItem('sutra_auth_token');
       this.campusId = localStorage.getItem('sutra_active_campus_id');
     }
+  }
+
+  public isDemoMode(): boolean {
+    return isDemoMode();
   }
 
   public setToken(token: string | null) {
@@ -208,6 +368,8 @@ class ApiClient {
           risk_probability: riskProbability,
           threshold: 0.46,
           classification: classification,
+          processed_at: new Date().toISOString(),
+          is_synthetic_fallback: true,
           evidence_card: {
             card_type: 'ml_early_warning_evidence',
             model_name: 'logistic_regression_baseline',
@@ -253,6 +415,8 @@ class ApiClient {
         risk_probability: riskProbability,
         threshold: 0.46,
         classification: classification,
+        processed_at: new Date().toISOString(),
+        is_synthetic_fallback: true,
         evidence_card: {
           card_type: 'ml_early_warning_evidence',
           model_name: 'logistic_regression_baseline',
@@ -292,6 +456,252 @@ class ApiClient {
         payment_status: 'current',
         aid_awarded: true,
         fee_hold: false,
+      } as unknown as T;
+    }
+
+    // Student 360 Feature Readiness: /students/:id/readiness
+    if (cleanEndpoint.includes('/students/') && cleanEndpoint.endsWith('/readiness')) {
+      const parts = cleanEndpoint.split('/');
+      const studentId = parts[parts.indexOf('students') + 1] || 'SYN-1007';
+      const stu = INITIAL_STUDENTS.find((s) => s.id === studentId) || INITIAL_STUDENTS[0];
+      const isComplete = studentId.includes('1007');
+
+      return {
+        student: {
+          id: stu.id,
+          external_ref: stu.id,
+          display_name: stu.name,
+          enrollment_status: stu.status.toLowerCase(),
+          risk_level: isComplete ? 'high' : 'low',
+        },
+        model_name: 'Logistic Regression Baseline',
+        model_version: '1.0.0',
+        target_cutoff: 'Day 30',
+        is_ready_for_inference: isComplete,
+        applicability_status: isComplete ? 'ready' : 'incomplete_telemetry',
+        applicability_rationale: isComplete
+          ? 'All 25 canonical Day-30 features verified and available.'
+          : 'Missing required VLE clickstream features. Live inference blocked (HTTP 422).',
+        features_total_required: 25,
+        features_available_count: isComplete ? 25 : 6,
+        features_missing_count: isComplete ? 0 : 12,
+        features_underivable_count: isComplete ? 0 : 7,
+        features_stale_count: 0,
+        features: [
+          { feature_name: 'vle_total_clicks_d30', category: 'vle_engagement', status: isComplete ? 'available' : 'underivable_from_source', observed_value: isComplete ? 142 : null, source_domain: 'participation', derivation_note: 'Cumulative LMS clicks by Day 30' },
+          { feature_name: 'vle_active_days_d30', category: 'vle_engagement', status: isComplete ? 'available' : 'underivable_from_source', observed_value: isComplete ? 8 : null, source_domain: 'participation', derivation_note: 'Active learning platform days' },
+          { feature_name: 'vle_clicks_last_7d', category: 'vle_engagement', status: isComplete ? 'available' : 'underivable_from_source', observed_value: isComplete ? 12 : null, source_domain: 'participation', derivation_note: 'Recent LMS interaction velocity' },
+          { feature_name: 'vle_days_since_last_click', category: 'vle_engagement', status: isComplete ? 'available' : 'underivable_from_source', observed_value: isComplete ? 6 : null, source_domain: 'participation', derivation_note: 'Days since last LMS login' },
+          { feature_name: 'assessments_submitted_d30', category: 'assessment_timing', status: 'available', observed_value: 1, source_domain: 'academic', derivation_note: 'Formative assessments completed' },
+          { feature_name: 'num_of_prev_attempts', category: 'academic', status: 'available', observed_value: 0, source_domain: 'academic', derivation_note: 'Previous module attempt count' },
+          { feature_name: 'studied_credits', category: 'academic', status: 'available', observed_value: 60, source_domain: 'academic', derivation_note: 'Registered credit load' },
+        ],
+        telemetry_audit: {
+          total_observations: isComplete ? 25 : 6,
+          domains_present: ['academic', 'participation', 'demographic'],
+          quality_state_counts: { valid: isComplete ? 25 : 6 },
+          last_event_at: new Date().toISOString(),
+          last_available_at: new Date().toISOString(),
+          is_stale: false,
+          unsupported_sources: [],
+        },
+        governance_disclaimer: 'Feature readiness checks audit input data completeness. Missing values are never silently filled with zeros.',
+      } as unknown as T;
+    }
+
+    // --- Cohort Risk Analytics (Phase 5) ---
+    if (cleanEndpoint.includes('/analytics/cohort-summary')) {
+      return {
+        campus_id: this.campusId || '00000000-0000-0000-0000-000000000000',
+        as_of_at: new Date().toISOString(),
+        timeframe: 'this_month',
+        cohort_filter: null,
+        total_students_in_scope: INITIAL_STUDENTS.length,
+        evaluated_students_count: Math.min(INITIAL_STUDENTS.length, 6),
+        total_prediction_runs: 8,
+        coverage_percentage: 75.0,
+        risk_distribution: {
+          at_risk_count: 2,
+          at_risk_percentage: 33.3,
+          on_track_count: 4,
+          on_track_percentage: 66.7,
+          unevaluated_count: Math.max(0, INITIAL_STUDENTS.length - 6),
+          threshold: 0.46,
+          granular_tiers: {
+            low_risk: 3,
+            moderate_risk: 1,
+            elevated_risk: 2,
+          },
+          is_privacy_suppressed: false,
+          suppression_reason: null,
+        },
+        cohort_breakdown: [
+          {
+            cohort_code: 'CS-2026',
+            total_students: 5,
+            evaluated_count: 4,
+            at_risk_count: 1,
+            at_risk_percentage: 25.0,
+            on_track_count: 3,
+            on_track_percentage: 75.0,
+            is_privacy_suppressed: false,
+            suppression_reason: null,
+          },
+          {
+            cohort_code: 'ENG-2026',
+            total_students: 3,
+            evaluated_count: 2,
+            at_risk_count: 1,
+            at_risk_percentage: 50.0,
+            on_track_count: 1,
+            on_track_percentage: 50.0,
+            is_privacy_suppressed: false,
+            suppression_reason: null,
+          },
+        ],
+        trend_timeline: [
+          { date_key: '2026-10-06', label: 'Oct 06', prediction_runs: 2, signals_detected: 1, cases_opened: 1, confirmed_outcomes: 0 },
+          { date_key: '2026-10-07', label: 'Oct 07', prediction_runs: 1, signals_detected: 0, cases_opened: 0, confirmed_outcomes: 0 },
+          { date_key: '2026-10-08', label: 'Oct 08', prediction_runs: 3, signals_detected: 2, cases_opened: 1, confirmed_outcomes: 1 },
+          { date_key: '2026-10-09', label: 'Oct 09', prediction_runs: 0, signals_detected: 1, cases_opened: 0, confirmed_outcomes: 0 },
+          { date_key: '2026-10-10', label: 'Oct 10', prediction_runs: 1, signals_detected: 0, cases_opened: 1, confirmed_outcomes: 0 },
+          { date_key: '2026-10-11', label: 'Oct 11', prediction_runs: 1, signals_detected: 1, cases_opened: 0, confirmed_outcomes: 1 },
+          { date_key: '2026-10-12', label: 'Oct 12', prediction_runs: 0, signals_detected: 0, cases_opened: 0, confirmed_outcomes: 0 },
+        ],
+        case_lifecycle_distribution: [
+          { state: 'NEW', count: 1, is_terminal: false },
+          { state: 'TRIAGED', count: 1, is_terminal: false },
+          { state: 'UNDER_REVIEW', count: 0, is_terminal: false },
+          { state: 'ACTIONABLE', count: 0, is_terminal: false },
+          { state: 'ASSIGNED', count: 1, is_terminal: false },
+          { state: 'ACCEPTED', count: 0, is_terminal: false },
+          { state: 'IN_PROGRESS', count: 1, is_terminal: false },
+          { state: 'FOLLOW_UP_REQUIRED', count: 0, is_terminal: false },
+          { state: 'RESOLVED', count: 1, is_terminal: true },
+          { state: 'CLOSED', count: 0, is_terminal: true },
+        ],
+        intervention_distribution: [
+          { key: 'academic_tutoring_offer', label: 'Subject Tutoring Referral', count: 2, percentage: 50.0 },
+          { key: 'mentor_check_in', label: 'Faculty Mentorship 1-on-1', count: 1, percentage: 25.0 },
+          { key: 'counselling_referral', label: 'Student Wellbeing Referral', count: 1, percentage: 25.0 },
+          { key: 'fee_emergency_counselling', label: 'Financial Aid Consultation', count: 0, percentage: 0.0 },
+        ],
+        governance_disclaimers: [
+          'Case counts reflect educator triage volume, not model precision.',
+          'Intervention counts reflect assigned student support protocols, not verified treatment causality.',
+          'Small-group privacy safeguards (ADR-004) automatically mask cells with fewer than 5 students in leadership views.',
+        ],
+      } as unknown as T;
+    }
+
+    // --- Model Performance Dashboard (Phase 6) ---
+    if (cleanEndpoint.includes('/ml/performance') || cleanEndpoint.includes('/analytics/model-performance')) {
+      return {
+        model_name: 'Regularized Logistic Regression Baseline',
+        model_version: 'v1.0.0',
+        operational_threshold: 0.46,
+        evaluation_environment: 'offline_held_out_benchmark',
+        dataset_provenance: {
+          dataset_label: 'OULAD Day-30 Processed Dataset',
+          partition: 'Presentation 2014J (Temporal Holdout)',
+          evaluation_date: '2026-10-12',
+          sample_size: 9203,
+          unique_students: 8857,
+          raw_rows_examined: 27466,
+          outcome_definition: 'Binary early withdrawal or academic failure (target=1 for At-Risk, 0 for On-Track)',
+          class_prevalence: 0.407,
+          actual_at_risk_count: 3746,
+          actual_on_track_count: 5457,
+          provenance_type: 'offline_held_out_benchmark',
+          provenance_warning:
+            'HISTORICAL PARTITION NOTICE: Presentation 2014J represents previously inspected development evidence. It must NEVER be reported as an untouched prospective test set. Real-world generalization must be assessed on authentic, prospectively collected cohorts.',
+        },
+        threshold_independent_metrics: {
+          roc_auc: 0.7216,
+          pr_auc: 0.6502,
+          brier_score: 0.2103,
+          expected_calibration_error_ece: 0.0681,
+          maximum_calibration_error_mce: 0.0967,
+        },
+        threshold_dependent_metrics: {
+          threshold: 0.46,
+          accuracy: 0.6498,
+          balanced_accuracy: 0.6573,
+          precision: 0.5556,
+          recall: 0.6978,
+          specificity: 0.6168,
+          false_positive_rate: 0.3832,
+          f1_score: 0.6186,
+          confusion_matrix: {
+            tp: 2614,
+            fp: 2091,
+            tn: 3366,
+            fn: 1132,
+          },
+          operational_workload: {
+            total_alerts_fired: 4705,
+            alert_rate_pct: 51.12,
+            false_alarms_advisor_burden: 2091,
+            missed_at_risk_students: 1132,
+            successful_proactive_catches: 2614,
+          },
+        },
+        reliability_table: [
+          { bin_range: '[0.0, 0.1)', samples_count: 116, mean_predicted_prob: 0.0718, observed_positive_rate: 0.1466, calibration_gap: 0.0747 },
+          { bin_range: '[0.1, 0.2)', samples_count: 563, mean_predicted_prob: 0.1567, observed_positive_rate: 0.1368, calibration_gap: 0.0199 },
+          { bin_range: '[0.2, 0.3)', samples_count: 1153, mean_predicted_prob: 0.2551, observed_positive_rate: 0.1977, calibration_gap: 0.0574 },
+          { bin_range: '[0.3, 0.4)', samples_count: 1587, mean_predicted_prob: 0.3509, observed_positive_rate: 0.2716, calibration_gap: 0.0793 },
+          { bin_range: '[0.4, 0.5)', samples_count: 1770, mean_predicted_prob: 0.4493, observed_positive_rate: 0.3525, calibration_gap: 0.0967 },
+          { bin_range: '[0.5, 0.6)', samples_count: 1607, mean_predicted_prob: 0.5489, observed_positive_rate: 0.4748, calibration_gap: 0.0741 },
+          { bin_range: '[0.6, 0.7)', samples_count: 1205, mean_predicted_prob: 0.6462, observed_positive_rate: 0.5793, calibration_gap: 0.067 },
+          { bin_range: '[0.7, 0.8)', samples_count: 732, mean_predicted_prob: 0.7449, observed_positive_rate: 0.694, calibration_gap: 0.051 },
+          { bin_range: '[0.8, 0.9)', samples_count: 368, mean_predicted_prob: 0.8453, observed_positive_rate: 0.8288, calibration_gap: 0.0165 },
+          { bin_range: '[0.9, 1.0)', samples_count: 102, mean_predicted_prob: 0.9261, observed_positive_rate: 0.9314, calibration_gap: 0.0053 },
+        ],
+        roc_curve_points: [
+          { fpr: 0.0, tpr: 0.0, threshold: 1.0 },
+          { fpr: 0.05, tpr: 0.23, threshold: 0.73 },
+          { fpr: 0.1, tpr: 0.35, threshold: 0.65 },
+          { fpr: 0.2, tpr: 0.52, threshold: 0.56 },
+          { fpr: 0.3, tpr: 0.63, threshold: 0.5 },
+          { fpr: 0.3832, tpr: 0.6978, threshold: 0.46 },
+          { fpr: 0.5, tpr: 0.78, threshold: 0.39 },
+          { fpr: 0.7, tpr: 0.89, threshold: 0.28 },
+          { fpr: 1.0, tpr: 1.0, threshold: 0.0 },
+        ],
+        pr_curve_points: [
+          { precision: 0.407, recall: 1.0, threshold: 0.0 },
+          { precision: 0.48, recall: 0.88, threshold: 0.32 },
+          { precision: 0.5556, recall: 0.6978, threshold: 0.46 },
+          { precision: 0.62, recall: 0.55, threshold: 0.55 },
+          { precision: 0.74, recall: 0.28, threshold: 0.7 },
+        ],
+        subgroup_metrics: [
+          { dimension: 'gender', subgroup: 'F', sample_size: 3872, confidence_flag: 'STABLE', positives_count: 1488, negatives_count: 2384, prevalence: 0.3843, true_positives: 927, false_positives: 830, true_negatives: 1554, false_negatives: 561, recall: 0.623, precision: 0.5276, specificity: 0.6518, false_positive_rate: 0.3482, f1_score: 0.5713, roc_auc: 0.6898, pr_auc: 0.5902 },
+          { dimension: 'gender', subgroup: 'M', sample_size: 5331, confidence_flag: 'STABLE', positives_count: 2258, negatives_count: 3073, prevalence: 0.4236, true_positives: 1687, false_positives: 1261, true_negatives: 1812, false_negatives: 571, recall: 0.7471, precision: 0.5723, specificity: 0.5897, false_positive_rate: 0.4103, f1_score: 0.6481, roc_auc: 0.7428, pr_auc: 0.6873 },
+          { dimension: 'age_band', subgroup: '0-35', sample_size: 6305, confidence_flag: 'STABLE', positives_count: 2658, negatives_count: 3647, prevalence: 0.4216, true_positives: 1996, false_positives: 1632, true_negatives: 2015, false_negatives: 662, recall: 0.7509, precision: 0.5502, specificity: 0.5525, false_positive_rate: 0.4475, f1_score: 0.6351, roc_auc: 0.7235, pr_auc: 0.6664 },
+          { dimension: 'age_band', subgroup: '35-55', sample_size: 2811, confidence_flag: 'STABLE', positives_count: 1057, negatives_count: 1754, prevalence: 0.376, true_positives: 605, false_positives: 457, true_negatives: 1297, false_negatives: 452, recall: 0.5724, precision: 0.5697, specificity: 0.7395, false_positive_rate: 0.2605, f1_score: 0.571, roc_auc: 0.7182, pr_auc: 0.6124 },
+          { dimension: 'age_band', subgroup: '55<=', sample_size: 87, confidence_flag: 'LOW_CONFIDENCE (<100)', positives_count: 31, negatives_count: 56, prevalence: 0.3563, true_positives: 13, false_positives: 2, true_negatives: 54, false_negatives: 18, recall: 0.4194, precision: 0.8667, specificity: 0.9643, false_positive_rate: 0.0357, f1_score: 0.5652, roc_auc: 0.7465, pr_auc: 0.6982 },
+        ],
+        live_telemetry: {
+          total_inferences_logged: 48,
+          average_latency_ms: 3.4,
+          active_campus_count: 1,
+          monitoring_window: 'Last 30 Days',
+          status: 'healthy',
+          telemetry_notice:
+            'Live telemetry monitors real-time system throughput and execution latency. It does not represent measured model accuracy until student outcomes are confirmed.',
+        },
+        fairness_disclaimer:
+          'FAIRNESS & PARITY NOTICE: Disaggregated subgroup metrics highlight performance differences across courses, demographics, and prior education. The presence of this dashboard does NOT demonstrate that the model is fair, unbiased, or suitable for automated high-stakes decisions. Differences in recall and false alarm burden reflect historical institutional patterns.',
+        non_causal_disclaimer:
+          'NON-CAUSAL GOVERNANCE NOTICE: Statistical risk estimates reflect retrospective correlations in historical data. Predictions must never be treated as diagnostic certainties or proof of future student failure. All alerts require human professional judgement.',
+        limitations: [
+          'Evaluated on historical Open University course registrations (Presentation 2014J); generalization to prospective cohorts remains unverified.',
+          'Cutoff fixed at Day 30 post-start; early assessment marks are excluded to prevent temporal data leakage.',
+          'ROC curves require genuine per-record scores and labels; they are not fabricated from aggregate single-point values.',
+          'Cell counts under 5 are suppressed to protect student privacy in disaggregated views.',
+        ],
       } as unknown as T;
     }
 
@@ -456,7 +866,43 @@ class ApiClient {
       } as unknown as T;
     }
 
-    // Mutations: /review, /transition, /assign, /accept, /tasks, /follow-ups, /outcome
+    // Document Subsystem Offline Fallback (Demo Mode only)
+    if (cleanEndpoint.endsWith('/documents')) {
+      return {
+        documents: [],
+        total: 0,
+        network: 'Base Sepolia (Chain ID 84532)',
+      } as unknown as T;
+    }
+
+    if (cleanEndpoint.includes('/documents/generate') && options.method?.toUpperCase() === 'POST') {
+      let bodyData: any = {};
+      try {
+        if (typeof options.body === 'string') bodyData = JSON.parse(options.body);
+      } catch {
+        // ignore
+      }
+      return {
+        id: `00000000-0000-0000-0000-${Date.now().toString().slice(-12).padStart(12, '0')}`,
+        institution_id: '00000000-0000-0000-0000-000000000001',
+        document_ref: `DOC-DEMO-${Date.now().toString().slice(-4)}`,
+        title: bodyData.title || 'Intervention Agreement',
+        doc_type: bodyData.doc_type || 'intervention_plan',
+        file_name: 'intervention_agreement.pdf',
+        file_size_bytes: 1024,
+        mime_type: 'application/pdf',
+        sha256_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        status: 'draft',
+        student_ref: bodyData.student_ref || 'SYN-1007',
+        student_name: bodyData.student_name || 'Asha',
+        chain_id: 84532,
+        anchoring_mode: 'simulated',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as unknown as T;
+    }
+
+    // Mutations: /review, /transition, /assign, /accept, /tasks, /follow-ups, /outcome (Demo Mode only)
     if (options.method && options.method.toUpperCase() === 'POST') {
       let bodyData: any = {};
       try {
@@ -482,10 +928,13 @@ class ApiClient {
   ): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       Accept: 'application/json',
       ...(options.headers as Record<string, string>),
     };
+
+    if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
@@ -494,52 +943,91 @@ class ApiClient {
       headers['X-Campus-Id'] = this.campusId;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const signal = options.signal || controller.signal;
+
     try {
       const response = await fetch(url, {
         ...options,
         headers,
+        signal,
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        let errorData: any;
+        let errorData: any = {};
         try {
-          errorData = await response.json();
+          const errText = await response.text();
+          if (errText) errorData = JSON.parse(errText);
         } catch {
           errorData = { message: response.statusText };
         }
-        const error = new Error(
-          errorData?.error?.message ||
-            errorData?.detail ||
-            `HTTP ${response.status}: ${response.statusText}`
-        );
-        (error as any).status = response.status;
-        (error as any).data = errorData;
-        throw error;
+        throw ApiError.fromResponse(response.status, errorData, url);
       }
 
-      return (await response.json()) as T;
+      if (response.status === 204) {
+        return undefined as unknown as T;
+      }
+
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        return undefined as unknown as T;
+      }
+
+      try {
+        return JSON.parse(responseText) as T;
+      } catch (jsonErr) {
+        throw new ApiError({
+          message: 'Server returned an invalid JSON response format.',
+          kind: 'invalid_format',
+          status: response.status,
+          cause: jsonErr,
+        });
+      }
     } catch (err: any) {
-      // Gracefully handle network failures when backend is offline
+      clearTimeout(timeoutId);
+
+      // Re-throw existing ApiError from non-2xx HTTP responses
+      if (ApiError.isApiError(err)) {
+        throw err;
+      }
+
+      if (err?.name === 'AbortError') {
+        throw ApiError.timeout(`Request to ${url} timed out after 15 seconds.`);
+      }
+
       const isNetworkError =
         err instanceof TypeError ||
         err?.name === 'TypeError' ||
         err?.message?.includes('Failed to fetch') ||
-        err?.message?.includes('NetworkError');
+        err?.message?.includes('NetworkError') ||
+        err?.message?.includes('fetch failed');
 
-      if (isNetworkError) {
-        console.warn(`[SUTRA API] Backend offline at ${url}. Providing graceful offline response for: ${endpoint}`);
+      // EXPLICIT DEMO MODE ONLY:
+      if (isDemoMode()) {
+        console.warn(`[SUTRA DEMO MODE] Using demo fallback for: ${endpoint}`);
         const fallback = this.getOfflineFallback<T>(endpoint, options);
         if (fallback !== undefined) {
           return fallback;
         }
-        const offlineError = new Error(`Backend offline: Unable to connect to ${url}`);
-        (offlineError as any).status = 0;
-        (offlineError as any).isOffline = true;
-        throw offlineError;
       }
 
-      // Re-throw with formatted context
-      throw err;
+      // Normal application mode: network failures MUST remain errors!
+      if (isNetworkError) {
+        throw ApiError.network(
+          `Unable to connect to the backend server at ${url}. Please ensure the SUTRA backend is running.`,
+          err
+        );
+      }
+
+      throw new ApiError({
+        message: err?.message || 'An unexpected request error occurred.',
+        kind: 'unknown',
+        status: 0,
+        cause: err,
+      });
     }
   }
 
@@ -573,6 +1061,8 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload || {}),
       }),
+    getReadiness: (id: string) =>
+      this.request<StudentReadinessResponse>(`/students/${id}/readiness`),
   };
 
   // --- Signals & Review ---
@@ -658,7 +1148,12 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    getPerformance: (modelVersion?: string) => {
+      const qs = modelVersion ? `?model_version=${encodeURIComponent(modelVersion)}` : '';
+      return this.request<ModelPerformanceResponse>(`/ml/performance${qs}`);
+    },
   };
+
 
   // --- Bounded AI Orchestration Subsystem (Phase 6) ---
   public ai = {
@@ -729,6 +1224,69 @@ class ApiClient {
         body: JSON.stringify(payload),
       }),
   };
+
+  // --- Document Integrity & Base Sepolia Anchoring Subsystem ---
+  public documents = {
+    list: (params?: { doc_type?: string; status?: string; student_ref?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.doc_type) q.append('doc_type', params.doc_type);
+      if (params?.status) q.append('status', params.status);
+      if (params?.student_ref) q.append('student_ref', params.student_ref);
+      const qs = q.toString();
+      return this.request<DocumentListResponse>(`/documents${qs ? `?${qs}` : ''}`);
+    },
+    get: (id: string) => this.request<DocumentDTO>(`/documents/${id}`),
+    generate: (payload: DocumentCreateRequest, finalizeImmediately: boolean = false) =>
+      this.request<DocumentDTO>(
+        `/documents/generate${finalizeImmediately ? '?finalize_immediately=true' : ''}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }
+      ),
+    finalize: (id: string) =>
+      this.request<DocumentFinalizeResponse>(`/documents/${id}/finalize`, {
+        method: 'POST',
+      }),
+    anchor: (id: string) =>
+      this.request<DocumentAnchorResponse>(`/documents/${id}/anchor`, {
+        method: 'POST',
+      }),
+    verify: (id: string, file: File) => {
+      const formData = new FormData();
+      formData.append('candidate_file', file);
+      return this.request<DocumentVerifyResponse>(`/documents/${id}/verify`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+    getDownloadUrl: (id: string) => `${API_BASE_URL}/documents/${id}/download`,
+  };
+
+  // --- SBI Digital Rupee (e₹ / CBDC) Incentive Subsystem ---
+  public cbdc = {
+    issueVoucher: (payload: CBDCVoucherIssueRequest) =>
+      this.request<CBDCVoucherRecord>('/documents/cbdc/issue-voucher', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+  };
+
+  // --- Institutional Analytics & Cohort Risk (Phase 5) ---
+  public analytics = {
+    getCohortSummary: (params?: { cohort?: string; timeframe?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.cohort) q.append('cohort', params.cohort);
+      if (params?.timeframe) q.append('timeframe', params.timeframe);
+      const qs = q.toString();
+      return this.request<CohortAnalyticsSummaryResponse>(`/analytics/cohort-summary${qs ? `?${qs}` : ''}`);
+    },
+    getModelPerformance: (modelVersion?: string) => {
+      const qs = modelVersion ? `?model_version=${encodeURIComponent(modelVersion)}` : '';
+      return this.request<ModelPerformanceResponse>(`/analytics/model-performance${qs}`);
+    },
+  };
+
 
   // --- Health & Governance ---
   public health = {

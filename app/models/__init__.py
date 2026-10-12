@@ -17,6 +17,7 @@ from app.models.counselor import (
     CaseEscalationRecord,
     CounselorCallRequest,
 )
+from app.models.document import DocumentRecord
 
 __all__ = [
     "Base",
@@ -45,4 +46,5 @@ __all__ = [
     "AuthorityContact",
     "CaseEscalationRecord",
     "CounselorCallRequest",
+    "DocumentRecord",
 ]

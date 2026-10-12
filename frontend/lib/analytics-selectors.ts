@@ -468,3 +468,199 @@ export function computeAnalyticsOperationalCards(
     activeCases,
   };
 }
+
+// ==========================================
+// Phase 5: Cohort Risk Selectors & Governance Engine
+// ==========================================
+
+export interface StudentPredictionRecord {
+  student_id?: string;
+  external_student_ref: string;
+  risk_probability: number;
+  threshold?: number;
+  classification?: string;
+  created_at?: string;
+}
+
+/**
+ * Computes cohort risk distribution with deduplication and small-group privacy protection.
+ */
+export function computeCohortRiskDistribution(
+  students: Student[],
+  predictions: StudentPredictionRecord[] = [],
+  isLeadership: boolean = false
+) {
+  const totalStudents = students.length;
+
+  // Build set of valid student identifiers in scope
+  const studentRefMap = new Map<string, Student>();
+  for (const s of students) {
+    studentRefMap.set(s.id, s);
+    if (s.external_ref) studentRefMap.set(s.external_ref, s);
+  }
+
+  // Deduplicate predictions: latest per unique student
+  const latestByStudent = new Map<string, StudentPredictionRecord>();
+  let totalPredictionRuns = 0;
+
+  for (const p of predictions) {
+    const key = p.student_id || p.external_student_ref;
+    // Ensure prediction belongs to a student in scope
+    if (studentRefMap.has(key)) {
+      totalPredictionRuns++;
+      const existing = latestByStudent.get(key);
+      if (!existing) {
+        latestByStudent.set(key, p);
+      } else if (p.created_at && existing.created_at) {
+        if (new Date(p.created_at).getTime() >= new Date(existing.created_at).getTime()) {
+          latestByStudent.set(key, p);
+        }
+      } else {
+        // If no created_at, later in array is newer
+        latestByStudent.set(key, p);
+      }
+    }
+  }
+
+  const evaluatedStudentsCount = latestByStudent.size;
+  const coveragePercentage =
+    totalStudents > 0
+      ? Math.round((evaluatedStudentsCount / totalStudents) * 100)
+      : 0;
+
+  // Evaluate risk counts
+  let rawAtRisk = 0;
+  let rawOnTrack = 0;
+  let lowRisk = 0;
+  let moderateRisk = 0;
+  let elevatedRisk = 0;
+
+  for (const pred of Array.from(latestByStudent.values())) {
+    const prob = pred.risk_probability;
+    const thresh = pred.threshold ?? 0.46;
+    const isAtRisk = prob >= thresh || pred.classification === "At_Risk";
+
+    if (isAtRisk) {
+      rawAtRisk++;
+      elevatedRisk++;
+    } else {
+      rawOnTrack++;
+      if (prob < 0.30) {
+        lowRisk++;
+      } else {
+        moderateRisk++;
+      }
+    }
+  }
+
+  const unevaluatedCount = Math.max(0, totalStudents - evaluatedStudentsCount);
+
+  // Small-group privacy protection (ADR-004)
+  const isPrivacySuppressed = totalStudents < 5 && isLeadership;
+  const suppressionReason = isPrivacySuppressed
+    ? "Subgroup size < 5 (Protected under ADR-004 to prevent student re-identification)"
+    : null;
+
+  return {
+    totalStudents,
+    evaluatedStudentsCount,
+    totalPredictionRuns,
+    coveragePercentage,
+    unevaluatedCount,
+    threshold: 0.46,
+    is_privacy_suppressed: isPrivacySuppressed,
+    suppression_reason: suppressionReason,
+    at_risk_count: isPrivacySuppressed ? null : rawAtRisk,
+    at_risk_percentage: isPrivacySuppressed
+      ? null
+      : evaluatedStudentsCount > 0
+      ? Math.round((rawAtRisk / evaluatedStudentsCount) * 100)
+      : 0,
+    on_track_count: isPrivacySuppressed ? null : rawOnTrack,
+    on_track_percentage: isPrivacySuppressed
+      ? null
+      : evaluatedStudentsCount > 0
+      ? Math.round((rawOnTrack / evaluatedStudentsCount) * 100)
+      : 0,
+    unevaluated_count: unevaluatedCount,
+    granular_tiers: isPrivacySuppressed
+      ? null
+      : {
+          low_risk: lowRisk,
+          moderate_risk: moderateRisk,
+          elevated_risk: elevatedRisk,
+        },
+  };
+}
+
+/**
+ * Computes breakdown by cohort/course with small-group privacy protection for leadership.
+ */
+export function computeCohortBreakdown(
+  students: Student[],
+  predictions: StudentPredictionRecord[] = [],
+  isLeadership: boolean = false
+) {
+  const groups = new Map<string, Student[]>();
+
+  for (const s of students) {
+    const code = s.cohort_code || (s as any).course || "General Cohort";
+    const arr = groups.get(code) || [];
+    arr.push(s);
+    groups.set(code, arr);
+  }
+
+  // Pre-index predictions by student ID / external ref
+  const latestByStudent = new Map<string, StudentPredictionRecord>();
+  for (const p of predictions) {
+    const key = p.student_id || p.external_student_ref;
+    const existing = latestByStudent.get(key);
+    if (!existing || (p.created_at && existing.created_at && new Date(p.created_at) >= new Date(existing.created_at))) {
+      latestByStudent.set(key, p);
+    }
+  }
+
+  const result = [];
+  for (const [cohortCode, cStudents] of Array.from(groups.entries()).sort()) {
+    const totalStudents = cStudents.length;
+    let evalCount = 0;
+    let atRiskCount = 0;
+
+    for (const s of cStudents) {
+      const pred = latestByStudent.get(s.id) || (s.external_ref ? latestByStudent.get(s.external_ref) : undefined);
+      if (pred) {
+        evalCount++;
+        const thresh = pred.threshold ?? 0.46;
+        if (pred.risk_probability >= thresh || pred.classification === "At_Risk") {
+          atRiskCount++;
+        }
+      }
+    }
+
+    const isSuppressed = totalStudents < 5 && isLeadership;
+    result.push({
+      cohort_code: cohortCode,
+      total_students: totalStudents,
+      evaluated_count: evalCount,
+      at_risk_count: isSuppressed ? null : atRiskCount,
+      at_risk_percentage: isSuppressed
+        ? null
+        : evalCount > 0
+        ? Math.round((atRiskCount / evalCount) * 100)
+        : 0,
+      on_track_count: isSuppressed ? null : evalCount - atRiskCount,
+      on_track_percentage: isSuppressed
+        ? null
+        : evalCount > 0
+        ? Math.round(((evalCount - atRiskCount) / evalCount) * 100)
+        : 0,
+      is_privacy_suppressed: isSuppressed,
+      suppression_reason: isSuppressed
+        ? "Subgroup size < 5 (Protected under ADR-004)"
+        : null,
+    });
+  }
+
+  return result;
+}
+

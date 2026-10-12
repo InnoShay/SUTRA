@@ -88,6 +88,20 @@ class Settings(BaseSettings):
     SARVAM_API_KEY: Optional[str] = None
     SARVAM_API_URL: str = "https://api.sarvam.ai/translate"
 
+    # Base Sepolia Blockchain & Document Anchoring Settings
+    BASE_SEPOLIA_CHAIN_ID: int = 84532
+    BASE_SEPOLIA_RPC_URL: str = "https://sepolia.base.org"
+    BASE_SEPOLIA_CONTRACT_ADDRESS: Optional[str] = None
+    BASE_SEPOLIA_PRIVATE_KEY: Optional[str] = None
+    ANCHOR_MODE: str = "simulated"  # "onchain" | "simulated"
+    DOCUMENTS_STORAGE_DIR: str = "storage/documents"
+
+    # SBI Digital Rupee (e₹) CBDC Integration Boundary (ADR / Future Readiness)
+    CBDC_ENABLED: bool = True
+    CBDC_PROVIDER: str = "simulated"  # "simulated" | "sbi_sandbox"
+    CBDC_MERCHANT_ID: Optional[str] = None
+    CBDC_SANDBOX_URL: Optional[str] = None
+
     @property
     def sync_database_url(self) -> str:
         """Returns synchronous database URL suitable for Alembic migrations."""

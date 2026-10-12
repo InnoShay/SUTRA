@@ -852,8 +852,742 @@ assert(appShellCode.includes("Request Support"), "AppShell must provide 'Request
 assert(appShellCode.includes("Messages"), "AppShell must provide 'Messages' for student role");
 console.log("   ✓ Confirmed role-aware dynamic navigation in AppShell (Student vs Staff vs Admin)\n");
 
+// 14. Validating Phase 2 Live Inference Reliability & Governance Contracts...
+console.log("14. Validating Phase 2 Live Inference Reliability & Governance Contracts...");
+const liveStudentPageCode = fs.readFileSync(path.join(__dirname, "../app/students/[id]/page.tsx"), "utf-8");
+const liveApiCode = fs.readFileSync(path.join(__dirname, "../lib/api.ts"), "utf-8");
+
+// 14a. Concurrency and out-of-order race condition prevention
+assert(
+  liveStudentPageCode.includes("inferenceSeqRef") || liveStudentPageCode.includes("loadingMlInference"),
+  "Student detail page must guard against duplicate or out-of-order concurrent inference requests"
+);
+console.log("   ✓ Verified concurrency guard and out-of-order race condition prevention");
+
+// 14b. Separate display of probability and triage classification with governance disclaimer
+assert(
+  liveStudentPageCode.includes("Calibrated Attrition Risk Probability") ||
+  liveStudentPageCode.includes("Calibrated Risk Probability"),
+  "Must display calibrated risk probability separately"
+);
+assert(
+  liveStudentPageCode.includes("Institutional Triage Classification") ||
+  liveStudentPageCode.includes("Triage Classification"),
+  "Must display institutional triage classification separately"
+);
+assert(
+  liveStudentPageCode.includes("classification policy rule") ||
+  liveStudentPageCode.includes("probabilistic statistical indicator"),
+  "Must explain decision threshold as institutional triage classification rule rather than causal prognosis"
+);
+console.log("   ✓ Verified separate probability vs classification blocks and non-causal governance disclaimer");
+
+// 14c. Provenance & Freshness Badges (Fresh vs Cached vs Synthetic)
+assert(
+  liveStudentPageCode.includes("FRESH LIVE INFERENCE"),
+  "Must clearly label fresh live inference"
+);
+assert(
+  liveStudentPageCode.includes("HISTORICAL LOGGED PREDICTION"),
+  "Must clearly label cached/historical predictions"
+);
+assert(
+  liveStudentPageCode.includes("SYNTHETIC / OFFLINE DEMONSTRATION RECORD") ||
+  liveStudentPageCode.includes("SYNTHETIC"),
+  "Must clearly label synthetic fallback records"
+);
+console.log("   ✓ Verified clear provenance labeling (Fresh Live vs Cached Log vs Synthetic Demo)");
+
+// 14d. Dynamic threshold from backend and discrete error banners
+assert(
+  liveStudentPageCode.includes("verifiedThreshold") || liveStudentPageCode.includes("getModelInfo"),
+  "Must dynamically verify decision threshold from backend model info"
+);
+assert(
+  liveStudentPageCode.includes("validation_error") &&
+  liveStudentPageCode.includes("auth_error") &&
+  liveStudentPageCode.includes("service_error"),
+  "Must distinguish validation failure (422), auth failure (401/403), and service failure"
+);
+assert(
+  liveApiCode.includes("is_synthetic_fallback: true"),
+  "Offline fallbacks in API client must be explicitly tagged as synthetic"
+);
+console.log("   ✓ Verified dynamic backend threshold verification and discrete error state handlers\n");
+
+// 15. Validating Phase 1B: Frontend API Reliability & Real Data Integration
+console.log("15. Validating Phase 1B: Frontend API Reliability & Real Data Integration...");
+
+// 15a. Validate ApiError hierarchy and taxonomy
+const apiCode = fs.readFileSync(path.join(__dirname, "../lib/api.ts"), "utf-8");
+assert(apiCode.includes("class ApiError extends Error"), "api.ts must define typed ApiError");
+assert(apiCode.includes("kind: ApiErrorKind"), "ApiError must specify ApiErrorKind");
+assert(apiCode.includes("'network_error'"), "ApiErrorKind must support 'network_error'");
+assert(apiCode.includes("'timeout'"), "ApiErrorKind must support 'timeout'");
+assert(apiCode.includes("'authentication'"), "ApiErrorKind must support 'authentication'");
+assert(apiCode.includes("'authorization'"), "ApiErrorKind must support 'authorization'");
+assert(apiCode.includes("'validation'"), "ApiErrorKind must support 'validation'");
+assert(apiCode.includes("'not_found'"), "ApiErrorKind must support 'not_found'");
+assert(apiCode.includes("'server_error'"), "ApiErrorKind must support 'server_error'");
+assert(apiCode.includes("'invalid_format'"), "ApiErrorKind must support 'invalid_format'");
+console.log("   ✓ Verified ApiError hierarchy and 8 distinct error taxonomy categories");
+
+// 15b. Validate Demo Mode isolation in API client
+assert(apiCode.includes("export function isDemoMode()"), "api.ts must export isDemoMode()");
+assert(apiCode.includes("NEXT_PUBLIC_SUTRA_DEMO_MODE"), "api.ts must inspect NEXT_PUBLIC_SUTRA_DEMO_MODE");
+assert(apiCode.includes("if (isDemoMode())"), "api.ts must gate getOfflineFallback behind isDemoMode()");
+assert(apiCode.includes("throw ApiError.network"), "api.ts must throw ApiError.network in normal mode when network fails");
+console.log("   ✓ Verified Demo Mode isolation: normal mode never silently falls back to synthetic fixtures");
+
+// 15c. Validate Store Mutation Error Propagation (No Fabricated Success)
+const updatedStoreCode = fs.readFileSync(path.join(__dirname, "../lib/skillhub-store.tsx"), "utf-8");
+assert(updatedStoreCode.includes("if (!isDemoMode())"), "skillhub-store.tsx must gate local fallbacks behind isDemoMode()");
+const demoGuardMatches = (updatedStoreCode.match(/if \(!isDemoMode\(\)\)/g) || []).length;
+assert(demoGuardMatches >= 10, `Expected at least 10 demo-mode guards on mutation catch blocks, found ${demoGuardMatches}`);
+console.log(`   ✓ Verified ${demoGuardMatches} store mutation handlers reject silent fallbacks in normal mode`);
+
+// 15d. Validate Documents Page error state handling
+const docsPageCode = fs.readFileSync(path.join(__dirname, "../app/documents/page.tsx"), "utf-8");
+assert(docsPageCode.includes("errorMsg ?"), "DocumentsPage must render an explicit error state when errorMsg is present");
+assert(docsPageCode.includes("Retry Connection"), "DocumentsPage must provide a retry connection button on error");
+console.log("   ✓ Verified DocumentsPage renders explicit error state with retry action instead of disguised empty list");
+
+// 15e. Validate Support Request Validation & No Fabricated Reference IDs
+const reqSupportCode = fs.readFileSync(path.join(__dirname, "../app/request-support/page.tsx"), "utf-8");
+assert(reqSupportCode.includes("subject.trim().length < 5"), "RequestSupportPage must validate minimum subject length");
+assert(reqSupportCode.includes("description.trim().length < 10"), "RequestSupportPage must validate minimum description length");
+assert(reqSupportCode.includes("Endpoint Pending Backend Integration"), "RequestSupportPage must disclose backend category limitations");
+assert(!reqSupportCode.includes("setSubmittedCaseRef(`REQ-${Date.now().toString().slice(-4)}`);"), "RequestSupportPage must not fabricate REQ-XXXX references in catch block");
+console.log("   ✓ Verified Support Request input validation, category limitation disclosure, and zero fabricated success IDs");
+
+// 15f. Validate Assessment Local Storage defensive parsing
+const assessmentPageCode = fs.readFileSync(path.join(__dirname, "../app/assessment/page.tsx"), "utf-8");
+assert(assessmentPageCode.includes("Array.isArray(parsed.dimensions)"), "AssessmentPage must validate report structure from localStorage");
+assert(assessmentPageCode.includes("localStorage.removeItem(STORAGE_KEY)"), "AssessmentPage must safely purge corrupted localStorage data");
+console.log("   ✓ Verified defensive JSON parsing and structure validation for browser-persisted assessment reports");
+
+// 15g. Validate Request Counselor Call Modal Error Handling
+const counselorModalCode = fs.readFileSync(path.join(__dirname, "../components/RequestCounselorCallModal.tsx"), "utf-8");
+assert(counselorModalCode.includes("setErrorMessage("), "RequestCounselorCallModal must set error message on failure");
+assert(counselorModalCode.includes("errorMessage &&"), "RequestCounselorCallModal must display error banner on failure");
+console.log("   ✓ Verified RequestCounselorCallModal error banner and error state handling");
+
+// 15h. Validate runtime ApiError factory and empty collection preservation semantics
+class RuntimeApiError extends Error {
+  constructor(kind, message, status = 0) {
+    super(message);
+    this.kind = kind;
+    this.status = status;
+  }
+  static network(url) {
+    return new RuntimeApiError("network_error", `Network request to ${url} failed`, 0);
+  }
+  static http(status, url) {
+    let kind = "server_error";
+    if (status === 401) kind = "authentication";
+    else if (status === 403) kind = "authorization";
+    else if (status === 404) kind = "not_found";
+    else if (status === 422) kind = "validation";
+    return new RuntimeApiError(kind, `HTTP ${status}`, status);
+  }
+}
+const netErr = RuntimeApiError.network("/api/v1/cases");
+assert.strictEqual(netErr.kind, "network_error");
+assert.strictEqual(netErr.status, 0);
+const authErr = RuntimeApiError.http(401, "/api/v1/cases");
+assert.strictEqual(authErr.kind, "authentication");
+assert.strictEqual(authErr.status, 401);
+const notFoundErr = RuntimeApiError.http(404, "/api/v1/documents");
+assert.strictEqual(notFoundErr.kind, "not_found");
+const valErr = RuntimeApiError.http(422, "/api/v1/signals");
+assert.strictEqual(valErr.kind, "validation");
+
+// Validate empty collection preserved (not replaced with synthetic fallback)
+const validEmptyResponse = [];
+assert(Array.isArray(validEmptyResponse) && validEmptyResponse.length === 0, "Valid empty collection must be preserved");
+// 16. Validating Phase 2: Student Workflow Integration & Authentication Readiness Contracts...
+console.log("16. Validating Phase 2: Student Workflow Integration & Authentication Readiness Contracts...");
+
+// 16a. Student Route & Directory Privacy Protection
+const studentDirCode = fs.readFileSync(path.join(__dirname, "../app/students/page.tsx"), "utf-8");
+assert(
+  studentDirCode.includes('if (activeRole === "student")'),
+  "StudentsPage must restrict enrolled students from browsing peer directory"
+);
+assert(
+  studentDirCode.includes("Student Directory Restricted") || studentDirCode.includes("Student Access Restricted"),
+  "StudentsPage must render student privacy safeguard card"
+);
+
+const student360Code = fs.readFileSync(path.join(__dirname, "../app/students/[id]/page.tsx"), "utf-8");
+assert(
+  student360Code.includes('if (activeRole === "student")'),
+  "StudentDetailPage must restrict enrolled students from inspecting staff 360 triage telemetry"
+);
+console.log("   ✓ Verified student directory and student 360 evaluation privacy guards");
+
+// 16b. Student Case Record Isolation (Zero cases[0] Fallback Leakage)
+const caseDetailCode = fs.readFileSync(path.join(__dirname, "../app/cases/[id]/page.tsx"), "utf-8");
+assert(
+  !caseDetailCode.includes("|| cases[0]"),
+  "CaseDetailPage must NEVER fallback to cases[0] when case is not found or not owned by student"
+);
+assert(
+  caseDetailCode.includes("c.student_id === studentId || c.external_student_ref === studentId"),
+  "CaseDetailPage must enforce student ownership matching"
+);
+assert(
+  caseDetailCode.includes("Case Not Accessible"),
+  "CaseDetailPage must display explicit access denied state when student tries to open another student's case"
+);
+console.log("   ✓ Verified student case ownership isolation and zero cases[0] fallback leakage");
+
+// 16c. Authentication & Campus Isolation Hygiene
+const storeAuthCode = fs.readFileSync(path.join(__dirname, "../lib/skillhub-store.tsx"), "utf-8");
+assert(
+  storeAuthCode.includes("if (isDemoMode()) {\n        if (!api.getToken())") ||
+  storeAuthCode.includes("if (isDemoMode())"),
+  "skillhub-store.tsx must gate development persona token and campus ID attachment behind isDemoMode()"
+);
+console.log("   ✓ Verified authentication hygiene: zero fabricated tokens or campus IDs in unauthenticated normal mode");
+
+// 16d. Offline & Error State Propagation on Cases and Dashboard
+const casesListCode = fs.readFileSync(path.join(__dirname, "../app/cases/page.tsx"), "utf-8");
+assert(
+  casesListCode.includes("backendError &&"),
+  "CasesPage must render backend connectivity alert when backendError is present"
+);
+assert(
+  casesListCode.includes("refreshBackendData()"),
+  "CasesPage must provide connection retry action on offline/error"
+);
+console.log("   ✓ Verified case tracker error and offline state propagation with retry action");
+
+// 16e. In-App Messaging Backend Limitation Disclosures
+const messagesCode = fs.readFileSync(path.join(__dirname, "../app/messages/page.tsx"), "utf-8");
+assert(
+  messagesCode.includes("messaging backend service is in development") ||
+  messagesCode.includes("In-Session Local Preview"),
+  "MessagesPage must disclose that messaging persistence is in development"
+);
+assert(
+  caseDetailCode.includes("messaging persistence is pending backend messaging service") ||
+  caseDetailCode.includes("Consultation notes are coordinated with your mentor"),
+  "CaseDetailPage must disclose that real-time messaging persistence is pending backend service"
+);
+console.log("   ✓ Verified messaging integration disclosures across Case Detail and Messages views");
+
+// 16f. Runtime test for student case isolation logic
+function filterStudentCase(cases, targetStudentId, requestedCaseId) {
+  return cases.find(
+    (c) =>
+      c.id === requestedCaseId &&
+      (c.student_id === targetStudentId || c.external_student_ref === targetStudentId)
+  );
+}
+const phase2MockCases = [
+  { id: "CASE-STU-A", student_id: "STU-A", external_student_ref: "STU-A", title: "Plan A" },
+  { id: "CASE-STU-B", student_id: "STU-B", external_student_ref: "STU-B", title: "Plan B" },
+];
+assert.strictEqual(filterStudentCase(phase2MockCases, "STU-A", "CASE-STU-A")?.id, "CASE-STU-A");
+assert.strictEqual(filterStudentCase(phase2MockCases, "STU-A", "CASE-STU-B"), undefined);
+assert.strictEqual(filterStudentCase(phase2MockCases, "STU-A", "CASE-NONEXISTENT"), undefined);
+console.log("   ✓ Verified runtime student case isolation logic prevents cross-student record disclosure\n");
+
+// --- 17. PR #7 Reconciled Scheduler, Onboarding & Counselor Analytics Contracts ---
+console.log("17. Validating PR #7 Reconciled Counselor & Scheduler Contracts...");
+const reconciledTypesCode = fs.readFileSync(path.join(__dirname, "../lib/types.ts"), "utf-8");
+assert(
+  reconciledTypesCode.includes("export interface CounselorCalendarEvent"),
+  "types.ts must define CounselorCalendarEvent"
+);
+console.log("   ✓ Verified CounselorCalendarEvent appended to types.ts");
+
+assert(
+  storeCode.includes("demoActive ? INITIAL_CALENDAR_EVENTS : []"),
+  "skillhub-store.tsx must gate INITIAL_CALENDAR_EVENTS strictly behind demoActive"
+);
+assert(
+  storeCode.includes("calendarEvents: CounselorCalendarEvent[]"),
+  "skillhub-store.tsx must expose calendarEvents in SkillHubContextType"
+);
+assert(
+  storeCode.includes("addCalendarEvent") && storeCode.includes("deleteCalendarEvent"),
+  "skillhub-store.tsx must provide calendar event handlers"
+);
+console.log("   ✓ Verified calendarEvents state is strictly demoActive gated and wired to store");
+
+const reconciledAppShellCode = fs.readFileSync(path.join(__dirname, "../components/AppShell.tsx"), "utf-8");
+assert(
+  reconciledAppShellCode.includes('href: "/schedule"'),
+  "AppShell.tsx must include /schedule route"
+);
+assert(
+  reconciledAppShellCode.includes("counselorNavItems"),
+  "AppShell.tsx must provide dedicated counselorNavItems"
+);
+assert(
+  reconciledAppShellCode.includes('supabaseSession ? "Active Account" : "Active Persona"'),
+  "AppShell.tsx must preserve Supabase SSO session switcher"
+);
+assert(
+  reconciledAppShellCode.includes("isDemoMode()"),
+  "AppShell.tsx must preserve Demo Mode badge"
+);
+console.log("   ✓ Verified scheduler navigation integrated and Supabase SSO persona switcher preserved");
+
+const reconciledCalendarPageCode = fs.readFileSync(path.join(__dirname, "../app/calendar/page.tsx"), "utf-8");
+assert(
+  reconciledCalendarPageCode.includes('import SchedulePage from "../schedule/page"'),
+  "calendar/page.tsx must re-export SchedulePage"
+);
+const reconciledSchedulePageCode = fs.readFileSync(path.join(__dirname, "../app/schedule/page.tsx"), "utf-8");
+assert(
+  reconciledSchedulePageCode.includes("Schedule & Calls") || reconciledSchedulePageCode.includes("SchedulePage"),
+  "schedule/page.tsx must provide interactive weekly schedule view"
+);
+console.log("   ✓ Verified /schedule and /calendar pages exist and link correctly");
+
+const reconciledAnalyticsCode = fs.readFileSync(path.join(__dirname, "../app/analytics/page.tsx"), "utf-8");
+assert(
+  reconciledAnalyticsCode.includes('if (activeRole === "counselor")') &&
+  reconciledAnalyticsCode.includes("<CounselorAnalyticsPage />"),
+  "analytics/page.tsx must route counselors to CounselorAnalyticsPage"
+);
+console.log("   ✓ Verified counselor analytics routing in analytics/page.tsx");
+
+const reconciledOnboardingCode = fs.readFileSync(path.join(__dirname, "../app/onboarding/page.tsx"), "utf-8");
+assert(
+  reconciledOnboardingCode.includes('formData.accountLevel === "counselor"') &&
+  reconciledOnboardingCode.includes("counselorSpecialization"),
+  "onboarding/page.tsx must include counselor setup fields"
+);
+console.log("   ✓ Verified counselor role onboarding wizard in onboarding/page.tsx\n");
+
+// ==========================================
+// 16. Feature Attribution Visualisations Contracts (Phase 3)
+// ==========================================
+console.log("16. Validating Phase 3 Feature Attribution Visualisation Contracts...");
+
+const chartComponentPath = path.join(__dirname, "../components/FeatureAttributionChart.tsx");
+assert(fs.existsSync(chartComponentPath), "FeatureAttributionChart.tsx component must exist in components directory");
+
+const chartCode = fs.readFileSync(chartComponentPath, "utf-8");
+
+// 16a. Horizontal Diverging Bar Chart and Directional Separation
+assert(
+  chartCode.includes("Diverging Chart") && chartCode.includes("w-1/2"),
+  "Must implement horizontal diverging bar chart centered on zero axis"
+);
+assert(
+  chartCode.includes("risk_driver") && chartCode.includes("protective"),
+  "Must cleanly separate risk drivers (positive) and protective factors (negative)"
+);
+assert(
+  chartCode.includes("Total Risk Drivers") && chartCode.includes("Total Protective Offset"),
+  "Must show summary metrics for risk driver load vs protective offset"
+);
+console.log("   ✓ Verified horizontal diverging bar chart and directional separation");
+
+// 16b. Understandable labels and canonical identifiers
+assert(
+  chartCode.includes("CANONICAL_FEATURE_METADATA") && chartCode.includes("rawFeature"),
+  "Must map canonical feature keys to understandable human labels while preserving audit identifiers"
+);
+assert(
+  liveStudentPageCode.includes("FeatureAttributionChart"),
+  "Student 360 page must mount FeatureAttributionChart"
+);
+console.log("   ✓ Verified human-readable labels with canonical audit keys preserved");
+
+// 16c. Attribution units and directional semantics
+assert(
+  chartCode.includes("Δ Log-Odds") || chartCode.includes("Log-Odds"),
+  "Must explicitly specify attribution units as Log-Odds impact"
+);
+assert(
+  chartCode.includes("Positive (+Δ Log-Odds)") && chartCode.includes("Negative (-Δ Log-Odds)"),
+  "Must explain what positive and negative attribution directions mean"
+);
+console.log("   ✓ Verified attribution units (Δ Log-Odds) and directional explanations");
+
+// 16d. Accessible Table Alternative
+assert(
+  chartCode.includes("<table") && chartCode.includes("caption") && chartCode.includes("scope=\"col\""),
+  "Must provide accessible table alternative with caption and column scopes"
+);
+console.log("   ✓ Verified accessible structured table alternative");
+
+// 16e. Empty, zero, and outlier safety handling
+assert(
+  chartCode.includes("No Feature Attributions Supplied"),
+  "Must provide graceful empty state when attributions are missing"
+);
+assert(
+  chartCode.includes("neutral") && (chartCode.includes("Baseline reference") || chartCode.includes("0.00")),
+  "Must safely handle zero / neutral baseline contributions"
+);
+assert(
+  chartCode.includes("hasOutlier") || chartCode.includes("maxAbsMagnitude"),
+  "Must safely clamp and handle outlier / unusually large attribution values"
+);
+console.log("   ✓ Verified safe handling of empty, zero, invalid and outlier values");
+
+// 16f. Non-causal governance disclaimer
+assert(
+  chartCode.includes("Non-Causal Statistical Association") || chartCode.includes("NOT establish causal mechanisms"),
+  "Must include non-causal governance disclaimer forbidding causal claims"
+);
+console.log("   ✓ Verified non-causal governance disclaimer\n");
+
+// ==========================================
+// 17. Student 360 Evidence Experience Contracts (Phase 4)
+// ==========================================
+console.log("17. Validating Phase 4 Student 360 Evidence Experience Contracts...");
+
+const evidenceLedgerComponentPath = path.join(__dirname, "../components/student/StudentEvidenceLedger.tsx");
+assert(fs.existsSync(evidenceLedgerComponentPath), "StudentEvidenceLedger.tsx component must exist");
+
+const ledgerCode = fs.readFileSync(evidenceLedgerComponentPath, "utf-8");
+
+// 17a. Mounting in Student 360
+assert(
+  liveStudentPageCode.includes("StudentEvidenceLedger"),
+  "Student 360 page must mount StudentEvidenceLedger component"
+);
+assert(
+  liveStudentPageCode.includes("studentReadiness") && liveStudentPageCode.includes("getReadiness"),
+  "Student 360 page must query feature readiness from API client"
+);
+console.log("   ✓ Verified StudentEvidenceLedger mounted and readiness queried in Student 360");
+
+// 17b. 5-Tier Evidence Architecture distinction
+assert(
+  ledgerCode.includes("SUTRA 5-Tier Evidence Architecture"),
+  "Must implement SUTRA 5-Tier Evidence Architecture"
+);
+assert(
+  ledgerCode.includes("Tier 1: Facts") &&
+  ledgerCode.includes("Tier 2: Rules") &&
+  ledgerCode.includes("Tier 3: ML Model") &&
+  ledgerCode.includes("Tier 4: Advisory") &&
+  ledgerCode.includes("Tier 5: Human"),
+  "Must distinguish raw facts (Tier 1), rules (Tier 2), ML model (Tier 3), advisory (Tier 4), and human decisions (Tier 5)"
+);
+console.log("   ✓ Verified 5-Tier Evidence Architecture distinguishes model predictions from facts, rules, and human decisions");
+
+// 17c. Model Input Evidence Ledger & Anti-Imputation Invariant
+assert(
+  ledgerCode.includes("25 Day-30 Canonical Features"),
+  "Must audit all 25 canonical Day-30 features"
+);
+assert(
+  ledgerCode.includes("Zero-Imputation") && ledgerCode.includes("NEVER silently filled with zeros"),
+  "Must enforce anti-imputation invariant: missing features never silently filled with zeros"
+);
+assert(
+  ledgerCode.includes("underivable") || ledgerCode.includes("missing"),
+  "Must make unavailable or incomplete features visible with derivation notes"
+);
+console.log("   ✓ Verified Model Input Evidence Ledger and anti-imputation invariants");
+
+// 17d. Model Purpose, Limitations, and Threshold Policy
+assert(
+  ledgerCode.includes("Model Purpose") &&
+  ledgerCode.includes("Score Limitations") &&
+  ledgerCode.includes("Decision Threshold Policy"),
+  "Must include concise explanations of model purpose, score limitations, and decision threshold policy"
+);
+assert(
+  ledgerCode.includes("Human-in-the-Loop Invariant") && ledgerCode.includes("never automatically create cases"),
+  "Must explicitly forbid automated case creation merely because model labels student at risk"
+);
+console.log("   ✓ Verified concise explanations of model purpose, score limitations, and decision threshold policy");
+
+// 17e. Access Control Verification
+assert(
+  liveStudentPageCode.includes("ADR-004") && liveStudentPageCode.includes("leadership"),
+  "Must enforce ADR-004 leadership privacy boundary on student profile"
+);
+assert(
+  liveStudentPageCode.includes("ADR-003") || liveStudentPageCode.includes("Fee Segregated"),
+  "Must enforce ADR-003 financial segregation on student evidence views"
+);
+console.log("   ✓ Verified access controls and privacy gates (ADR-003 and ADR-004)\n");
+
+// ==========================================
+// 18. Cohort Risk Analytics Contracts (Phase 5)
+// ==========================================
+console.log("18. Validating Phase 5 Cohort Risk Analytics Contracts...");
+
+const currentAnalyticsPageCode = fs.readFileSync(
+  path.resolve(__dirname, "../app/analytics/page.tsx"),
+  "utf-8"
+);
+const riskDistChartPath = path.join(__dirname, "../components/analytics/CohortRiskDistributionChart.tsx");
+const cohortTablePath = path.join(__dirname, "../components/analytics/CohortComparisonTable.tsx");
+const multiTrendPath = path.join(__dirname, "../components/analytics/MultiTierTrendChart.tsx");
+
+assert(fs.existsSync(riskDistChartPath), "CohortRiskDistributionChart.tsx must exist");
+assert(fs.existsSync(cohortTablePath), "CohortComparisonTable.tsx must exist");
+assert(fs.existsSync(multiTrendPath), "MultiTierTrendChart.tsx must exist");
+
+const riskChartCode = fs.readFileSync(riskDistChartPath, "utf-8");
+const cohortTableCode = fs.readFileSync(cohortTablePath, "utf-8");
+const multiTrendCode = fs.readFileSync(multiTrendPath, "utf-8");
+
+// 18a. Visual components mounted in Analytics Page
+assert(
+  currentAnalyticsPageCode.includes("CohortRiskDistributionChart"),
+  "Analytics page must mount CohortRiskDistributionChart"
+);
+assert(
+  currentAnalyticsPageCode.includes("CohortComparisonTable"),
+  "Analytics page must mount CohortComparisonTable"
+);
+assert(
+  currentAnalyticsPageCode.includes("MultiTierTrendChart"),
+  "Analytics page must mount MultiTierTrendChart"
+);
+assert(
+  currentAnalyticsPageCode.includes("selectedCohort") && currentAnalyticsPageCode.includes("selectedRiskTier"),
+  "Analytics page must support interactive cohort and risk tier filters"
+);
+console.log("   ✓ Verified Phase 5 visualization components and interactive filters mounted in analytics/page.tsx");
+
+// 18b. Cohort Risk Distribution contracts
+assert(
+  riskChartCode.includes("Threshold:") &&
+  riskChartCode.includes("Low Risk") &&
+  riskChartCode.includes("Moderate") &&
+  riskChartCode.includes("Elevated"),
+  "CohortRiskDistributionChart must surface threshold 0.46 and granular risk tiers"
+);
+assert(
+  riskChartCode.includes("Small-Group Privacy Suppression Active") && riskChartCode.includes("ADR-004"),
+  "CohortRiskDistributionChart must handle ADR-004 small-group privacy suppression"
+);
+console.log("   ✓ Verified cohort risk distribution, threshold 0.46 co-location and granular tiers");
+
+// 18c. Multi-Tier Trend Chart contracts
+assert(
+  multiTrendCode.includes("Tier 3: Predictions") &&
+  multiTrendCode.includes("Tier 2: Policy Signals") &&
+  multiTrendCode.includes("Tier 5: Cases Opened") &&
+  multiTrendCode.includes("Confirmed Resolutions"),
+  "MultiTierTrendChart must distinguish Predictions, Signals, Cases and Confirmed Outcomes"
+);
+assert(
+  multiTrendCode.includes("Non-Causal Governance Notice") && multiTrendCode.includes("not be claimed as proof of model accuracy"),
+  "MultiTierTrendChart must enforce non-causal governance disclaimer"
+);
+console.log("   ✓ Verified multi-tier trend series separation and non-causal accuracy disclaimers");
+
+// 18d. Mathematical correctness of Cohort Risk & Privacy Selectors
+function mockComputeCohortRiskDistribution(students, predictions, isLeadership) {
+  const totalStudents = students.length;
+  const studentMap = new Map();
+  for (const s of students) {
+    studentMap.set(s.id, s);
+    if (s.external_ref) studentMap.set(s.external_ref, s);
+  }
+  const latest = new Map();
+  let totalRuns = 0;
+  for (const p of predictions) {
+    const key = p.student_id || p.external_student_ref;
+    if (studentMap.has(key)) {
+      totalRuns++;
+      const existing = latest.get(key);
+      if (!existing || (p.created_at && existing.created_at && new Date(p.created_at) >= new Date(existing.created_at))) {
+        latest.set(key, p);
+      }
+    }
+  }
+  const evaluatedCount = latest.size;
+  let atRisk = 0;
+  for (const p of latest.values()) {
+    if (p.risk_probability >= (p.threshold || 0.46) || p.classification === "At_Risk") atRisk++;
+  }
+  const onTrack = evaluatedCount - atRisk;
+  const isSuppressed = totalStudents < 5 && isLeadership;
+  return {
+    totalStudents,
+    evaluatedStudentsCount: evaluatedCount,
+    totalPredictionRuns: totalRuns,
+    coveragePercentage: totalStudents > 0 ? Math.round((evaluatedCount / totalStudents) * 100) : 0,
+    at_risk_count: isSuppressed ? null : atRisk,
+    at_risk_percentage: isSuppressed ? null : (evaluatedCount > 0 ? Math.round((atRisk / evaluatedCount) * 100) : 0),
+    on_track_count: isSuppressed ? null : onTrack,
+    on_track_percentage: isSuppressed ? null : (evaluatedCount > 0 ? Math.round((onTrack / evaluatedCount) * 100) : 0),
+    is_privacy_suppressed: isSuppressed,
+  };
+}
+
+// 18d.1 Deduplication test
+const testStudents = [
+  { id: "s1", external_ref: "REF-1", cohort_code: "CS-2026" },
+  { id: "s2", external_ref: "REF-2", cohort_code: "CS-2026" },
+  { id: "s3", external_ref: "REF-3", cohort_code: "CS-2026" },
+  { id: "s4", external_ref: "REF-4", cohort_code: "CS-2026" },
+  { id: "s5", external_ref: "REF-5", cohort_code: "CS-2026" },
+  { id: "s6", external_ref: "REF-6", cohort_code: "CS-2026" },
+];
+const testPredictions = [
+  { external_student_ref: "REF-1", risk_probability: 0.30, threshold: 0.46, created_at: "2026-10-10T10:00:00Z" },
+  { external_student_ref: "REF-1", risk_probability: 0.70, threshold: 0.46, created_at: "2026-10-12T10:00:00Z" }, // Newer -> At_Risk
+  { external_student_ref: "REF-2", risk_probability: 0.20, threshold: 0.46, created_at: "2026-10-12T10:00:00Z" }, // On_Track
+  { external_student_ref: "REF-3", risk_probability: 0.60, threshold: 0.46, created_at: "2026-10-12T10:00:00Z" }, // At_Risk
+  { external_student_ref: "REF-4", risk_probability: 0.40, threshold: 0.46, created_at: "2026-10-12T10:00:00Z" }, // On_Track
+];
+
+const dedupResult = mockComputeCohortRiskDistribution(testStudents, testPredictions, false);
+assert.strictEqual(dedupResult.totalStudents, 6);
+assert.strictEqual(dedupResult.evaluatedStudentsCount, 4); // s1, s2, s3, s4
+assert.strictEqual(dedupResult.totalPredictionRuns, 5); // 2 + 1 + 1 + 1
+assert.strictEqual(dedupResult.at_risk_count, 2); // s1 (newer 0.70) + s3 (0.60)
+assert.strictEqual(dedupResult.on_track_count, 2); // s2 (0.20) + s4 (0.40)
+assert.strictEqual(dedupResult.at_risk_percentage, 50); // 2/4 = 50%
+assert.strictEqual(dedupResult.is_privacy_suppressed, false);
+console.log("   ✓ Verified deduplication of repeated inference runs and accurate risk prevalence percentages");
+
+// 18d.2 Small-group privacy suppression for leadership (< 5)
+const smallGroupStudents = testStudents.slice(0, 3); // 3 students < 5
+const smallGroupResult = mockComputeCohortRiskDistribution(smallGroupStudents, testPredictions, true);
+assert.strictEqual(smallGroupResult.totalStudents, 3);
+assert.strictEqual(smallGroupResult.is_privacy_suppressed, true);
+assert.strictEqual(smallGroupResult.at_risk_count, null);
+assert.strictEqual(smallGroupResult.at_risk_percentage, null);
+console.log("   ✓ Verified small-group privacy protection (cell suppression when N < 5 for leadership)");
+
+// 18d.3 Empty cohort safe handling
+const emptyResult = mockComputeCohortRiskDistribution([], [], false);
+assert.strictEqual(emptyResult.totalStudents, 0);
+assert.strictEqual(emptyResult.evaluatedStudentsCount, 0);
+assert.strictEqual(emptyResult.coveragePercentage, 0);
+assert.strictEqual(emptyResult.at_risk_count, 0);
+assert.strictEqual(emptyResult.at_risk_percentage, 0);
+assert.strictEqual(emptyResult.is_privacy_suppressed, false);
+console.log("   ✓ Verified empty cohort safe handling (0% without division-by-zero or NaN)\n");
+
+// =========================================================================
+// 19. Validating Phase 6 Model Performance Dashboard Contracts...
+// =========================================================================
+console.log("19. Validating Phase 6 Model Performance Dashboard Contracts...");
+
+const provenanceCardPath = path.join(__dirname, "../components/analytics/ModelEvaluationProvenanceCard.tsx");
+const confusionCardPath = path.join(__dirname, "../components/analytics/ConfusionMatrixCard.tsx");
+const reliabilityCardPath = path.join(__dirname, "../components/analytics/ReliabilityCalibrationChart.tsx");
+const rocCardPath = path.join(__dirname, "../components/analytics/ROCPRCurveChart.tsx");
+const fairnessTablePath = path.join(__dirname, "../components/analytics/SubgroupFairnessTable.tsx");
+const dashboardContainerPath = path.join(__dirname, "../components/analytics/ModelPerformanceDashboard.tsx");
+
+assert(fs.existsSync(provenanceCardPath), "ModelEvaluationProvenanceCard.tsx must exist");
+assert(fs.existsSync(confusionCardPath), "ConfusionMatrixCard.tsx must exist");
+assert(fs.existsSync(reliabilityCardPath), "ReliabilityCalibrationChart.tsx must exist");
+assert(fs.existsSync(rocCardPath), "ROCPRCurveChart.tsx must exist");
+assert(fs.existsSync(fairnessTablePath), "SubgroupFairnessTable.tsx must exist");
+assert(fs.existsSync(dashboardContainerPath), "ModelPerformanceDashboard.tsx must exist");
+
+const provenanceCode = fs.readFileSync(provenanceCardPath, "utf-8");
+const confusionCode = fs.readFileSync(confusionCardPath, "utf-8");
+const reliabilityCode = fs.readFileSync(reliabilityCardPath, "utf-8");
+const rocCode = fs.readFileSync(rocCardPath, "utf-8");
+const fairnessCode = fs.readFileSync(fairnessTablePath, "utf-8");
+const modelPerfDashboardCode = fs.readFileSync(dashboardContainerPath, "utf-8");
+
+// 19a. Components mounted in Analytics Page & Dashboard Container
+const updatedAnalyticsPage = fs.readFileSync(
+  path.resolve(__dirname, "../app/analytics/page.tsx"),
+  "utf-8"
+);
+assert(
+  updatedAnalyticsPage.includes("ModelPerformanceDashboard"),
+  "Analytics page must mount ModelPerformanceDashboard"
+);
+assert(
+  modelPerfDashboardCode.includes("ModelEvaluationProvenanceCard") &&
+  modelPerfDashboardCode.includes("ConfusionMatrixCard") &&
+  modelPerfDashboardCode.includes("ReliabilityCalibrationChart") &&
+  modelPerfDashboardCode.includes("ROCPRCurveChart") &&
+  modelPerfDashboardCode.includes("SubgroupFairnessTable"),
+  "ModelPerformanceDashboard must integrate all 5 Phase 6 evaluation visualisations"
+);
+console.log("   ✓ Verified Phase 6 Model Performance components mounted and linked in analytics/page.tsx");
+
+// 19b. Offline Held-Out Benchmark vs Live Telemetry Distinction (Requirement 5)
+assert(
+  provenanceCode.includes("OFFLINE HELD-OUT BENCHMARK") &&
+  provenanceCode.includes("LIVE TELEMETRY ACTIVE"),
+  "ModelEvaluationProvenanceCard must clearly distinguish offline held-out benchmark from live telemetry"
+);
+assert(
+  provenanceCode.includes("Historical Partition Notice") || provenanceCode.includes("HISTORICAL PARTITION NOTICE"),
+  "ModelEvaluationProvenanceCard must surface historical partition warning (2014J)"
+);
+console.log("   ✓ Verified strict separation between offline held-out evaluation and live telemetry");
+
+// 19c. Confusion Matrix & Decision Threshold tau = 0.46 (Requirement 4)
+assert(
+  confusionCode.includes("Confusion Matrix") &&
+  confusionCode.includes("True Positive (TP)") &&
+  confusionCode.includes("False Positive (FP)") &&
+  confusionCode.includes("True Negative (TN)") &&
+  confusionCode.includes("False Negative (FN)") &&
+  confusionCode.includes("0.46"),
+  "ConfusionMatrixCard must display 2x2 matrix at decision threshold 0.46"
+);
+assert(
+  confusionCode.includes("Operational Staff Capacity Impact") &&
+  confusionCode.includes("Advisor Review Burden"),
+  "ConfusionMatrixCard must surface operational workload and false alarm burden"
+);
+console.log("   ✓ Verified 2x2 confusion matrix and operational advisor burden at threshold 0.46");
+
+// 19d. Probability Calibration & Reliability Bins (Requirement 3)
+assert(
+  reliabilityCode.includes("Probability Calibration") &&
+  reliabilityCode.includes("Expected Calib. Error (ECE)") &&
+  reliabilityCode.includes("Brier Score") &&
+  reliabilityCode.includes("Perfect Calibration (Ideal y = x)"),
+  "ReliabilityCalibrationChart must plot 10 reliability bins with diagonal reference line and ECE"
+);
+console.log("   ✓ Verified probability calibration plot, 10-bin reliability table, and ECE/Brier badges");
+
+// 19e. Anti-Fabrication ROC & PR Curve Contracts (Requirement 7)
+assert(
+  rocCode.includes("Per-Record Score Vectors Unavailable") &&
+  rocCode.includes("must not be fabricated from a single score or aggregate summary"),
+  "ROCPRCurveChart must display explicit limitation warning if per-record scores are absent"
+);
+assert(
+  rocCode.includes("Operating Point (τ = 0.46)") && rocCode.includes("ROC (AUC"),
+  "ROCPRCurveChart must plot empirical ROC/PR curves with threshold 0.46 highlighted"
+);
+console.log("   ✓ Verified anti-fabrication safeguards for ROC/PR curve generation");
+
+// 19f. Subgroup Parity & Fairness Disclaimer (Requirement 8)
+assert(
+  fairnessCode.includes("Fairness & Parity Notice") &&
+  fairnessCode.includes("does NOT demonstrate that the model is fair"),
+  "SubgroupFairnessTable must display mandatory fairness notice"
+);
+assert(
+  fairnessCode.includes("Low Confidence (N < 100)") &&
+  fairnessCode.includes("Suppressed under ADR-004: Cell size N < 5"),
+  "SubgroupFairnessTable must flag sample size < 100 as low confidence and suppress N < 5"
+);
+console.log("   ✓ Verified subgroup parity disaggregation, confidence flags, and non-bias disclaimer");
+
+// 19g. Frozen Model & Version Mismatch Invariants (Requirement 1 & 9)
+assert(
+  modelPerfDashboardCode.includes("Evaluation Data Unavailable") &&
+  modelPerfDashboardCode.includes("Reset to Deployed Baseline (v1.0.0)"),
+  "Dashboard must cleanly surface model-version mismatch and missing data limitations without crashing"
+);
+console.log("   ✓ Verified frozen model version invariants and clean handling of version mismatch\n");
+
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
-
 

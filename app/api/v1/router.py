@@ -11,6 +11,8 @@ from app.api.v1.cases import router as cases_router
 from app.api.v1.ai import router as ai_router
 from app.api.v1.counselors import router as counselors_router
 from app.api.v1.datasets import router as datasets_router
+from app.api.v1.documents import router as documents_router
+from app.api.v1.analytics import router as analytics_router
 
 api_router = APIRouter()
 
@@ -27,3 +29,5 @@ api_router.include_router(cases_router)
 api_router.include_router(ai_router)
 api_router.include_router(counselors_router)
 api_router.include_router(datasets_router)
+api_router.include_router(documents_router)
+api_router.include_router(analytics_router)

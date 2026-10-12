@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Shield,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 
 interface RequestCounselorCallModalProps {
@@ -40,6 +41,7 @@ export function RequestCounselorCallModal({
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Check if an active call request already exists for this student
   const existingRequest = callRequests.find(
@@ -51,6 +53,7 @@ export function RequestCounselorCallModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await requestCounselorCall({
         student_id: studentId,
@@ -62,8 +65,9 @@ export function RequestCounselorCallModal({
         student_notes: notes.trim(),
       });
       setIsSubmitted(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to submit counselor call request:", err);
+      setErrorMessage(err.message || "Failed to submit request to backend. Please check connection.");
     } finally {
       setIsSubmitting(false);
     }
@@ -219,6 +223,13 @@ export function RequestCounselorCallModal({
                 adversely impacted by seeking support.
               </p>
             </div>
+
+            {errorMessage && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
             {/* Preferred Communication Method */}
             <div className="space-y-1.5">

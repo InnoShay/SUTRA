@@ -295,6 +295,8 @@ export interface MLPredictResponse {
   threshold: number;
   classification: 'At_Risk' | 'On_Track';
   evidence_card: EvidenceCardDTO;
+  processed_at?: string;
+  is_synthetic_fallback?: boolean;
 }
 
 export interface HealthResponse {
@@ -308,6 +310,43 @@ export interface ReadinessResponse {
   status: string;
   database: string;
   timestamp: string;
+}
+
+export interface FeatureReadinessItem {
+  feature_name: string;
+  category: string;
+  status: 'available' | 'missing' | 'stale' | 'underivable_from_source' | string;
+  observed_value?: any;
+  source_domain?: string | null;
+  derivation_note: string;
+}
+
+export interface ObservationTelemetryAudit {
+  total_observations: number;
+  domains_present: string[];
+  quality_state_counts: Record<string, number>;
+  last_event_at?: string | null;
+  last_available_at?: string | null;
+  is_stale: boolean;
+  unsupported_sources: string[];
+}
+
+export interface StudentReadinessResponse {
+  student: StudentSummary;
+  model_name: string;
+  model_version: string;
+  target_cutoff: string;
+  is_ready_for_inference: boolean;
+  applicability_status: string;
+  applicability_rationale: string;
+  features_total_required: number;
+  features_available_count: number;
+  features_missing_count: number;
+  features_underivable_count: number;
+  features_stale_count: number;
+  features: FeatureReadinessItem[];
+  telemetry_audit: ObservationTelemetryAudit;
+  governance_disclaimer: string;
 }
 
 export interface ErrorEnvelope {
@@ -538,6 +577,295 @@ export interface CreateCallRequestInput {
   preferred_contact_method: 'phone' | 'in_person' | 'video';
   preferred_time_slot: 'morning' | 'afternoon' | 'flexible';
   student_notes?: string;
+}
+
+// --- Document Integrity & Blockchain Anchoring Subsystem ---
+export interface DocumentDTO {
+  id: string;
+  institution_id: string;
+  document_ref: string;
+  title: string;
+  doc_type: string;
+  file_name: string;
+  file_size_bytes: number;
+  mime_type: string;
+  sha256_hash: string;
+  status: 'draft' | 'finalized' | 'anchored' | 'anchor_failed';
+  created_by: string;
+  finalized_by?: string | null;
+  finalized_at?: string | null;
+  chain_id: number;
+  contract_address?: string | null;
+  tx_hash?: string | null;
+  block_number?: number | null;
+  anchored_at?: string | null;
+  anchoring_mode: 'simulated' | 'onchain';
+  last_verified_at?: string | null;
+  verification_status?: 'verified_match' | 'mismatch' | 'unverified' | null;
+  explorer_url?: string | null;
+  metadata_payload?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentCreateRequest {
+  title: string;
+  doc_type?: string;
+  student_ref?: string;
+  student_name?: string;
+  content_text?: string;
+  metadata_payload?: Record<string, any>;
+}
+
+export interface DocumentFinalizeResponse {
+  id: string;
+  document_ref: string;
+  sha256_hash: string;
+  status: string;
+  finalized_at: string;
+  message: string;
+}
+
+export interface DocumentAnchorResponse {
+  id: string;
+  document_ref: string;
+  sha256_hash: string;
+  status: string;
+  chain_id: number;
+  contract_address?: string | null;
+  tx_hash?: string | null;
+  explorer_url?: string | null;
+  anchoring_mode: 'simulated' | 'onchain';
+  anchored_at: string;
+  message: string;
+}
+
+export interface DocumentVerifyResponse {
+  id: string;
+  document_ref: string;
+  anchored_hash: string;
+  candidate_hash: string;
+  is_match: boolean;
+  verification_status: 'verified_match' | 'mismatch';
+  verified_at: string;
+  chain_id: number;
+  contract_address?: string | null;
+  tx_hash?: string | null;
+  explorer_url?: string | null;
+  anchoring_mode: string;
+  legal_disclaimer: string;
+}
+
+export interface DocumentListResponse {
+  documents: DocumentDTO[];
+  total: number;
+  network: string;
+}
+
+// --- SBI Digital Rupee (e₹ / CBDC) Incentive Subsystem ---
+export interface CBDCVoucherIssueRequest {
+  student_ref: string;
+  amount_inr: number;
+  purpose_code: string;
+  milestone_ref: string;
+  campus_id: string;
+}
+
+export interface CBDCVoucherRecord {
+  voucher_id: string;
+  student_ref: string;
+  amount_inr: number;
+  currency: string;
+  purpose_code: string;
+  milestone_ref: string;
+  campus_id: string;
+  status: 'SIMULATED_ISSUED' | 'SIMULATED_REDEEMED' | 'PENDING_PSP_CLEARING';
+  is_simulated: boolean;
+  disclaimer: string;
+  issued_at: string;
+  redeemed_at?: string | null;
+  transaction_reference?: string | null;
+}
+
+// --- Cohort Risk Analytics (Phase 5) ---
+export interface GranularRiskTiers {
+  low_risk: number;
+  moderate_risk: number;
+  elevated_risk: number;
+}
+
+export interface RiskDistributionDTO {
+  at_risk_count: number | null;
+  at_risk_percentage: number | null;
+  on_track_count: number | null;
+  on_track_percentage: number | null;
+  unevaluated_count: number;
+  threshold: number;
+  granular_tiers?: GranularRiskTiers | null;
+  is_privacy_suppressed: boolean;
+  suppression_reason?: string | null;
+}
+
+export interface CohortBreakdownItem {
+  cohort_code: string;
+  total_students: number;
+  evaluated_count: number;
+  at_risk_count?: number | null;
+  at_risk_percentage?: number | null;
+  on_track_count?: number | null;
+  on_track_percentage?: number | null;
+  is_privacy_suppressed: boolean;
+  suppression_reason?: string | null;
+}
+
+export interface MultiTierTrendPoint {
+  date_key: string;
+  label: string;
+  prediction_runs: number;
+  signals_detected: number;
+  cases_opened: number;
+  confirmed_outcomes: number;
+}
+
+export interface CohortAnalyticsSummaryResponse {
+  campus_id: string;
+  as_of_at: string;
+  timeframe: string;
+  cohort_filter?: string | null;
+  total_students_in_scope: number;
+  evaluated_students_count: number;
+  total_prediction_runs: number;
+  coverage_percentage: number;
+  risk_distribution: RiskDistributionDTO;
+  cohort_breakdown: CohortBreakdownItem[];
+  trend_timeline: MultiTierTrendPoint[];
+  case_lifecycle_distribution: { state: string; count: number; is_terminal: boolean }[];
+  intervention_distribution: { key: string; label: string; count: number; percentage: number }[];
+  governance_disclaimers: string[];
+}
+
+// ==========================================
+// Phase 6: Model Performance Dashboard Domain
+// ==========================================
+
+export interface ModelDatasetProvenance {
+  dataset_label: string;
+  partition: string;
+  evaluation_date: string;
+  sample_size: number;
+  unique_students: number;
+  raw_rows_examined: number;
+  outcome_definition: string;
+  class_prevalence: number;
+  actual_at_risk_count: number;
+  actual_on_track_count: number;
+  provenance_type: 'offline_held_out_benchmark' | 'live_production_telemetry';
+  provenance_warning?: string | null;
+}
+
+export interface ConfusionMatrixDTO {
+  tp: number;
+  fp: number;
+  tn: number;
+  fn: number;
+}
+
+export interface OperationalWorkloadDTO {
+  total_alerts_fired: number;
+  alert_rate_pct: number;
+  false_alarms_advisor_burden: number;
+  missed_at_risk_students: number;
+  successful_proactive_catches: number;
+}
+
+export interface ReliabilityBinDTO {
+  bin_range: string;
+  samples_count: number;
+  mean_predicted_prob: number;
+  observed_positive_rate: number;
+  calibration_gap: number;
+}
+
+export interface SubgroupMetricDTO {
+  dimension: string;
+  subgroup: string;
+  sample_size: number;
+  confidence_flag: 'STABLE' | 'LOW_CONFIDENCE (<100)';
+  positives_count: number;
+  negatives_count: number;
+  prevalence: number;
+  true_positives: number;
+  false_positives: number;
+  true_negatives: number;
+  false_negatives: number;
+  recall: number;
+  precision: number;
+  specificity: number;
+  false_positive_rate: number;
+  f1_score: number;
+  roc_auc: number;
+  pr_auc: number;
+  is_suppressed?: boolean;
+}
+
+export interface ThresholdIndependentMetricsDTO {
+  roc_auc: number;
+  pr_auc: number;
+  brier_score: number;
+  expected_calibration_error_ece: number;
+  maximum_calibration_error_mce: number;
+}
+
+export interface ThresholdDependentMetricsDTO {
+  threshold: number;
+  accuracy: number;
+  balanced_accuracy: number;
+  precision: number;
+  recall: number;
+  specificity: number;
+  false_positive_rate: number;
+  f1_score: number;
+  confusion_matrix: ConfusionMatrixDTO;
+  operational_workload: OperationalWorkloadDTO;
+}
+
+export interface ROCCurvePointDTO {
+  fpr: number;
+  tpr: number;
+  threshold: number;
+}
+
+export interface PRCurvePointDTO {
+  precision: number;
+  recall: number;
+  threshold: number;
+}
+
+export interface LiveMonitoringTelemetryDTO {
+  total_inferences_logged: number;
+  average_latency_ms: number;
+  active_campus_count: number;
+  monitoring_window: string;
+  status: 'healthy' | 'degraded' | 'idle';
+  telemetry_notice: string;
+}
+
+export interface ModelPerformanceResponse {
+  model_name: string;
+  model_version: string;
+  operational_threshold: number;
+  evaluation_environment: 'offline_held_out_benchmark' | 'live_production_telemetry';
+  dataset_provenance: ModelDatasetProvenance;
+  threshold_independent_metrics: ThresholdIndependentMetricsDTO;
+  threshold_dependent_metrics: ThresholdDependentMetricsDTO;
+  reliability_table: ReliabilityBinDTO[];
+  roc_curve_points?: ROCCurvePointDTO[] | null;
+  pr_curve_points?: PRCurvePointDTO[] | null;
+  subgroup_metrics: SubgroupMetricDTO[];
+  live_telemetry?: LiveMonitoringTelemetryDTO | null;
+  fairness_disclaimer: string;
+  non_causal_disclaimer: string;
+  limitations: string[];
 }
 
 export interface CounselorCalendarEvent {
