@@ -12,6 +12,7 @@ import { GlobalSearchModal } from "./GlobalSearchModal";
 import { NotificationPopover, MessagesDrawer } from "./TopBarActionDrawers";
 import { UserAvatar } from "./UserAvatar";
 import { AccountDialog } from "./AccountDialog";
+import { UserSettingsModal, SettingsTabId } from "./UserSettingsModal";
 import {
   LayoutGrid,
   Bookmark,
@@ -69,6 +70,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+  const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
+  const [userSettingsTab, setUserSettingsTab] = useState<SettingsTabId>("profile");
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -477,13 +480,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
           <button
             type="button"
-            onClick={() => setIsAccountDialogOpen(true)}
+            onClick={() => {
+              setUserSettingsTab("profile");
+              setIsUserSettingsOpen(true);
+            }}
             className={`group w-full flex items-center transition-all duration-150 rounded-2xl hover:bg-neutral-200/40 cursor-pointer ${sidebarCollapsed
               ? "justify-center p-2 mx-auto"
               : "justify-center lg:justify-start p-2 lg:px-3 lg:py-2.5 lg:gap-3"
               }`}
-            title="Account details and settings"
-            aria-label="Open Account Dialog"
+            title="Open User Settings"
+            aria-label="Open User Settings"
           >
             <UserAvatar
               src={user.avatar}
@@ -605,13 +611,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </button>
 
-              {/* Profile Avatar / Account Dialog Trigger */}
+              {/* Profile Avatar / User Settings Trigger */}
               <button
                 type="button"
-                onClick={() => setIsAccountDialogOpen(true)}
+                onClick={() => {
+                  setUserSettingsTab("profile");
+                  setIsUserSettingsOpen(true);
+                }}
                 className="flex items-center gap-2 pl-1 cursor-pointer group"
                 title={`${user.fullName || currentPersona.name} (${user.role || currentPersona.title})`}
-                aria-label="Open Account Dialog"
+                aria-label="Open User Settings"
               >
                 <UserAvatar
                   src={user.avatar || currentPersona.avatar}
@@ -706,9 +715,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <X className="w-4 h-4" />
               </button>
             </div>
-
             {/* Secondary Navigation Links */}
             <div className="space-y-1 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setUserSettingsTab("profile");
+                  setIsUserSettingsOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-800 hover:text-neutral-950 hover:bg-neutral-50 active:bg-neutral-100 transition-colors cursor-pointer"
+              >
+                <Settings className="w-4 h-4 text-neutral-600" />
+                <span>User Settings</span>
+              </button>
+
               {othersNavItems.map((item) => {
                 if (item.name === "Logout") {
                   return (
@@ -732,7 +753,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
+                    className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-700 hover:text-neutral-950 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
                   >
                     <item.icon className="w-4 h-4 text-neutral-500" />
                     <span>{item.name}</span>
@@ -751,6 +772,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <GlobalSearchModal />
       <NotificationPopover />
       <MessagesDrawer />
+      <UserSettingsModal
+        isOpen={isUserSettingsOpen}
+        onClose={() => setIsUserSettingsOpen(false)}
+        initialTab={userSettingsTab}
+      />
       <AccountDialog
         isOpen={isAccountDialogOpen}
         onClose={() => setIsAccountDialogOpen(false)}
