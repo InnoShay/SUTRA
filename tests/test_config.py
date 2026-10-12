@@ -12,8 +12,8 @@ def test_settings_defaults():
 
 
 def test_sync_database_url_translation():
-    s = Settings(DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/sutra")
+    s = Settings(_env_file=None, DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/sutra")
     assert s.sync_database_url == "postgresql+psycopg2://user:pass@localhost:5432/sutra"
 
-    s_sqlite = Settings(DATABASE_URL="sqlite+aiosqlite:///:memory:")
+    s_sqlite = Settings(_env_file=None, DATABASE_URL="sqlite+aiosqlite:///:memory:")
     assert s_sqlite.sync_database_url == "sqlite:///:memory:"

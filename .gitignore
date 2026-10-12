@@ -1,4 +1,7 @@
 # Environments & Caches
+.env
+.env.local
+.env.*.local
 .venv/
 venv/
 ENV/

@@ -25,6 +25,27 @@ async def get_current_user_profile(
     result = await db.execute(query)
     rows = result.all()
 
+    # JIT Provisioning for newly authenticated Supabase / Google OAuth users
+    if not rows:
+        any_membership_query = select(InstitutionMembership).where(InstitutionMembership.user_id == user.id)
+        any_membership_res = await db.execute(any_membership_query)
+        if not any_membership_res.scalars().first():
+            primary_inst_query = select(Institution).where(Institution.is_active == True).limit(1)
+            primary_inst_res = await db.execute(primary_inst_query)
+            primary_inst = primary_inst_res.scalar_one_or_none()
+            if primary_inst:
+                import uuid
+                new_membership = InstitutionMembership(
+                    id=uuid.uuid4(),
+                    institution_id=primary_inst.id,
+                    user_id=user.id,
+                    role="faculty",
+                    is_active=True,
+                )
+                db.add(new_membership)
+                await db.commit()
+                rows = [(new_membership, primary_inst.name)]
+
     # Group roles per campus
     campus_map = {}
     for membership, inst_name in rows:

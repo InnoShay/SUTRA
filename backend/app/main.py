@@ -16,6 +16,9 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.cases import router as cases_router
 from backend.app.api.endpoints import router as api_router
+from backend.app.api.interventions import router as interventions_router
+from backend.app.api.demo_ui import router as demo_ui_router
+from backend.app.api.research_explorer import router as research_explorer_router
 from backend.app.core.config import settings
 from backend.app.orchestration.persistence.db import create_connection, init_db
 from sutra_ml.inference.predictor import SutraRiskPredictor
@@ -136,6 +139,10 @@ def create_app() -> FastAPI:
     app.include_router(api_router, prefix=settings.api_prefix)
     app.include_router(api_router, prefix="/api/v1")
     app.include_router(cases_router, prefix="/api/v1")
+    app.include_router(interventions_router, prefix="/interventions")
+    app.include_router(interventions_router, prefix="/api/v1/interventions")
+    app.include_router(demo_ui_router)
+    app.include_router(research_explorer_router)
 
     # Static files for Advisor Review UI
     static_dir = Path(__file__).parent / "static"

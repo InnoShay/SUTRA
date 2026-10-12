@@ -11,6 +11,7 @@ def make_jwt(
     secret: str = settings.SUPABASE_JWT_SECRET,
     algorithm: str = settings.SUPABASE_JWT_ALGORITHM,
     audience: str = "authenticated",
+    extra_claims: dict = None,
 ) -> str:
     """Generates test JWT tokens for authentication testing."""
     now = datetime.now(timezone.utc)
@@ -23,4 +24,6 @@ def make_jwt(
         "iat": int(now.timestamp()),
         "exp": int(exp.timestamp()),
     }
+    if extra_claims:
+        payload.update(extra_claims)
     return jwt.encode(payload, secret, algorithm=algorithm)

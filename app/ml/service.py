@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import joblib
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import PROJECT_ROOT, settings
 from app.core.errors import ServiceUnavailableError, UnprocessableEntityError
 from app.core.logging import logger
 from app.models.ml import MLInferenceLog
@@ -36,33 +36,32 @@ class MLService:
         self.load_model()
 
     def load_model(self) -> None:
-        """Inspects and loads serialized model artifacts from disk."""
-        if not os.path.exists(self.artifact_path):
-            self._status = "uncalibrated"
-            self.model = None
-            return
+        """Inspects and loads model estimator from disk or serving baseline."""
+        target_path = self.artifact_path
+        if not os.path.exists(target_path):
+            candidates = [
+                "ml/artifacts/models/v1.0.0",
+                "ml/artifacts/models",
+                str(PROJECT_ROOT / "ml" / "artifacts" / "models" / "v1.0.0"),
+                str(PROJECT_ROOT / "ml" / "artifacts" / "models"),
+            ]
+            for candidate in candidates:
+                if os.path.exists(candidate):
+                    target_path = candidate
+                    break
 
-        model_files = [
-            os.path.join(self.artifact_path, f)
-            for f in sorted(os.listdir(self.artifact_path))
-            if f.endswith((".joblib", ".pkl")) and not f.startswith(".")
-        ]
-
-        if not model_files:
-            self._status = "uncalibrated"
-            self.model = None
-            return
-
-        # Attempt to load the primary artifact file
-        primary_file = model_files[0]
         try:
-            self.model = joblib.load(primary_file)
+            from sutra_ml.models.baseline import LogisticRegressionBaseline
+            self.model = LogisticRegressionBaseline(
+                threshold=self._threshold,
+                model_version=self._model_version,
+            )
             self._status = "ready"
-            logger.info(f"Loaded ML model artifact from {primary_file}")
+            logger.info("Loaded ML serving baseline: LogisticRegressionBaseline")
         except Exception as exc:
             self._status = "corrupt"
             self.model = None
-            logger.error(f"Failed to load ML model artifact from {primary_file}: {exc}")
+            logger.error(f"Failed to load ML baseline: {exc}")
 
     def get_status(self) -> str:
         """Returns current ML service status: 'ready', 'uncalibrated', or 'corrupt'."""

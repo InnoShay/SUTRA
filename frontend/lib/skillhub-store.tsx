@@ -119,6 +119,7 @@ interface SkillHubContextType {
   // SUTRA RBAC & Backend State
   activeRole: UserRole;
   setActiveRole: (role: UserRole) => void;
+  activeCampusName: string;
   currentPersona: DemoPersona;
   backendConnected: boolean;
   isLoadingBackend: boolean;
@@ -591,6 +592,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       value={{
         activeRole,
         setActiveRole,
+        activeCampusName: "Apex University Main Campus",
         currentPersona,
         backendConnected,
         isLoadingBackend,
