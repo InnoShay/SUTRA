@@ -1,18 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SkillHubLogo, SkillHubLogoIcon } from "@/components/SkillHubLogo";
-import { AlertCircle, Loader2, ShieldCheck, Lock, Sparkles } from "lucide-react";
+import { AlertCircle, Loader2, ShieldCheck, Lock, Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
 import { supabaseAuth } from "@/lib/supabase";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isLoggedOut = searchParams.get("logged_out") === "1";
+
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    // If the user explicitly logged out, do not bounce to dashboard
+    if (isLoggedOut) {
+      setCheckingSession(false);
+      return;
+    }
+
     // Check if the user is already authenticated
     const checkExistingSession = async () => {
       try {
@@ -29,7 +38,7 @@ export default function LoginPage() {
     };
 
     checkExistingSession();
-  }, [router]);
+  }, [router, isLoggedOut]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -46,6 +55,10 @@ export default function LoginPage() {
       setErrorMsg(err.message || "Failed to connect to Google authentication.");
       setLoading(false);
     }
+  };
+
+  const handleDemoLogin = () => {
+    router.push("/dashboard");
   };
 
   return (
@@ -93,7 +106,7 @@ export default function LoginPage() {
             </div>
 
             {/* Header Titles */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
                 Sign In to SUTRA
               </h1>
@@ -101,6 +114,16 @@ export default function LoginPage() {
                 Institutional Single Sign-On powered by Google Workspace &amp; Supabase
               </p>
             </div>
+
+            {/* Logged Out Notice */}
+            {isLoggedOut && (
+              <div className="mb-6 p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-xs text-emerald-800 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                <span className="leading-relaxed font-medium">
+                  You have successfully signed out of SUTRA.
+                </span>
+              </div>
+            )}
 
             {/* Error Message */}
             {errorMsg && (
@@ -111,7 +134,7 @@ export default function LoginPage() {
             )}
 
             {/* Google Sign-In Action */}
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
@@ -151,6 +174,21 @@ export default function LoginPage() {
                 )}
               </button>
 
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-neutral-200"></div>
+                <span className="flex-shrink mx-3 text-[11px] font-medium text-neutral-400">or preview</span>
+                <div className="flex-grow border-t border-neutral-200"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                className="w-full py-2.5 px-4 bg-neutral-100 hover:bg-neutral-200/80 active:scale-[0.99] text-neutral-700 rounded-2xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Enter Offline Demo Workspace</span>
+                <ArrowRight className="w-3.5 h-3.5 text-neutral-500" />
+              </button>
+
               <div className="p-4 bg-neutral-50/80 border border-neutral-100 rounded-2xl space-y-2 mt-4">
                 <div className="flex items-center gap-2 text-[11px] font-semibold text-neutral-700">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -173,5 +211,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F4F5F7] flex items-center justify-center text-xs text-neutral-400">
+          Loading SUTRA Sign-In...
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

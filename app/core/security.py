@@ -109,10 +109,35 @@ async def get_campus_membership(
     memberships = result.scalars().all()
 
     if not memberships:
-        raise CampusAccessDeniedError(
-            f"User {user.id} does not have membership in campus {campus_uuid}",
-            code="CAMPUS_MEMBERSHIP_NOT_FOUND",
+        # Only JIT provision brand-new users who have zero memberships anywhere
+        any_membership_query = select(InstitutionMembership).where(
+            InstitutionMembership.user_id == user.id
         )
+        any_res = await db.execute(any_membership_query)
+        if not any_res.scalars().first():
+            campus_query = select(Institution).where(
+                Institution.id == campus_uuid,
+                Institution.status == "active",
+            )
+            campus_res = await db.execute(campus_query)
+            campus_obj = campus_res.scalar_one_or_none()
+            if campus_obj:
+                new_membership = InstitutionMembership(
+                    id=uuid.uuid4(),
+                    institution_id=campus_uuid,
+                    user_id=user.id,
+                    role="faculty",
+                    is_active=True,
+                )
+                db.add(new_membership)
+                await db.commit()
+                memberships = [new_membership]
+
+        if not memberships:
+            raise CampusAccessDeniedError(
+                f"User {user.id} does not have membership in campus {campus_uuid}",
+                code="CAMPUS_MEMBERSHIP_NOT_FOUND",
+            )
 
     active_memberships = [m for m in memberships if m.is_active]
     if not active_memberships:

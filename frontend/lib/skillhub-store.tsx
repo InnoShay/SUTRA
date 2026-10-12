@@ -34,6 +34,7 @@ import {
 } from "./types";
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
 import { api } from "./api";
+import { supabase, supabaseAuth, SupabaseUser, SupabaseSession } from "./supabase";
 
 export interface NotificationItem {
   id: string;
@@ -130,6 +131,10 @@ interface SkillHubContextType {
   interventions: InterventionItem[];
   mlModelInfo: MLModelInfo | null;
   refreshBackendData: () => Promise<void>;
+  supabaseUser: SupabaseUser | null;
+  supabaseSession: SupabaseSession | null;
+  isAuthenticated: boolean;
+  logout: () => Promise<void>;
 
   // SUTRA Workflow Actions
   reviewSignal: (id: string, req: SignalReviewRequest) => Promise<SignalReviewResponse>;
@@ -197,6 +202,11 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [activeRole, setActiveRoleState] = useState<UserRole>("faculty");
   const currentPersona = DEMO_PERSONAS[activeRole] || DEMO_PERSONAS.faculty;
 
+  const [supabaseSession, setSupabaseSession] = useState<SupabaseSession | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [activeCampusName, setActiveCampusName] = useState<string>("Apex University Main Campus");
+  const isAuthenticated = Boolean(supabaseSession?.access_token);
+
   const [backendConnected, setBackendConnected] = useState<boolean>(false);
   const [isLoadingBackend, setIsLoadingBackend] = useState<boolean>(true);
   const [backendError, setBackendError] = useState<string | null>(null);
@@ -243,19 +253,81 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const setActiveRole = (newRole: UserRole) => {
     setActiveRoleState(newRole);
     const persona = DEMO_PERSONAS[newRole];
-    api.setToken(persona.token);
-    api.setCampusId(DEMO_CAMPUS_ID);
-    setUser({
-      ...CURRENT_USER,
-      name: persona.name.split(" ")[0],
-      fullName: persona.name,
-      role: persona.title,
-      avatar: persona.avatar,
-    });
+    if (!supabaseSession?.access_token) {
+      api.setToken(persona.token);
+      api.setCampusId(DEMO_CAMPUS_ID);
+      setUser({
+        ...CURRENT_USER,
+        name: persona.name.split(" ")[0],
+        fullName: persona.name,
+        role: persona.title,
+        avatar: persona.avatar,
+      });
+    }
     // If leadership, immediately clear individual student roster to uphold ADR-004
     if (!persona.canViewIndividualStudents) {
       setStudents([]);
     }
+  };
+
+  const logout = async () => {
+    try {
+      await supabaseAuth.signOut();
+    } catch (e) {
+      console.warn("Sign out exception:", e);
+    }
+    setSupabaseSession(null);
+    setSupabaseUser(null);
+    api.setToken(null);
+    api.setCampusId(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("sutra_auth_token");
+      localStorage.removeItem("sutra_refresh_token");
+      localStorage.removeItem("sutra_user_profile");
+      localStorage.removeItem("sutra_active_campus_id");
+      window.location.href = "/login?logged_out=1";
+    }
+  };
+
+  const syncUserFromSession = async (session: any) => {
+    setSupabaseSession(session);
+    setSupabaseUser(session.user);
+    api.setToken(session.access_token);
+
+    const fullName =
+      session.user?.user_metadata?.full_name ||
+      session.user?.user_metadata?.name ||
+      session.user?.email?.split("@")[0] ||
+      "Educator";
+    const firstName = fullName.split(" ")[0];
+    const avatar =
+      session.user?.user_metadata?.avatar_url ||
+      session.user?.user_metadata?.picture ||
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80";
+
+    try {
+      const me = await api.auth.getMe();
+      if (me.memberships && me.memberships.length > 0) {
+        const primary = me.memberships[0];
+        api.setCampusId(primary.institution_id);
+        setActiveCampusName(primary.institution_name || "Apex University Main Campus");
+        if (primary.roles && primary.roles.length > 0) {
+          setActiveRoleState(primary.roles[0] as UserRole);
+        }
+      } else {
+        api.setCampusId(DEMO_CAMPUS_ID);
+      }
+    } catch {
+      api.setCampusId(DEMO_CAMPUS_ID);
+    }
+
+    setUser((prev) => ({
+      ...prev,
+      name: firstName,
+      fullName: fullName,
+      email: session.user.email || prev.email,
+      avatar: avatar,
+    }));
   };
 
   // Sync with Backend
@@ -263,8 +335,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingBackend(true);
     setBackendError(null);
     try {
-      api.setToken(currentPersona.token);
-      api.setCampusId(DEMO_CAMPUS_ID);
+      if (!supabaseSession?.access_token) {
+        api.setToken(currentPersona.token);
+      }
+      if (!api.getCampusId()) {
+        api.setCampusId(DEMO_CAMPUS_ID);
+      }
 
       // Check backend health
       await api.health.check();
@@ -394,7 +470,39 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    refreshBackendData();
+    let isMounted = true;
+
+    // Check existing Supabase session on startup
+    supabaseAuth.getSession().then((session) => {
+      if (session && session.access_token && isMounted) {
+        syncUserFromSession(session).then(() => {
+          if (isMounted) refreshBackendData();
+        });
+      } else if (isMounted) {
+        refreshBackendData();
+      }
+    });
+
+    // Listen to real-time auth events (Sign In, Token Refreshed, Sign Out)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return;
+        if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
+          await syncUserFromSession(session);
+          refreshBackendData();
+        } else if (event === "SIGNED_OUT") {
+          setSupabaseSession(null);
+          setSupabaseUser(null);
+          api.setToken(null);
+          api.setCampusId(null);
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      authListener?.subscription?.unsubscribe();
+    };
   }, [activeRole]);
 
   // Workflow Handlers
@@ -592,7 +700,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       value={{
         activeRole,
         setActiveRole,
-        activeCampusName: "Apex University Main Campus",
+        activeCampusName,
         currentPersona,
         backendConnected,
         isLoadingBackend,
@@ -603,6 +711,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         interventions,
         mlModelInfo,
         refreshBackendData,
+        supabaseUser,
+        supabaseSession,
+        isAuthenticated,
+        logout,
         reviewSignal,
         assignCase,
         acceptCase,

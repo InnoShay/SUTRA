@@ -43,6 +43,9 @@ export default function DashboardPage() {
     currentPersona,
     backendConnected,
     transitionCase,
+    activeCampusName,
+    supabaseSession,
+    isAuthenticated,
   } = useSkillHub();
 
   const [activeTab, setActiveTab] = useState<"overview" | "triage">("overview");
@@ -142,10 +145,25 @@ export default function DashboardPage() {
           <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
             Welcome back, {user.name}!
           </h1>
-          <p className="text-xs text-neutral-400 mt-0.5 flex items-center gap-2">
+          <p className="text-xs text-neutral-400 mt-0.5 flex flex-wrap items-center gap-2">
             <span>{currentPersona?.title || "Course Instructor & Faculty Mentor"}</span>
             <span>•</span>
-            <span>Apex University Main Campus</span>
+            <span className="font-medium text-neutral-600">{activeCampusName || "Apex University Main Campus"}</span>
+            <span>•</span>
+            {supabaseSession ? (
+              <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Google SSO ({user.email || "Active"})</span>
+              </span>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1 font-semibold text-amber-600 hover:text-amber-700 hover:underline"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span>Demo Workspace (Sign In)</span>
+              </Link>
+            )}
           </p>
         </div>
 

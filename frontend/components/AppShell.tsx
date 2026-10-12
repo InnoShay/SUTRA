@@ -45,7 +45,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     isMessagesOpen,
     setIsMessagesOpen,
     notifications,
+    supabaseSession,
+    isAuthenticated,
+    logout,
   } = useSkillHub();
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   const unreadNotifCount = notifications.filter((n) => n.unread).length;
 
@@ -296,6 +303,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {othersNavItems.map((item) => {
                   const isActive = pathname === item.href;
 
+                  if (item.name === "Logout") {
+                    return (
+                      <button
+                        key="logout-desktop"
+                        type="button"
+                        onClick={handleLogout}
+                        className={`group relative flex items-center transition-all duration-150 w-full cursor-pointer ${
+                          sidebarCollapsed
+                            ? "w-11 h-11 justify-center mx-auto rounded-2xl"
+                            : "justify-center lg:justify-start w-11 h-11 lg:w-auto lg:h-auto lg:gap-3 px-0 lg:px-3.5 py-2.5 rounded-2xl text-xs"
+                        } text-rose-600 hover:text-rose-700 hover:bg-rose-50/80 font-medium`}
+                      >
+                        <item.icon className="w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-105 text-rose-500" />
+                        {!sidebarCollapsed && (
+                          <span className="hidden lg:inline font-semibold">Sign Out</span>
+                        )}
+                        {/* Tooltip on collapsed / tablet hover */}
+                        <div className="lg:hidden absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
+                          Sign Out
+                        </div>
+                        {sidebarCollapsed && (
+                          <div className="hidden lg:block absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
+                            Sign Out
+                          </div>
+                        )}
+                      </button>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.href}
@@ -355,9 +391,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <p className="text-xs font-semibold text-neutral-900 truncate group-hover:text-neutral-950">
                   {user.fullName}
                 </p>
-                <p className="text-[11px] text-neutral-400 truncate font-medium">
-                  Instructor
-                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      supabaseSession ? "bg-emerald-500 animate-pulse" : "bg-amber-400"
+                    }`}
+                  />
+                  <p className="text-[10px] text-neutral-400 truncate font-medium">
+                    {supabaseSession ? (user.email || "Google SSO") : "Demo Persona"}
+                  </p>
+                </div>
               </div>
             )}
           </Link>
@@ -599,17 +642,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* Secondary Navigation Links */}
             <div className="space-y-1 pt-1">
-              {othersNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
-                >
-                  <item.icon className="w-4 h-4 text-neutral-500" />
-                  <span>{item.name}</span>
-                </Link>
-              ))}
+              {othersNavItems.map((item) => {
+                if (item.name === "Logout") {
+                  return (
+                    <button
+                      key="logout-mobile"
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 active:bg-rose-100 transition-colors cursor-pointer"
+                    >
+                      <item.icon className="w-4 h-4 text-rose-500" />
+                      <span>Sign Out</span>
+                    </button>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
+                  >
+                    <item.icon className="w-4 h-4 text-neutral-500" />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>
