@@ -1,20 +1,54 @@
 "use client";
-
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SkillHubLogo, SkillHubLogoIcon } from "@/components/SkillHubLogo";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { supabaseAuth } from "@/lib/supabase";
+import { DEMO_PERSONAS, DEMO_CAMPUS_ID } from "@/lib/demo-auth";
+import { api } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const res = isSignUp
+        ? await supabaseAuth.signUp(email, password)
+        : await supabaseAuth.signInWithPassword(email, password);
+
+      if (res.error) {
+        setErrorMsg(res.error);
+        setLoading(false);
+        return;
+      }
+
+      // Successful Supabase Auth login
+      router.push("/dashboard");
+    } catch (err: any) {
+      setErrorMsg(err.message || "An unexpected error occurred during authentication.");
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = (role: keyof typeof DEMO_PERSONAS) => {
+    const persona = DEMO_PERSONAS[role];
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sutra_auth_token", persona.token);
+      localStorage.setItem("sutra_active_campus_id", DEMO_CAMPUS_ID);
+      api.setToken(persona.token);
+      api.setCampusId(DEMO_CAMPUS_ID);
+    }
     router.push("/dashboard");
   };
 
@@ -113,11 +147,26 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              {errorMsg && (
+                <div className="p-3 bg-red-50 border border-red-200/80 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.99] text-white rounded-xl text-xs font-semibold shadow-md shadow-neutral-900/10 transition-all mt-2"
+                disabled={loading}
+                className="w-full py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.99] text-white rounded-xl text-xs font-semibold shadow-md shadow-neutral-900/10 transition-all mt-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                {isSignUp ? "Create Account" : "Sign In"}
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Authenticating...</span>
+                  </>
+                ) : (
+                  <span>{isSignUp ? "Create Account" : "Sign In"}</span>
+                )}
               </button>
 
               {/* Mode Toggle */}
@@ -136,8 +185,27 @@ export default function LoginPage() {
                 </button>
               </div>
 
+              {/* Quick Demo Personas */}
+              <div className="pt-2">
+                <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider text-center mb-2">
+                  Or instant demo login as:
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(["faculty", "counselor", "dean", "leadership"] as const).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => handleDemoLogin(r)}
+                      className="px-2.5 py-1.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/70 rounded-lg text-[11px] font-medium text-neutral-700 capitalize text-center transition-all"
+                    >
+                      {r === "faculty" ? "Faculty Mentor" : r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Divider: "or continue with" */}
-              <div className="relative my-6 text-center">
+              <div className="relative my-4 text-center">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-neutral-200/60" />
                 </div>

@@ -39,6 +39,9 @@ def verify_supabase_jwt(token: str) -> Dict[str, Any]:
         }
         if settings.SUPABASE_JWT_AUDIENCE:
             decode_kwargs["audience"] = settings.SUPABASE_JWT_AUDIENCE
+        if settings.SUPABASE_JWT_ISSUER:
+            decode_kwargs["issuer"] = settings.SUPABASE_JWT_ISSUER
+            decode_kwargs["options"]["verify_iss"] = True
 
         payload = jwt.decode(token, **decode_kwargs)
         return payload

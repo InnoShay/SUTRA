@@ -16,11 +16,26 @@ class Base(DeclarativeBase):
     pass
 
 
-# Create async engine with pool configuration
+# Engine configuration with Supabase PgBouncer & PostgreSQL pool settings
+engine_kwargs = {
+    "echo": False,
+    "future": True,
+    "pool_pre_ping": settings.DATABASE_POOL_PRE_PING,
+}
+
+if settings.DATABASE_URL.startswith("postgresql"):
+    connect_args = {}
+    if settings.DATABASE_STATEMENT_CACHE_SIZE is not None:
+        connect_args["statement_cache_size"] = settings.DATABASE_STATEMENT_CACHE_SIZE
+    if connect_args:
+        engine_kwargs["connect_args"] = connect_args
+    engine_kwargs["pool_size"] = settings.DATABASE_POOL_SIZE
+    engine_kwargs["max_overflow"] = settings.DATABASE_MAX_OVERFLOW
+    engine_kwargs["pool_recycle"] = settings.DATABASE_POOL_RECYCLE
+
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=False,
-    future=True,
+    **engine_kwargs,
 )
 
 # Async session factory
