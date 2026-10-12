@@ -222,9 +222,15 @@ impl SutraApiClient {
         resp.json::<AiReviewBriefResponse>().await.map_err(|e| e.to_string())
     }
 
-    pub async fn ai_summarize_evidence(&self, student_id: Uuid) -> Result<AiSummarizeEvidenceResponse, String> {
+    pub async fn ai_summarize_evidence(&self, id_or_ref: &str) -> Result<AiSummarizeEvidenceResponse, String> {
+        let clean_id = id_or_ref.trim();
+        let payload = if let Ok(u) = Uuid::parse_str(clean_id) {
+            serde_json::json!({ "student_id": u })
+        } else {
+            serde_json::json!({ "student_ref": clean_id })
+        };
+
         let url = format!("{}/ai/summarize-evidence", self.config.api_url);
-        let payload = serde_json::json!({ "student_id": student_id });
         let resp = self.client.post(&url)
             .headers(self.headers())
             .json(&payload)
@@ -235,6 +241,22 @@ impl SutraApiClient {
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("AI summarize request failed: {}", body));
+        }
+        resp.json::<AiSummarizeEvidenceResponse>().await.map_err(|e| e.to_string())
+    }
+
+    pub async fn get_student_evidence_summary(&self, id_or_ref: &str) -> Result<AiSummarizeEvidenceResponse, String> {
+        let clean_id = id_or_ref.trim();
+        let url = format!("{}/students/{}/evidence-summary", self.config.api_url, clean_id);
+        let resp = self.client.get(&url)
+            .headers(self.headers())
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("Student evidence summary request failed: {}", body));
         }
         resp.json::<AiSummarizeEvidenceResponse>().await.map_err(|e| e.to_string())
     }

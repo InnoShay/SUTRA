@@ -241,10 +241,16 @@ enum AiCommands {
         signal_id: Uuid,
     },
 
-    #[command(about = "Synthesize student multi-domain telemetry (ADR-003 financial exclusion)")]
+    #[command(about = "Synthesize student multi-domain telemetry and evidence card (ADR-003 financial exclusion)")]
     Summarize {
-        #[arg(help = "Student UUID")]
-        student_id: Uuid,
+        #[arg(help = "Student UUID or external reference (e.g. SYN-1007)")]
+        student: String,
+    },
+
+    #[command(about = "Retrieve 5-tier evidence summary card for an authorized student")]
+    Evidence {
+        #[arg(help = "Student UUID or external reference (e.g. SYN-1007)")]
+        student: String,
     },
 }
 
@@ -414,8 +420,11 @@ async fn main() {
             AiCommands::ReviewBrief { signal_id } => {
                 commands::ai::ai_review_brief(&client, signal_id).await
             }
-            AiCommands::Summarize { student_id } => {
-                commands::ai::ai_summarize_evidence(&client, student_id).await
+            AiCommands::Summarize { student } => {
+                commands::ai::ai_summarize_evidence(&client, &student).await
+            }
+            AiCommands::Evidence { student } => {
+                commands::ai::ai_student_evidence(&client, &student).await
             }
         },
         Commands::Students(args) => match args.command {

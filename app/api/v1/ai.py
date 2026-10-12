@@ -75,6 +75,7 @@ async def summarize_evidence(
         institution_id=membership.campus_id,
         user_id=membership.user.id,
         student_id=payload.student_id,
+        student_ref=payload.student_ref,
         signal_id=payload.signal_id,
     )
 

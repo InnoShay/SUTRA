@@ -15,20 +15,38 @@ SAFETY INVARIANTS & CONSTRAINTS:
 6. Return your response as a valid, strictly formatted JSON object.
 """
 
+# Injection patterns targeted at overriding system boundaries or hijacking deliberation
+INJECTION_PATTERNS = [
+    r"(?i)\bignore\s+(all\s+)?(previous|prior)\s+instructions\b",
+    r"(?i)\bsystem\s+prompt\s*:",
+    r"(?i)\bdisregard\s+(all\s+)?(previous\s+|prior\s+)?(rules|constraints|instructions)\b",
+    r"(?i)\byou\s+are\s+now\s+(an?\s+)?unrestricted\b",
+    r"(?i)\bbypass\s+(safety|governance|policy)\b",
+    r"(?i)\boutput\s+(the\s+)?(secret|token|password|system\s+prompt)\b",
+]
+
+
 def sanitize_untrusted_text(text: str) -> str:
     """Sanitizes text from student notes or external source to prevent prompt injection or delimiter breakout."""
     if not text:
         return ""
-    # Strip closing tag attempts
-    sanitized = re.sub(r"</?untrusted_student_evidence>", "[UNTRUSTED_DELIMITER_REMOVED]", text, flags=re.IGNORECASE)
+    # Strip closing/opening tag attempts
+    sanitized = re.sub(r"</?untrusted_student_evidence[^>]*>", "[UNTRUSTED_DELIMITER_REMOVED]", text, flags=re.IGNORECASE)
     # Strip dangerous control characters
     sanitized = sanitized.replace("\x00", "")
+
+    # Neutralize prompt injection attempts
+    for pattern in INJECTION_PATTERNS:
+        sanitized = re.sub(pattern, "[UNTRUSTED_INJECTION_NEUTRALIZED]", sanitized)
+
     return sanitized.strip()
+
 
 def wrap_untrusted_evidence(label: str, text: str) -> str:
     """Safely wraps untrusted student-provided text in fenced delimiters."""
     sanitized = sanitize_untrusted_text(text)
     return f'<untrusted_student_evidence label="{label}">\n{sanitized}\n</untrusted_student_evidence>'
+
 
 def build_review_brief_prompt(
     student_ref: str,
@@ -42,7 +60,7 @@ def build_review_brief_prompt(
     # Data minimization: filter out sensitive financial records per ADR-003
     safe_obs = [
         o for o in observations
-        if o.get("domain", "").lower() not in ("finance", "billing", "fee")
+        if o.get("domain", "").lower() not in ("finance", "billing", "fee", "financial_aid", "scholarship")
     ]
 
     obs_lines = []

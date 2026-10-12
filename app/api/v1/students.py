@@ -14,6 +14,7 @@ from app.models.observation import FinanceObservation, StudentObservation
 from app.models.signal import Signal
 from app.models.student import Student
 from app.schemas.ml import DAY30_REQUIRED_FEATURES, FORBIDDEN_LEAKED_FEATURES, MLPredictRequest, MLPredictResponse
+from app.schemas.ai import AISummarizeEvidenceResponse
 from app.schemas.student import (
     FeatureReadinessItem,
     FinanceObservationDTO,
@@ -571,3 +572,30 @@ async def predict_student_single(
     await db.commit()
 
     return response
+
+
+@router.get("/{student_id}/evidence-summary", response_model=AISummarizeEvidenceResponse)
+async def get_student_evidence_summary(
+    student_id: str = Path(..., description="Student UUID or external reference"),
+    membership: CampusMembershipContext = Depends(get_campus_membership),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns the comprehensive 5-tier evidence summary for an authorized student:
+    - Tier 1: Observed student telemetry (facts, contradictions, limitations).
+    - Tier 2: Active deterministic rule triggers.
+    - Tier 3: Production ML predictions & calibrated attributions.
+    - Tier 4: Bounded AI advisory recommendations (catalogue-grounded).
+    - Tier 5: Human review history, case progression, and outcomes.
+    Financial aid observations are strictly excluded per ADR-003.
+    """
+    check_leadership_access(membership)
+    student = await _resolve_student_in_campus(student_id, membership.campus_id, db)
+    from app.ai.service import ai_service
+    return await ai_service.summarize_evidence(
+        db=db,
+        institution_id=membership.campus_id,
+        user_id=membership.user.id,
+        student_id=student.id,
+    )
+

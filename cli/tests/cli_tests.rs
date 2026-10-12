@@ -173,3 +173,90 @@ fn test_case_dto_deserialization_with_followups_and_outcome() {
     assert_eq!(v["outcome"]["outcome_status"], "helped");
 }
 
+#[test]
+fn test_ai_review_brief_five_tier_deserialization() {
+    let raw = r#"{
+        "target_student_ref": "SYN-1007",
+        "signal_id": "88888888-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "summary": "Student flagged by academic compound risk.",
+        "observed_facts": ["Recorded attendance rate of 0.72"],
+        "model_predictions": ["Day-30 risk probability: 0.68"],
+        "uncertainties": ["Sparse telemetry in participation domain"],
+        "review_questions": ["Are absences excused?"],
+        "candidate_interventions": [
+            {
+                "intervention_key": "academic_tutoring_offer",
+                "display_label": "Subject Tutoring Referral",
+                "domain": "academic",
+                "recipient_role": "faculty",
+                "confidence": 0.85,
+                "evidence_grounding": "Low quiz score",
+                "caveats": "Requires educator review"
+            }
+        ],
+        "limitations": ["Non-diagnostic advisory model."],
+        "metadata": {
+            "model_name": "sutra-mock-v1",
+            "provider": "deterministic_mock",
+            "latency_ms": 8.5,
+            "is_mock": true,
+            "timestamp": "2026-10-12T05:00:00Z"
+        },
+        "tier1_observed_data": {
+            "total_observations": 12,
+            "data_freshness": "valid",
+            "domains_represented": ["attendance", "academic", "vle"],
+            "observed_facts": ["142 VLE clicks", "Attendance 72%"],
+            "contradictions_detected": ["High VLE activity but 3 missing assignments"],
+            "data_limitations": ["Financial records excluded per ADR-003"]
+        },
+        "tier2_rule_signal": {
+            "rule_key": "academic_attendance_compound_risk",
+            "result": "flagged",
+            "evaluated_at": "2026-10-12T04:00:00Z",
+            "quality_state": "valid",
+            "trigger_summary": "Attendance and assignment deficit"
+        },
+        "tier3_ml_prediction": {
+            "has_ml_prediction": true,
+            "model_name": "logistic_regression_baseline",
+            "model_version": "1.0.0",
+            "prediction_cutoff": "Day 30",
+            "risk_probability": 0.68,
+            "threshold": 0.46,
+            "classification": "At_Risk",
+            "calibration_status": "platt_calibrated",
+            "top_attributions": [{"feature": "vle_days_since_last_click", "attribution": 0.3265}],
+            "ml_limitations": ["Trained on OULAD; non-causal."]
+        },
+        "tier4_ai_recommendation": {
+            "summary": "Educator triage recommended.",
+            "uncertainties": ["Sparse participation notes"],
+            "review_questions": ["Any extenuating circumstances?"],
+            "candidate_interventions": [],
+            "is_advisory": true,
+            "advisory_notice": "Decision support only."
+        },
+        "tier5_human_decision": {
+            "has_human_review": true,
+            "reviewed_decision": "approve",
+            "reviewed_by": "11111111-1111-1111-1111-111111111111",
+            "case_id": "22222222-2222-2222-2222-222222222222",
+            "case_state": "in_progress",
+            "follow_ups_count": 2,
+            "outcome_status": "helped"
+        }
+    }"#;
+
+    let v: serde_json::Value = serde_json::from_str(raw).expect("Must parse 5-tier AI review brief JSON");
+    assert_eq!(v["target_student_ref"], "SYN-1007");
+    assert_eq!(v["tier1_observed_data"]["total_observations"], 12);
+    assert_eq!(v["tier1_observed_data"]["contradictions_detected"].as_array().unwrap().len(), 1);
+    assert_eq!(v["tier2_rule_signal"]["rule_key"], "academic_attendance_compound_risk");
+    assert_eq!(v["tier3_ml_prediction"]["has_ml_prediction"], true);
+    assert_eq!(v["tier3_ml_prediction"]["classification"], "At_Risk");
+    assert_eq!(v["tier4_ai_recommendation"]["is_advisory"], true);
+    assert_eq!(v["tier5_human_decision"]["outcome_status"], "helped");
+}
+
+
