@@ -677,6 +677,38 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
+    // Check for explicit demo walkthrough activation in URL
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const isWalkthrough =
+          params.get("walkthrough") === "student" ||
+          params.get("role") === "student" ||
+          params.get("demo") === "true";
+        if (isWalkthrough) {
+          localStorage.setItem("sutra_demo_mode", "true");
+          setActiveRoleState("student");
+          const stuPersona = DEMO_PERSONAS.student;
+          api.setToken(stuPersona.token);
+          api.setCampusId(DEMO_CAMPUS_ID);
+          setUser({
+            ...CURRENT_USER,
+            name: stuPersona.name.split(" ")[0],
+            fullName: stuPersona.name,
+            role: stuPersona.title,
+            avatar: stuPersona.avatar,
+          });
+          setCases(DEMO_CASES);
+          setSignals(DEMO_SIGNALS);
+          setInterventions(DEMO_INTERVENTIONS);
+          setMlModelInfo(DEMO_ML_MODEL_INFO);
+          setIsLoadingBackend(false);
+        }
+      } catch (e) {
+        console.warn("Could not parse walkthrough URL parameters:", e);
+      }
+    }
+
     // Register automatic session refresh handler with API client
     api.setTokenRefreshHandler(async () => {
       const refreshed = await supabaseAuth.refreshSession();

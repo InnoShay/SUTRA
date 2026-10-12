@@ -240,10 +240,10 @@ export default function Hero() {
             </Link>
 
             <Link
-              href="/login"
+              href="/dashboard?walkthrough=student"
               className="pl-5 sm:pl-6 pr-2 py-1.5 sm:py-2 rounded-full bg-[#d2f831] hover:bg-[#c4ec26] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2.5 sm:gap-3 group"
             >
-              <span>GET STARTED</span>
+              <span>INTERACTIVE WALKTHROUGH</span>
               <div className="w-7 h-7 rounded-full bg-slate-950 text-white flex items-center justify-center transition-transform group-hover:rotate-45">
                 <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
               </div>

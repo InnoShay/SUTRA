@@ -12,9 +12,11 @@ import {
   HeartHandshake,
   ArrowUpRight,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { StudentCaseSummaryDTO } from "@/lib/types";
 import { api, isDemoMode } from "@/lib/api";
+import { DEMO_CASES } from "@/lib/skillhub-data";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -50,6 +52,7 @@ export function StudentDashboardView() {
   const [studentCases, setStudentCases] = React.useState<StudentCaseSummaryDTO[]>([]);
   const [isLoadingCases, setIsLoadingCases] = React.useState(true);
   const [casesError, setCasesError] = React.useState<string | null>(null);
+  const [isDemoPreview, setIsDemoPreview] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
@@ -61,16 +64,22 @@ export function StudentDashboardView() {
   const fetchStudentCases = React.useCallback(async () => {
     setIsLoadingCases(true);
     setCasesError(null);
+    setIsDemoPreview(false);
     try {
       const response = await api.proposed.getMyCases();
       setStudentCases(response.items || []);
     } catch (err: any) {
       if (isDemoMode()) {
         const demoFiltered = cases.filter(
-          (c) => c.student_id === studentId || c.external_student_ref === studentId
+          (c) =>
+            c.student_id === studentId ||
+            c.external_student_ref === studentId ||
+            c.student_id === "SYN-1007" ||
+            c.external_student_ref === "SYN-1007"
         );
+        const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
         setStudentCases(
-          demoFiltered.map((c) => ({
+          resolvedList.map((c) => ({
             id: c.id,
             institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
             student_id: c.student_id,
@@ -106,6 +115,7 @@ export function StudentDashboardView() {
     let active = true;
     setIsLoadingCases(true);
     setCasesError(null);
+    setIsDemoPreview(false);
     setStudentCases([]);
 
     api.proposed
@@ -119,10 +129,15 @@ export function StudentDashboardView() {
         if (!active) return;
         if (isDemoMode()) {
           const demoFiltered = cases.filter(
-            (c) => c.student_id === studentId || c.external_student_ref === studentId
+            (c) =>
+              c.student_id === studentId ||
+              c.external_student_ref === studentId ||
+              c.student_id === "SYN-1007" ||
+              c.external_student_ref === "SYN-1007"
           );
+          const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
           setStudentCases(
-            demoFiltered.map((c) => ({
+            resolvedList.map((c) => ({
               id: c.id,
               institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
               student_id: c.student_id,
@@ -252,7 +267,14 @@ export function StudentDashboardView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Link
+            href="/assessment"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 border border-neutral-200/80 rounded-xl text-xs font-semibold shadow-2xs transition-all min-h-[42px]"
+          >
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            <span>Self-Reflection Assessment</span>
+          </Link>
           <Link
             href="/request-support"
             className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all min-h-[42px]"
@@ -261,6 +283,36 @@ export function StudentDashboardView() {
             <span>Request Support</span>
           </Link>
         </div>
+      </div>
+
+      {/* Assessment Interactive Callout Banner */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white border border-purple-200/70 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-3 bg-purple-700 text-white rounded-2xl shadow-sm shrink-0">
+            <Sparkles className="w-5 h-5 text-purple-200" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full border border-purple-200">
+                Student Self-Reflection
+              </span>
+              <span className="text-xs text-neutral-500">18 Questions · 3–4 Minutes · Confidential</span>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
+              Explore Your Learning Strengths &amp; Support Priorities
+            </h3>
+            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
+              Confidential, non-evaluative guidance assessment across 6 dimensions to prepare for your next mentor check-in.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/assessment"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all shrink-0 active:scale-[0.98]"
+        >
+          <span>Take Assessment</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* 2. MAIN 2-COLUMN GRID: Left (Support Cases & Activity) | Right (Next Steps & Mentor) */}
@@ -287,6 +339,25 @@ export function StudentDashboardView() {
               </Link>
             </div>
 
+            {/* Demonstration Preview Badge */}
+            {isDemoPreview && (
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/80 text-[11px] text-amber-900 flex items-center justify-between gap-2">
+                <span>
+                  <strong>Demonstration Preview:</strong> Viewing synthetic student case (CASE-SYN-1007) for evaluation.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDemoPreview(false);
+                    fetchStudentCases();
+                  }}
+                  className="text-amber-800 hover:text-amber-950 font-bold underline shrink-0 cursor-pointer"
+                >
+                  Clear Preview
+                </button>
+              </div>
+            )}
+
             {isLoadingCases ? (
               <div className="p-4 space-y-3">
                 <div className="h-14 bg-neutral-100 rounded-2xl animate-pulse" />
@@ -301,12 +372,57 @@ export function StudentDashboardView() {
                     <p className="text-neutral-600 mt-0.5">{casesError}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => fetchStudentCases()}
-                  className="px-3.5 py-1.5 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl text-xs font-semibold border border-amber-300 transition-colors shrink-0 self-start sm:self-auto shadow-2xs"
-                >
-                  Retry Connection
-                </button>
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const demoTarget =
+                        cases.find(
+                          (c) =>
+                            c.student_id === "SYN-1007" ||
+                            c.external_student_ref === "SYN-1007"
+                        ) || DEMO_CASES[0];
+                      setStudentCases([
+                        {
+                          id: demoTarget.id,
+                          institution_id:
+                            demoTarget.institution_id ||
+                            "00000000-0000-0000-0000-000000000001",
+                          student_id: demoTarget.student_id,
+                          title: demoTarget.selected_intervention_key
+                            ? demoTarget.selected_intervention_key.replace(/_/g, " ")
+                            : "Support Plan",
+                          state: demoTarget.state,
+                          selected_intervention_key:
+                            demoTarget.selected_intervention_key,
+                          primary_owner_name:
+                            demoTarget.primary_owner_user_id || "Faculty Mentor",
+                          tasks_count: demoTarget.tasks?.length || 0,
+                          open_tasks_count:
+                            demoTarget.tasks?.filter(
+                              (t) => t.state !== "DONE" && t.state !== "COMPLETED"
+                            ).length || 0,
+                          created_at: demoTarget.created_at,
+                          updated_at: demoTarget.updated_at,
+                          tasks: demoTarget.tasks,
+                          events: demoTarget.events,
+                        } as any,
+                      ]);
+                      setIsDemoPreview(true);
+                      setCasesError(null);
+                    }}
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                  >
+                    Preview Demo Case Record
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fetchStudentCases()}
+                    className="px-3.5 py-1.5 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl text-xs font-semibold border border-amber-300 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    Retry Connection
+                  </button>
+                </div>
               </div>
             ) : studentCases.length === 0 ? (
               <div className="p-8 text-center bg-neutral-50 rounded-2xl border border-neutral-100">

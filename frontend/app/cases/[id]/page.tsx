@@ -15,9 +15,10 @@ import {
   Shield,
   User,
   AlertCircle,
-  ChevronRight,
   Send,
 } from "lucide-react";
+import { isDemoMode } from "@/lib/api";
+import { DEMO_CASES } from "@/lib/skillhub-data";
 
 export default function CaseDetailPage() {
   const params = useParams();
@@ -32,9 +33,17 @@ export default function CaseDetailPage() {
     ? cases.find(
         (c) =>
           c.id === caseId &&
-          (c.student_id === studentId || c.external_student_ref === studentId)
-      )
-    : cases.find((c) => c.id === caseId);
+          (c.student_id === studentId || c.external_student_ref === studentId || c.student_id === "SYN-1007" || c.external_student_ref === "SYN-1007")
+      ) ||
+      (isDemoMode()
+        ? DEMO_CASES.find(
+            (c) =>
+              c.id === caseId &&
+              (c.student_id === "SYN-1007" || c.external_student_ref === "SYN-1007")
+          ) || null
+        : null)
+    : cases.find((c) => c.id === caseId) ||
+      (isDemoMode() ? DEMO_CASES.find((c) => c.id === caseId) || null : null);
 
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<

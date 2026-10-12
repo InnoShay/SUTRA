@@ -79,6 +79,25 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export function isDemoMode(): boolean {
+  if (typeof window !== 'undefined') {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (
+        urlParams.get('walkthrough') === 'student' ||
+        urlParams.get('walkthrough') === 'true' ||
+        urlParams.get('demo') === 'true' ||
+        urlParams.get('demo') === '1'
+      ) {
+        return true;
+      }
+      const localVal = window.localStorage.getItem('sutra_demo_mode');
+      if (localVal === 'true' || localVal === '1') {
+        return true;
+      }
+    } catch {
+      // Fall through to environment variable check
+    }
+  }
   if (typeof process !== 'undefined' && process.env) {
     const val = process.env.NEXT_PUBLIC_SUTRA_DEMO_MODE;
     return val === 'true' || val === '1';
