@@ -44,7 +44,6 @@ import {
   EscalationRecordDTO,
   CounselorCallRequestDTO,
   CreateCallRequestInput,
-  CounselorCalendarEvent,
 } from "./types";
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
 import { api, isDemoMode } from "./api";
@@ -261,7 +260,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [authorityContacts, setAuthorityContacts] = useState<AuthorityContactItem[]>(INITIAL_AUTHORITY_CONTACTS);
   const [escalations, setEscalations] = useState<EscalationRecordDTO[]>(INITIAL_ESCALATIONS);
   const [callRequests, setCallRequests] = useState<CounselorCallRequestDTO[]>(INITIAL_CALL_REQUESTS);
-  const [calendarEvents, setCalendarEvents] = useState<CounselorCalendarEvent[]>(INITIAL_CALENDAR_EVENTS);
+  const [calendarEvents, setCalendarEvents] = useState<CounselorCalendarEvent[]>(demoActive ? INITIAL_CALENDAR_EVENTS : []);
 
   // UI state initialized with canonical synthetic fixtures
   const [user, setUser] = useState({
@@ -1142,24 +1141,6 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     setCourses((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status } : c))
     );
-  };
-
-  const addCalendarEvent = (eventData: Omit<CounselorCalendarEvent, "id">) => {
-    const newEvent: CounselorCalendarEvent = {
-      ...eventData,
-      id: `evt-${Date.now()}`,
-    };
-    setCalendarEvents((prev) => [newEvent, ...prev]);
-  };
-
-  const updateCalendarEvent = (id: string, updates: Partial<CounselorCalendarEvent>) => {
-    setCalendarEvents((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
-    );
-  };
-
-  const deleteCalendarEvent = (id: string) => {
-    setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
   };
 
   const toggleCourseLive = (id: string) => {

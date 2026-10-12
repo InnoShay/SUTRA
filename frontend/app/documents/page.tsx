@@ -74,10 +74,12 @@ export default function DocumentsPage() {
   const [cbdcPurpose, setCbdcPurpose] = useState("ACADEMIC_PERSISTENCE_REWARD");
   const [cbdcMilestone, setCbdcMilestone] = useState("MILESTONE-W5-CHECKIN");
   const [isIssuingCbdc, setIsIssuingCbdc] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Load documents
   const fetchDocuments = async () => {
     setIsLoading(true);
+    setErrorMsg(null);
     try {
       if (currentPersona?.token) {
         api.setToken(currentPersona.token);
@@ -90,6 +92,7 @@ export default function DocumentsPage() {
       }
     } catch (err: any) {
       console.warn("Failed to fetch documents:", err);
+      setErrorMsg(err?.message || "Failed to load document records");
     } finally {
       setIsLoading(false);
     }
