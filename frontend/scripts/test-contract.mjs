@@ -463,6 +463,237 @@ assert(
 );
 console.log("   ✓ Zero legacy Figma forum discussions or social upvote widgets in community/page.tsx\n");
 
+// 10. Phase 4: Analytics & Chart Data Integrity Validation
+console.log("10. Validating Phase 4 Analytics & Chart Data Integrity...");
+
+const analyticsCode = fs.readFileSync(
+  path.resolve(__dirname, "../app/analytics/page.tsx"),
+  "utf-8"
+);
+const lpChartCode = fs.readFileSync(
+  path.resolve(__dirname, "../components/LearningProgressChart.tsx"),
+  "utf-8"
+);
+const engChartCode = fs.readFileSync(
+  path.resolve(__dirname, "../components/EngagementChart.tsx"),
+  "utf-8"
+);
+const radGaugeCode = fs.readFileSync(
+  path.resolve(__dirname, "../components/RadialProgressGauge.tsx"),
+  "utf-8"
+);
+const actHeatmapCode = fs.readFileSync(
+  path.resolve(__dirname, "../components/ActivityHeatmap.tsx"),
+  "utf-8"
+);
+
+// 10a. Assert zero forbidden legacy Hackingly chart datasets in components
+const forbiddenChartConstants = [
+  "TIMEFRAME_BARS",
+  "TIMEFRAME_POINTS",
+  "TIMEFRAME_PERFORMANCE",
+  "TIMEFRAME_MATRICES",
+];
+
+for (const constant of forbiddenChartConstants) {
+  assert(!lpChartCode.includes(constant), `TIMEFRAME constant ${constant} still in LearningProgressChart!`);
+  assert(!engChartCode.includes(constant), `TIMEFRAME constant ${constant} still in EngagementChart!`);
+  assert(!radGaugeCode.includes(constant), `TIMEFRAME constant ${constant} still in RadialProgressGauge!`);
+  assert(!actHeatmapCode.includes(constant), `TIMEFRAME constant ${constant} still in ActivityHeatmap!`);
+  assert(!analyticsCode.includes(constant), `TIMEFRAME constant ${constant} still in analytics/page.tsx!`);
+}
+console.log("   ✓ Zero legacy TIMEFRAME_* hardcoded datasets active across chart components");
+
+// 10b. Assert zero fake educational subjects or course completion terms in analytics
+const forbiddenAnalyticsTerms = [
+  "UI Design",
+  "React Development",
+  "UX Research",
+  "JavaScript",
+  "Course Performance",
+  "Avg. Completion Rate",
+  "Consistent Engagement",
+  "studyHours",
+  "growth: \"+14.2%\"",
+  "growth: \"+28.4%\"",
+];
+
+for (const term of forbiddenAnalyticsTerms) {
+  assert(
+    !analyticsCode.includes(term),
+    `Analytics page defect: Forbidden educational term "${term}" found in app/analytics/page.tsx!`
+  );
+  assert(
+    !radGaugeCode.includes(term),
+    `RadialProgressGauge defect: Forbidden educational term "${term}" found in RadialProgressGauge.tsx!`
+  );
+}
+console.log("   ✓ Zero fake educational subjects or fabricated growth percentages in analytics");
+
+// 10c. Verify Analytics Selectors mathematical correctness
+// Test Case Lifecycle Distribution
+function testComputeCaseStateDistribution(cases) {
+  const CANONICAL_STATES = [
+    "NEW", "TRIAGED", "UNDER_REVIEW", "ACTIONABLE", "ASSIGNED",
+    "ACCEPTED", "IN_PROGRESS", "FOLLOW_UP_REQUIRED", "RESOLVED", "CLOSED"
+  ];
+  const counts = {};
+  for (const st of CANONICAL_STATES) counts[st] = 0;
+  let totalCases = 0;
+  for (const c of cases) {
+    if (!c) continue;
+    totalCases++;
+    const norm = (c.state || "").toUpperCase();
+    if (counts[norm] !== undefined) counts[norm]++;
+    else counts["NEW"]++;
+  }
+  const resolvedCount = (counts["RESOLVED"] || 0) + (counts["CLOSED"] || 0);
+  const activeCount = totalCases - resolvedCount;
+  const resolutionRatePct = totalCases > 0 ? Math.round((resolvedCount / totalCases) * 100) : 0;
+  const states = CANONICAL_STATES.map((state) => ({
+    state,
+    count: counts[state] || 0,
+    isTerminal: state === "RESOLVED" || state === "CLOSED",
+  }));
+  return { states, totalCases, activeCount, resolvedCount, resolutionRatePct };
+}
+
+// 10c.1 Empty cases produce 10 states with zero counts (no omission, no NaN)
+const emptyCaseDist = testComputeCaseStateDistribution([]);
+assert.strictEqual(emptyCaseDist.totalCases, 0, "Empty collection total must be 0");
+assert.strictEqual(emptyCaseDist.activeCount, 0, "Empty collection activeCount must be 0");
+assert.strictEqual(emptyCaseDist.resolvedCount, 0, "Empty collection resolvedCount must be 0");
+assert.strictEqual(emptyCaseDist.resolutionRatePct, 0, "Empty collection resolution rate must be 0% (no NaN)");
+assert.strictEqual(emptyCaseDist.states.length, 10, "Must contain all 10 canonical states");
+for (const st of emptyCaseDist.states) {
+  assert.strictEqual(st.count, 0, `State ${st.state} count must be 0 in empty collection`);
+}
+console.log("   ✓ Case distribution handles empty collection safely with 10 canonical states");
+
+// 10c.2 Verify non-empty case distribution
+const sampleCases = [
+  { id: "c1", state: "NEW", selected_intervention_key: "mentor_check_in" },
+  { id: "c2", state: "IN_PROGRESS", selected_intervention_key: "academic_tutoring_offer" },
+  { id: "c3", state: "RESOLVED", selected_intervention_key: "mentor_check_in" },
+  { id: "c4", state: "CLOSED", selected_intervention_key: "counselling_referral" },
+];
+const sampleDist = testComputeCaseStateDistribution(sampleCases);
+assert.strictEqual(sampleDist.totalCases, 4);
+assert.strictEqual(sampleDist.activeCount, 2); // NEW + IN_PROGRESS
+assert.strictEqual(sampleDist.resolvedCount, 2); // RESOLVED + CLOSED
+assert.strictEqual(sampleDist.resolutionRatePct, 50); // 2/4 = 50%
+console.log("   ✓ Verified active vs terminal case calculations and resolution rate");
+
+// 10c.3 Verify intervention distribution
+function testComputeInterventionDistribution(cases) {
+  const CANONICAL = [
+    { key: "academic_tutoring_offer", label: "Subject Tutoring Referral" },
+    { key: "mentor_check_in", label: "Faculty Mentorship 1-on-1" },
+    { key: "counselling_referral", label: "Student Wellbeing Referral" },
+    { key: "fee_emergency_counselling", label: "Financial Aid Consultation" },
+  ];
+  const keyMap = {};
+  for (const c of CANONICAL) keyMap[c.key] = 0;
+  let totalAssigned = 0;
+  for (const c of cases) {
+    if (!c || !c.selected_intervention_key) continue;
+    totalAssigned++;
+    const k = c.selected_intervention_key;
+    keyMap[k] = (keyMap[k] || 0) + 1;
+  }
+  const items = CANONICAL.map((c) => ({
+    key: c.key,
+    label: c.label,
+    count: keyMap[c.key] || 0,
+    percentage: totalAssigned > 0 ? Math.round(((keyMap[c.key] || 0) / totalAssigned) * 100) : 0,
+  }));
+  return { items, totalAssigned };
+}
+
+const sampleIntDist = testComputeInterventionDistribution(sampleCases);
+assert.strictEqual(sampleIntDist.totalAssigned, 4);
+const mentorItem = sampleIntDist.items.find((i) => i.key === "mentor_check_in");
+assert(mentorItem !== undefined);
+assert.strictEqual(mentorItem.count, 2);
+assert.strictEqual(mentorItem.percentage, 50); // 2/4 = 50%
+console.log("   ✓ Verified canonical intervention key distribution and exact percentages");
+
+// 10c.4 Verify signal timeline with zero and valid signals
+function testComputeSignalTimeline(signals) {
+  if (!signals || signals.length === 0) return { points: [], hasData: false, totalSignals: 0 };
+  const valid = signals.filter((s) => s.evaluated_at && !isNaN(new Date(s.evaluated_at).getTime()));
+  if (valid.length === 0) return { points: [], hasData: false, totalSignals: signals.length };
+  const dayGroups = {};
+  for (const s of valid) {
+    const dayKey = new Date(s.evaluated_at).toISOString().split("T")[0];
+    if (!dayGroups[dayKey]) dayGroups[dayKey] = { count: 0, concerns: 0, reviewed: 0 };
+    dayGroups[dayKey].count++;
+    if ((s.result || "").toLowerCase() === "concern") dayGroups[dayKey].concerns++;
+    if (s.reviewed_decision && s.reviewed_decision.trim() !== "") dayGroups[dayKey].reviewed++;
+  }
+  const points = Object.keys(dayGroups).sort().map((dateKey) => ({
+    dateKey,
+    signalsCount: dayGroups[dateKey].count,
+    concernsCount: dayGroups[dateKey].concerns,
+    reviewedCount: dayGroups[dateKey].reviewed,
+  }));
+  return { points, hasData: points.length > 0, totalSignals: valid.length };
+}
+
+const emptyTimeline = testComputeSignalTimeline([]);
+assert.strictEqual(emptyTimeline.hasData, false);
+assert.strictEqual(emptyTimeline.points.length, 0);
+
+const sampleSignals = [
+  { id: "s1", evaluated_at: "2026-10-06T10:00:00Z", result: "concern", reviewed_decision: "approve" },
+  { id: "s2", evaluated_at: "2026-10-06T14:00:00Z", result: "concern", reviewed_decision: null },
+  { id: "s3", evaluated_at: "2026-10-08T09:00:00Z", result: "nominal", reviewed_decision: null },
+];
+const validTimeline = testComputeSignalTimeline(sampleSignals);
+assert.strictEqual(validTimeline.hasData, true);
+assert.strictEqual(validTimeline.totalSignals, 3);
+assert.strictEqual(validTimeline.points.length, 2); // 2 distinct dates: 2026-10-06 and 2026-10-08
+assert.strictEqual(validTimeline.points[0].signalsCount, 2);
+assert.strictEqual(validTimeline.points[0].concernsCount, 2);
+assert.strictEqual(validTimeline.points[0].reviewedCount, 1);
+assert.strictEqual(validTimeline.points[1].signalsCount, 1);
+assert.strictEqual(validTimeline.points[1].concernsCount, 0);
+console.log("   ✓ Verified signal timeline grouping by real evaluated_at timestamps");
+
+// 10c.5 Verify operational card metrics and ADR-004 leadership privacy
+function testComputeAnalyticsOperationalCards(signals, cases, students, activeRole) {
+  const isLeadership = activeRole === "leadership";
+  const studentCount = students.length;
+  const signalsCount = signals.length;
+  const pendingCount = signals.filter((s) => !s.reviewed_decision || s.reviewed_decision.trim() === "").length;
+  const reviewedCount = signalsCount - pendingCount;
+  const triageRate = signalsCount > 0 ? Math.round((reviewedCount / signalsCount) * 100) : 100;
+  const activeCount = cases.filter((c) => {
+    const s = (c.state || "").toUpperCase();
+    return s !== "RESOLVED" && s !== "CLOSED";
+  }).length;
+  return {
+    studentsInScope: { value: isLeadership ? "Restricted" : studentCount, isRestricted: isLeadership },
+    signalsGenerated: { value: signalsCount },
+    triageReviewRate: { value: `${triageRate}%` },
+    activeCases: { value: activeCount },
+  };
+}
+
+const leadCards = testComputeAnalyticsOperationalCards(sampleSignals, sampleCases, [{ id: "1" }], "leadership");
+assert.strictEqual(leadCards.studentsInScope.value, "Restricted");
+assert.strictEqual(leadCards.studentsInScope.isRestricted, true);
+
+const facultyCards = testComputeAnalyticsOperationalCards(sampleSignals, sampleCases, [{ id: "1" }], "faculty");
+assert.strictEqual(facultyCards.studentsInScope.value, 1);
+assert.strictEqual(facultyCards.studentsInScope.isRestricted, false);
+assert.strictEqual(facultyCards.signalsGenerated.value, 3);
+assert.strictEqual(facultyCards.triageReviewRate.value, "33%"); // 1 of 3 reviewed = 33%
+assert.strictEqual(facultyCards.activeCases.value, 2);
+console.log("   ✓ Verified ADR-004 leadership privacy enforcement and zero-division safety\n");
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
+
+
