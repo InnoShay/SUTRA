@@ -30,6 +30,7 @@ import {
   Info,
   ShieldCheck,
 } from "lucide-react";
+import CounselorAnalyticsPage from "../counselor/analytics/page";
 
 export default function AnalyticsPage() {
   const {
@@ -42,6 +43,10 @@ export default function AnalyticsPage() {
     backendConnected,
     dataProvenance,
   } = useSkillHub();
+
+  if (activeRole === "counselor") {
+    return <CounselorAnalyticsPage />;
+  }
 
   const timeframes = ["This Week", "This Month", "This Year"] as const;
 

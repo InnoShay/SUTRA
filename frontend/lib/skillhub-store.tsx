@@ -17,6 +17,7 @@ import {
   INITIAL_AUTHORITY_CONTACTS,
   INITIAL_CALL_REQUESTS,
   INITIAL_ESCALATIONS,
+  INITIAL_CALENDAR_EVENTS,
 } from "./skillhub-data";
 import {
   UserRole,
@@ -42,6 +43,7 @@ import {
   EscalationRecordDTO,
   CounselorCallRequestDTO,
   CreateCallRequestInput,
+  CounselorCalendarEvent,
 } from "./types";
 import { DEMO_PERSONAS, DEMO_CAMPUS_ID, DemoPersona } from "./demo-auth";
 import { api, isDemoMode } from "./api";
@@ -168,6 +170,10 @@ interface SkillHubContextType {
   escalateCaseToAuthority: (req: EscalationRequest) => Promise<EscalationRecordDTO>;
   requestCounselorCall: (input: CreateCallRequestInput) => Promise<CounselorCallRequestDTO>;
   updateCallRequestStatus: (id: string, status: string, notes?: string, incrementAttempt?: boolean) => Promise<void>;
+  calendarEvents: CounselorCalendarEvent[];
+  addCalendarEvent: (event: Omit<CounselorCalendarEvent, "id">) => void;
+  updateCalendarEvent: (id: string, updates: Partial<CounselorCalendarEvent>) => void;
+  deleteCalendarEvent: (id: string) => void;
 
   // Existing UI compatibility state
   user: typeof CURRENT_USER;
@@ -257,6 +263,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [callRequests, setCallRequests] = useState<CounselorCallRequestDTO[]>(
     demoActive ? INITIAL_CALL_REQUESTS : []
   );
+  const [calendarEvents, setCalendarEvents] = useState<CounselorCalendarEvent[]>(
+    demoActive ? INITIAL_CALENDAR_EVENTS : []
+  );
 
   // UI state initialized with canonical synthetic fixtures
   const [user, setUser] = useState({
@@ -300,8 +309,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     setActiveRoleState(newRole);
     const persona = DEMO_PERSONAS[newRole];
     if (!supabaseSession?.access_token) {
-      api.setToken(persona.token);
-      api.setCampusId(DEMO_CAMPUS_ID);
+      if (isDemoMode()) {
+        api.setToken(persona.token);
+        api.setCampusId(DEMO_CAMPUS_ID);
+      }
       setUser({
         ...CURRENT_USER,
         name: persona.name.split(" ")[0],
@@ -412,12 +423,14 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingBackend(true);
     setBackendError(null);
     try {
-      // If api client has no token yet (truly unauthenticated), use demo persona token
-      if (!api.getToken()) {
-        api.setToken(currentPersona.token);
-      }
-      if (!api.getCampusId()) {
-        api.setCampusId(DEMO_CAMPUS_ID);
+      // Attach development persona token/campus strictly in explicit demo mode
+      if (isDemoMode()) {
+        if (!api.getToken()) {
+          api.setToken(currentPersona.token);
+        }
+        if (!api.getCampusId()) {
+          api.setCampusId(DEMO_CAMPUS_ID);
+        }
       }
 
       // Check backend health
@@ -1117,6 +1130,24 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const addCalendarEvent = (eventData: Omit<CounselorCalendarEvent, "id">) => {
+    const newEvent: CounselorCalendarEvent = {
+      ...eventData,
+      id: `evt-${Date.now()}`,
+    };
+    setCalendarEvents((prev) => [newEvent, ...prev]);
+  };
+
+  const updateCalendarEvent = (id: string, updates: Partial<CounselorCalendarEvent>) => {
+    setCalendarEvents((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
+    );
+  };
+
+  const deleteCalendarEvent = (id: string) => {
+    setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
   const toggleCourseLive = (id: string) => {
     setCourses((prev) =>
       prev.map((c) =>
@@ -1280,6 +1311,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         escalateCaseToAuthority,
         requestCounselorCall,
         updateCallRequestStatus,
+        calendarEvents,
+        addCalendarEvent,
+        updateCalendarEvent,
+        deleteCalendarEvent,
         user,
         updateUser,
         courses,

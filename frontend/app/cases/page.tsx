@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 export default function CasesPage() {
-  const { user, currentPersona, cases, activeRole } = useSkillHub();
+  const { user, currentPersona, cases, activeRole, backendError, refreshBackendData } = useSkillHub();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
@@ -100,6 +100,22 @@ export default function CasesPage() {
           </select>
         </div>
       </div>
+
+      {/* Backend Offline Indicator Banner */}
+      {backendError && (
+        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+            <span>Backend service is unreachable ({backendError}). Viewing local case cache.</span>
+          </div>
+          <button
+            onClick={() => refreshBackendData()}
+            className="px-3 py-1 bg-white hover:bg-neutral-50 text-neutral-800 rounded-lg text-xs font-semibold border border-amber-200 transition-colors shrink-0"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
 
       {/* Case List */}
       <div className="skill-card bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">

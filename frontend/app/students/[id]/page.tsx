@@ -300,6 +300,41 @@ export default function StudentDetailPage() {
     }, 2000);
   };
 
+  // 0. Student Role Privacy Safeguard
+  if (activeRole === "student") {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto py-6">
+        <div>
+          <Link
+            href="/dashboard"
+            className="text-xs text-neutral-400 hover:text-neutral-900 font-semibold flex items-center gap-1.5 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to My Overview</span>
+          </Link>
+        </div>
+
+        <div className="skill-card p-8 bg-white border border-neutral-200/80 rounded-3xl flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-neutral-900">
+            Student 360 Evaluation Restricted
+          </h2>
+          <p className="text-xs text-neutral-600 leading-relaxed max-w-md">
+            Individual student telemetry, predictive risk assessments, and staff triage queues are restricted to authorized mentors and campus counselors.
+          </p>
+          <Link
+            href="/dashboard"
+            className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-sm transition-all"
+          >
+            Return to My Overview
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // 1. Leadership Institutional Privacy Safeguard
   if (activeRole === "leadership") {
     return (

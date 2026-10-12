@@ -37,6 +37,7 @@ import {
   Briefcase,
   ShieldCheck,
   Sparkles,
+  Calendar,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -161,6 +162,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isStudent = activeRole === "student";
   const isAdmin = activeRole === "admin" || activeRole === "superadmin";
+  const isCounselor = activeRole === "counselor";
 
   // Standardized navigation definitions: Teacher-centric with legacy compatibility aliases
   // Audited labels: Overview, Interventions & Protocols, Student Directory, Case Management, Institutional Analytics
@@ -211,6 +213,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       icon: LayoutGrid,
     },
     {
+      name: "Schedule & Calls",
+      shortName: "Schedule",
+      href: "/schedule",
+      icon: Calendar,
+    },
+    {
       name: t("nav.internships", "Internships"),
       shortName: t("nav.internships_short", "Internships"),
       href: "/internships",
@@ -242,12 +250,57 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     },
   ];
 
+  const counselorNavItems = [
+    {
+      name: t("nav.dashboard", "Overview"),
+      shortName: t("nav.dashboard_short", "Overview"),
+      href: "/dashboard",
+      icon: LayoutGrid,
+    },
+    {
+      name: "Schedule & Calls",
+      shortName: "Schedule",
+      href: "/schedule",
+      icon: Calendar,
+    },
+    {
+      name: "Students in Need",
+      shortName: "Students",
+      href: "/students",
+      icon: GraduationCap,
+    },
+    {
+      name: "Support Cases",
+      shortName: "Cases",
+      href: "/cases",
+      icon: FileText,
+    },
+    {
+      name: "Counselor Analytics",
+      shortName: "Analytics",
+      href: "/counselor/analytics",
+      icon: BarChart2,
+    },
+    {
+      name: t("nav.documents", "Document Integrity"),
+      shortName: t("nav.documents_short", "Documents"),
+      href: "/documents",
+      icon: ShieldCheck,
+    },
+  ];
+
   const adminNavItems = [
     {
       name: t("nav.dashboard", "Overview"),
       shortName: t("nav.dashboard_short", "Overview"),
       href: "/dashboard",
       icon: LayoutGrid,
+    },
+    {
+      name: "Schedule & Calls",
+      shortName: "Schedule",
+      href: "/schedule",
+      icon: Calendar,
     },
     {
       name: t("nav.internships", "Internships"),
@@ -289,6 +342,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const mainNavItems = isStudent
     ? studentNavItems
+    : isCounselor
+    ? counselorNavItems
     : isAdmin
     ? adminNavItems
     : teacherNavItems;

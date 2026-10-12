@@ -8,6 +8,7 @@ import {
   AuthorityContactItem,
   EscalationRecordDTO,
   CounselorCallRequestDTO,
+  CounselorCalendarEvent,
 } from "./types";
 import { DEMO_CAMPUS_ID } from "./demo-auth";
 
@@ -1017,4 +1018,174 @@ export const INITIAL_ESCALATIONS: EscalationRecordDTO[] = [
     follow_up_notes: "Follow-up discussion scheduled with student welfare coordinator for Thursday 11:00 AM.",
   },
 ];
+
+export interface CalendarAttachment {
+  dayOfWeek: number;
+  color: 'peach' | 'sky' | 'lavender';
+  title: string;
+  studentName: string;
+  notes: string;
+}
+
+export const INITIAL_CALENDAR_ATTACHMENTS: CalendarAttachment[] = [
+  {
+    dayOfWeek: 2, // Tuesday
+    color: 'peach',
+    title: 'Consultation Note: Asha S. - Exam Stress Strategy',
+    studentName: 'Asha (synthetic)',
+    notes: 'Prescribed 15-minute pomodoro breakdown and coordinated with Prof. Sharma for assignment deadline cushion.',
+  },
+  {
+    dayOfWeek: 3, // Wednesday
+    color: 'sky',
+    title: 'Wellbeing Intake Form: Ira - Attendance Triage',
+    studentName: 'Ira (synthetic)',
+    notes: 'Health center clearance attached. Attendance concession recommended for 3 consecutive days.',
+  },
+  {
+    dayOfWeek: 3, // Wednesday
+    color: 'lavender',
+    title: 'Academic Concession Slip: Physics Lab Evaluation',
+    studentName: 'Milan (synthetic)',
+    notes: 'Signed by Dean Rao for lab make-up session scheduling.',
+  },
+  {
+    dayOfWeek: 4, // Thursday
+    color: 'lavender',
+    title: 'Intervention Plan: Computer Science Exam Accommodations',
+    studentName: 'Tara (synthetic)',
+    notes: 'Peer tutoring pairing confirmed with Year 3 mentor.',
+  },
+  {
+    dayOfWeek: 6, // Saturday
+    color: 'peach',
+    title: 'Weekend Debrief Summary: 4 Consultations Completed',
+    studentName: 'Counselor Team',
+    notes: 'Weekly cohort wellbeing status marked green across 88% of mentored students.',
+  },
+];
+
+export const INITIAL_CALENDAR_EVENTS: CounselorCalendarEvent[] = [
+  {
+    id: "evt-1",
+    title: "Academic Stress Review",
+    studentId: "SYN-1007",
+    studentName: "Asha (synthetic)",
+    category: "academic",
+    dayOfWeek: 2, // Tuesday
+    startTime: "07:00",
+    endTime: "07:40",
+    durationLabel: "7:00am - 7:40am",
+    status: "pending",
+    color: "lavender",
+    locationOrMode: "Room 102 / Wellness Desk",
+    notes: "Review academic anxiety, lab submission deadlines, and persistence strategies.",
+  },
+  {
+    id: "evt-2",
+    title: "Anxiety & Workload Check-in",
+    studentId: "SYN-1009",
+    studentName: "Ira (synthetic)",
+    category: "wellbeing",
+    dayOfWeek: 2, // Tuesday
+    startTime: "07:30",
+    endTime: "09:00",
+    durationLabel: "7:30am - 9:00am",
+    status: "pending",
+    color: "sky",
+    locationOrMode: "Studio 4 / Online Call",
+    notes: "Stress de-escalation for project submission milestones and cognitive workload balancing.",
+  },
+  {
+    id: "evt-3",
+    title: "Lab Attendance Follow-up",
+    studentId: "SYN-1011",
+    studentName: "Milan (synthetic)",
+    category: "attendance",
+    dayOfWeek: 2, // Tuesday
+    startTime: "10:00",
+    endTime: "10:40",
+    durationLabel: "10:00am - 10:40am",
+    status: "pending",
+    color: "lavender",
+    locationOrMode: "Lab Hall B",
+    notes: "Follow-up on laboratory attendance drop, peer tutoring alignment, and assignment backlog.",
+  },
+  {
+    id: "evt-4",
+    title: "Wellbeing & Sports Routine",
+    studentId: "SYN-1010",
+    studentName: "Noor (synthetic)",
+    category: "wellbeing",
+    dayOfWeek: 2, // Tuesday
+    startTime: "10:50",
+    endTime: "12:10",
+    durationLabel: "10:50am - 12:10pm",
+    status: "confirmed",
+    color: "peach",
+    locationOrMode: "Wellness Center - Cabin 2",
+    notes: "Physical health rehabilitation, sleep routine check, and extracurricular scheduling clearance.",
+  },
+  {
+    id: "evt-5",
+    title: "Midterm Preparation Strategy",
+    studentId: "SYN-1008",
+    studentName: "Rohan (synthetic)",
+    category: "academic",
+    dayOfWeek: 4, // Thursday
+    startTime: "09:30",
+    endTime: "10:30",
+    durationLabel: "9:30am - 10:30am",
+    status: "pending",
+    color: "lavender",
+    locationOrMode: "Google Meet",
+    notes: "Midterm revision planning, study schedule breakdown, and test accommodation.",
+  },
+  {
+    id: "evt-6",
+    title: "Career & Internship Guidance",
+    studentId: "SYN-1012",
+    studentName: "Tara (synthetic)",
+    category: "career",
+    dayOfWeek: 4, // Thursday
+    startTime: "10:30",
+    endTime: "12:00",
+    durationLabel: "10:30am - 12:00pm",
+    status: "confirmed",
+    color: "mint",
+    locationOrMode: "Coding Lab 3",
+    notes: "Placement readiness, technical interview confidence building, and course persistence.",
+  },
+  {
+    id: "evt-7",
+    title: "Weekly Persistence Debrief",
+    studentId: "SYN-1007",
+    studentName: "Asha (synthetic)",
+    category: "academic",
+    dayOfWeek: 6, // Saturday
+    startTime: "09:30",
+    endTime: "10:30",
+    durationLabel: "9:30am - 10:30am",
+    status: "pending",
+    color: "lavender",
+    locationOrMode: "Phone Consultation",
+    notes: "Weekly wellness check-in, mentor feedback review, and milestone validation.",
+  },
+  {
+    id: "evt-8",
+    title: "Mental Health Care Consultation",
+    studentId: "SYN-1011",
+    studentName: "Milan (synthetic)",
+    category: "wellbeing",
+    dayOfWeek: 6, // Saturday
+    startTime: "10:30",
+    endTime: "12:00",
+    durationLabel: "10:30am - 12:00pm",
+    status: "confirmed",
+    color: "peach",
+    locationOrMode: "Sports Complex Room A",
+    notes: "Re-engagement debrief, stress coping mechanisms, and weekend routine check.",
+  },
+];
+
 
