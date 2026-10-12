@@ -44,6 +44,8 @@ export interface Student {
   completedLessons: number;
   totalLessons: number;
   bio?: string;
+  cohort_code?: string;
+  external_ref?: string;
 }
 
 export interface CommunityDiscussion {

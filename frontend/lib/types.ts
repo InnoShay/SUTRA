@@ -686,3 +686,61 @@ export interface CBDCVoucherRecord {
   redeemed_at?: string | null;
   transaction_reference?: string | null;
 }
+
+// --- Cohort Risk Analytics (Phase 5) ---
+export interface GranularRiskTiers {
+  low_risk: number;
+  moderate_risk: number;
+  elevated_risk: number;
+}
+
+export interface RiskDistributionDTO {
+  at_risk_count: number | null;
+  at_risk_percentage: number | null;
+  on_track_count: number | null;
+  on_track_percentage: number | null;
+  unevaluated_count: number;
+  threshold: number;
+  granular_tiers?: GranularRiskTiers | null;
+  is_privacy_suppressed: boolean;
+  suppression_reason?: string | null;
+}
+
+export interface CohortBreakdownItem {
+  cohort_code: string;
+  total_students: number;
+  evaluated_count: number;
+  at_risk_count?: number | null;
+  at_risk_percentage?: number | null;
+  on_track_count?: number | null;
+  on_track_percentage?: number | null;
+  is_privacy_suppressed: boolean;
+  suppression_reason?: string | null;
+}
+
+export interface MultiTierTrendPoint {
+  date_key: string;
+  label: string;
+  prediction_runs: number;
+  signals_detected: number;
+  cases_opened: number;
+  confirmed_outcomes: number;
+}
+
+export interface CohortAnalyticsSummaryResponse {
+  campus_id: string;
+  as_of_at: string;
+  timeframe: string;
+  cohort_filter?: string | null;
+  total_students_in_scope: number;
+  evaluated_students_count: number;
+  total_prediction_runs: number;
+  coverage_percentage: number;
+  risk_distribution: RiskDistributionDTO;
+  cohort_breakdown: CohortBreakdownItem[];
+  trend_timeline: MultiTierTrendPoint[];
+  case_lifecycle_distribution: { state: string; count: number; is_terminal: boolean }[];
+  intervention_distribution: { key: string; label: string; count: number; percentage: number }[];
+  governance_disclaimers: string[];
+}
+

@@ -49,6 +49,7 @@ import {
   DocumentListResponse,
   CBDCVoucherIssueRequest,
   CBDCVoucherRecord,
+  CohortAnalyticsSummaryResponse,
 } from './types';
 import {
   DEMO_SIGNALS,
@@ -504,6 +505,91 @@ class ApiClient {
           unsupported_sources: [],
         },
         governance_disclaimer: 'Feature readiness checks audit input data completeness. Missing values are never silently filled with zeros.',
+      } as unknown as T;
+    }
+
+    // --- Cohort Risk Analytics (Phase 5) ---
+    if (cleanEndpoint.includes('/analytics/cohort-summary')) {
+      return {
+        campus_id: this.campusId || '00000000-0000-0000-0000-000000000000',
+        as_of_at: new Date().toISOString(),
+        timeframe: 'this_month',
+        cohort_filter: null,
+        total_students_in_scope: INITIAL_STUDENTS.length,
+        evaluated_students_count: Math.min(INITIAL_STUDENTS.length, 6),
+        total_prediction_runs: 8,
+        coverage_percentage: 75.0,
+        risk_distribution: {
+          at_risk_count: 2,
+          at_risk_percentage: 33.3,
+          on_track_count: 4,
+          on_track_percentage: 66.7,
+          unevaluated_count: Math.max(0, INITIAL_STUDENTS.length - 6),
+          threshold: 0.46,
+          granular_tiers: {
+            low_risk: 3,
+            moderate_risk: 1,
+            elevated_risk: 2,
+          },
+          is_privacy_suppressed: false,
+          suppression_reason: null,
+        },
+        cohort_breakdown: [
+          {
+            cohort_code: 'CS-2026',
+            total_students: 5,
+            evaluated_count: 4,
+            at_risk_count: 1,
+            at_risk_percentage: 25.0,
+            on_track_count: 3,
+            on_track_percentage: 75.0,
+            is_privacy_suppressed: false,
+            suppression_reason: null,
+          },
+          {
+            cohort_code: 'ENG-2026',
+            total_students: 3,
+            evaluated_count: 2,
+            at_risk_count: 1,
+            at_risk_percentage: 50.0,
+            on_track_count: 1,
+            on_track_percentage: 50.0,
+            is_privacy_suppressed: false,
+            suppression_reason: null,
+          },
+        ],
+        trend_timeline: [
+          { date_key: '2026-10-06', label: 'Oct 06', prediction_runs: 2, signals_detected: 1, cases_opened: 1, confirmed_outcomes: 0 },
+          { date_key: '2026-10-07', label: 'Oct 07', prediction_runs: 1, signals_detected: 0, cases_opened: 0, confirmed_outcomes: 0 },
+          { date_key: '2026-10-08', label: 'Oct 08', prediction_runs: 3, signals_detected: 2, cases_opened: 1, confirmed_outcomes: 1 },
+          { date_key: '2026-10-09', label: 'Oct 09', prediction_runs: 0, signals_detected: 1, cases_opened: 0, confirmed_outcomes: 0 },
+          { date_key: '2026-10-10', label: 'Oct 10', prediction_runs: 1, signals_detected: 0, cases_opened: 1, confirmed_outcomes: 0 },
+          { date_key: '2026-10-11', label: 'Oct 11', prediction_runs: 1, signals_detected: 1, cases_opened: 0, confirmed_outcomes: 1 },
+          { date_key: '2026-10-12', label: 'Oct 12', prediction_runs: 0, signals_detected: 0, cases_opened: 0, confirmed_outcomes: 0 },
+        ],
+        case_lifecycle_distribution: [
+          { state: 'NEW', count: 1, is_terminal: false },
+          { state: 'TRIAGED', count: 1, is_terminal: false },
+          { state: 'UNDER_REVIEW', count: 0, is_terminal: false },
+          { state: 'ACTIONABLE', count: 0, is_terminal: false },
+          { state: 'ASSIGNED', count: 1, is_terminal: false },
+          { state: 'ACCEPTED', count: 0, is_terminal: false },
+          { state: 'IN_PROGRESS', count: 1, is_terminal: false },
+          { state: 'FOLLOW_UP_REQUIRED', count: 0, is_terminal: false },
+          { state: 'RESOLVED', count: 1, is_terminal: true },
+          { state: 'CLOSED', count: 0, is_terminal: true },
+        ],
+        intervention_distribution: [
+          { key: 'academic_tutoring_offer', label: 'Subject Tutoring Referral', count: 2, percentage: 50.0 },
+          { key: 'mentor_check_in', label: 'Faculty Mentorship 1-on-1', count: 1, percentage: 25.0 },
+          { key: 'counselling_referral', label: 'Student Wellbeing Referral', count: 1, percentage: 25.0 },
+          { key: 'fee_emergency_counselling', label: 'Financial Aid Consultation', count: 0, percentage: 0.0 },
+        ],
+        governance_disclaimers: [
+          'Case counts reflect educator triage volume, not model precision.',
+          'Intervention counts reflect assigned student support protocols, not verified treatment causality.',
+          'Small-group privacy safeguards (ADR-004) automatically mask cells with fewer than 5 students in leadership views.',
+        ],
       } as unknown as T;
     }
 
@@ -1067,6 +1153,17 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+  };
+
+  // --- Institutional Analytics & Cohort Risk (Phase 5) ---
+  public analytics = {
+    getCohortSummary: (params?: { cohort?: string; timeframe?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.cohort) q.append('cohort', params.cohort);
+      if (params?.timeframe) q.append('timeframe', params.timeframe);
+      const qs = q.toString();
+      return this.request<CohortAnalyticsSummaryResponse>(`/analytics/cohort-summary${qs ? `?${qs}` : ''}`);
+    },
   };
 
   // --- Health & Governance ---

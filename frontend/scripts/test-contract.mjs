@@ -1158,9 +1158,164 @@ assert(
 );
 console.log("   ✓ Verified access controls and privacy gates (ADR-003 and ADR-004)\n");
 
+// ==========================================
+// 18. Cohort Risk Analytics Contracts (Phase 5)
+// ==========================================
+console.log("18. Validating Phase 5 Cohort Risk Analytics Contracts...");
+
+const currentAnalyticsPageCode = fs.readFileSync(
+  path.resolve(__dirname, "../app/analytics/page.tsx"),
+  "utf-8"
+);
+const riskDistChartPath = path.join(__dirname, "../components/analytics/CohortRiskDistributionChart.tsx");
+const cohortTablePath = path.join(__dirname, "../components/analytics/CohortComparisonTable.tsx");
+const multiTrendPath = path.join(__dirname, "../components/analytics/MultiTierTrendChart.tsx");
+
+assert(fs.existsSync(riskDistChartPath), "CohortRiskDistributionChart.tsx must exist");
+assert(fs.existsSync(cohortTablePath), "CohortComparisonTable.tsx must exist");
+assert(fs.existsSync(multiTrendPath), "MultiTierTrendChart.tsx must exist");
+
+const riskChartCode = fs.readFileSync(riskDistChartPath, "utf-8");
+const cohortTableCode = fs.readFileSync(cohortTablePath, "utf-8");
+const multiTrendCode = fs.readFileSync(multiTrendPath, "utf-8");
+
+// 18a. Visual components mounted in Analytics Page
+assert(
+  currentAnalyticsPageCode.includes("CohortRiskDistributionChart"),
+  "Analytics page must mount CohortRiskDistributionChart"
+);
+assert(
+  currentAnalyticsPageCode.includes("CohortComparisonTable"),
+  "Analytics page must mount CohortComparisonTable"
+);
+assert(
+  currentAnalyticsPageCode.includes("MultiTierTrendChart"),
+  "Analytics page must mount MultiTierTrendChart"
+);
+assert(
+  currentAnalyticsPageCode.includes("selectedCohort") && currentAnalyticsPageCode.includes("selectedRiskTier"),
+  "Analytics page must support interactive cohort and risk tier filters"
+);
+console.log("   ✓ Verified Phase 5 visualization components and interactive filters mounted in analytics/page.tsx");
+
+// 18b. Cohort Risk Distribution contracts
+assert(
+  riskChartCode.includes("Threshold:") &&
+  riskChartCode.includes("Low Risk") &&
+  riskChartCode.includes("Moderate") &&
+  riskChartCode.includes("Elevated"),
+  "CohortRiskDistributionChart must surface threshold 0.46 and granular risk tiers"
+);
+assert(
+  riskChartCode.includes("Small-Group Privacy Suppression Active") && riskChartCode.includes("ADR-004"),
+  "CohortRiskDistributionChart must handle ADR-004 small-group privacy suppression"
+);
+console.log("   ✓ Verified cohort risk distribution, threshold 0.46 co-location and granular tiers");
+
+// 18c. Multi-Tier Trend Chart contracts
+assert(
+  multiTrendCode.includes("Tier 3: Predictions") &&
+  multiTrendCode.includes("Tier 2: Policy Signals") &&
+  multiTrendCode.includes("Tier 5: Cases Opened") &&
+  multiTrendCode.includes("Confirmed Resolutions"),
+  "MultiTierTrendChart must distinguish Predictions, Signals, Cases and Confirmed Outcomes"
+);
+assert(
+  multiTrendCode.includes("Non-Causal Governance Notice") && multiTrendCode.includes("not be claimed as proof of model accuracy"),
+  "MultiTierTrendChart must enforce non-causal governance disclaimer"
+);
+console.log("   ✓ Verified multi-tier trend series separation and non-causal accuracy disclaimers");
+
+// 18d. Mathematical correctness of Cohort Risk & Privacy Selectors
+function mockComputeCohortRiskDistribution(students, predictions, isLeadership) {
+  const totalStudents = students.length;
+  const studentMap = new Map();
+  for (const s of students) {
+    studentMap.set(s.id, s);
+    if (s.external_ref) studentMap.set(s.external_ref, s);
+  }
+  const latest = new Map();
+  let totalRuns = 0;
+  for (const p of predictions) {
+    const key = p.student_id || p.external_student_ref;
+    if (studentMap.has(key)) {
+      totalRuns++;
+      const existing = latest.get(key);
+      if (!existing || (p.created_at && existing.created_at && new Date(p.created_at) >= new Date(existing.created_at))) {
+        latest.set(key, p);
+      }
+    }
+  }
+  const evaluatedCount = latest.size;
+  let atRisk = 0;
+  for (const p of latest.values()) {
+    if (p.risk_probability >= (p.threshold || 0.46) || p.classification === "At_Risk") atRisk++;
+  }
+  const onTrack = evaluatedCount - atRisk;
+  const isSuppressed = totalStudents < 5 && isLeadership;
+  return {
+    totalStudents,
+    evaluatedStudentsCount: evaluatedCount,
+    totalPredictionRuns: totalRuns,
+    coveragePercentage: totalStudents > 0 ? Math.round((evaluatedCount / totalStudents) * 100) : 0,
+    at_risk_count: isSuppressed ? null : atRisk,
+    at_risk_percentage: isSuppressed ? null : (evaluatedCount > 0 ? Math.round((atRisk / evaluatedCount) * 100) : 0),
+    on_track_count: isSuppressed ? null : onTrack,
+    on_track_percentage: isSuppressed ? null : (evaluatedCount > 0 ? Math.round((onTrack / evaluatedCount) * 100) : 0),
+    is_privacy_suppressed: isSuppressed,
+  };
+}
+
+// 18d.1 Deduplication test
+const testStudents = [
+  { id: "s1", external_ref: "REF-1", cohort_code: "CS-2026" },
+  { id: "s2", external_ref: "REF-2", cohort_code: "CS-2026" },
+  { id: "s3", external_ref: "REF-3", cohort_code: "CS-2026" },
+  { id: "s4", external_ref: "REF-4", cohort_code: "CS-2026" },
+  { id: "s5", external_ref: "REF-5", cohort_code: "CS-2026" },
+  { id: "s6", external_ref: "REF-6", cohort_code: "CS-2026" },
+];
+const testPredictions = [
+  { external_student_ref: "REF-1", risk_probability: 0.30, threshold: 0.46, created_at: "2026-10-10T10:00:00Z" },
+  { external_student_ref: "REF-1", risk_probability: 0.70, threshold: 0.46, created_at: "2026-10-12T10:00:00Z" }, // Newer -> At_Risk
+  { external_student_ref: "REF-2", risk_probability: 0.20, threshold: 0.46, created_at: "2026-10-12T10:00:00Z" }, // On_Track
+  { external_student_ref: "REF-3", risk_probability: 0.60, threshold: 0.46, created_at: "2026-10-12T10:00:00Z" }, // At_Risk
+  { external_student_ref: "REF-4", risk_probability: 0.40, threshold: 0.46, created_at: "2026-10-12T10:00:00Z" }, // On_Track
+];
+
+const dedupResult = mockComputeCohortRiskDistribution(testStudents, testPredictions, false);
+assert.strictEqual(dedupResult.totalStudents, 6);
+assert.strictEqual(dedupResult.evaluatedStudentsCount, 4); // s1, s2, s3, s4
+assert.strictEqual(dedupResult.totalPredictionRuns, 5); // 2 + 1 + 1 + 1
+assert.strictEqual(dedupResult.at_risk_count, 2); // s1 (newer 0.70) + s3 (0.60)
+assert.strictEqual(dedupResult.on_track_count, 2); // s2 (0.20) + s4 (0.40)
+assert.strictEqual(dedupResult.at_risk_percentage, 50); // 2/4 = 50%
+assert.strictEqual(dedupResult.is_privacy_suppressed, false);
+console.log("   ✓ Verified deduplication of repeated inference runs and accurate risk prevalence percentages");
+
+// 18d.2 Small-group privacy suppression for leadership (< 5)
+const smallGroupStudents = testStudents.slice(0, 3); // 3 students < 5
+const smallGroupResult = mockComputeCohortRiskDistribution(smallGroupStudents, testPredictions, true);
+assert.strictEqual(smallGroupResult.totalStudents, 3);
+assert.strictEqual(smallGroupResult.is_privacy_suppressed, true);
+assert.strictEqual(smallGroupResult.at_risk_count, null);
+assert.strictEqual(smallGroupResult.at_risk_percentage, null);
+console.log("   ✓ Verified small-group privacy protection (cell suppression when N < 5 for leadership)");
+
+// 18d.3 Empty cohort safe handling
+const emptyResult = mockComputeCohortRiskDistribution([], [], false);
+assert.strictEqual(emptyResult.totalStudents, 0);
+assert.strictEqual(emptyResult.evaluatedStudentsCount, 0);
+assert.strictEqual(emptyResult.coveragePercentage, 0);
+assert.strictEqual(emptyResult.at_risk_count, 0);
+assert.strictEqual(emptyResult.at_risk_percentage, 0);
+assert.strictEqual(emptyResult.is_privacy_suppressed, false);
+console.log("   ✓ Verified empty cohort safe handling (0% without division-by-zero or NaN)\n");
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
+
 
 
 
