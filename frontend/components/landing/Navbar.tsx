@@ -83,16 +83,10 @@ export default function Navbar() {
             Sign In
           </Link>
           <Link
-            href="/dashboard?role=counselor&walkthrough=counselor"
-            className="text-xs font-bold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-colors duration-200"
-          >
-            Counselor
-          </Link>
-          <Link
-            href="/dashboard"
+            href="/onboarding"
             className="px-5 py-2.5 rounded-full bg-[#d2f831] hover:bg-[#c3ea22] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 group select-none"
           >
-            <span>Launch Console</span>
+            <span>Get Started</span>
             <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </Link>
         </div>
@@ -153,18 +147,11 @@ export default function Navbar() {
               Sign In
             </Link>
             <Link
-              href="/dashboard?role=counselor&walkthrough=counselor"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full block text-center py-2.5 rounded-full bg-white/10 text-emerald-300 font-bold text-xs uppercase tracking-wider hover:bg-white/20 transition-colors border border-emerald-500/30"
-            >
-              Counselor View (Dr. Nambiar)
-            </Link>
-            <Link
-              href="/dashboard"
+              href="/onboarding"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-[#d2f831] text-slate-950 font-bold text-xs uppercase tracking-wider hover:bg-[#c3ea22] transition-colors"
             >
-              <span>Launch Console</span>
+              <span>Get Started</span>
               <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
             </Link>
           </div>
