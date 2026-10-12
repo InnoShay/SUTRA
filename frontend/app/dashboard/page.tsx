@@ -40,6 +40,8 @@ export default function DashboardPage() {
     activeRole,
     currentPersona,
     backendConnected,
+    backendError,
+    isLoadingBackend,
   } = useSkillHub();
 
   const [growthOpen, setGrowthOpen] = useState(false);
@@ -150,6 +152,24 @@ export default function DashboardPage() {
           <span>New Course</span>
         </button>
       </div>
+
+      {/* Backend Standby Alert Banner */}
+      {!backendConnected && !isLoadingBackend && (
+        <div className="p-4 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-3 text-amber-900 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <div className="text-xs">
+              <span className="font-bold text-amber-950">FastAPI Standby (Mock Preview Mode): </span>
+              <span className="text-amber-800">
+                Backend unreachable at {process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}. Data shown is local mock preview. Start FastAPI server for live PostgreSQL persistence.
+              </span>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 bg-amber-200/60 rounded text-[10px] font-semibold tracking-wide uppercase shrink-0 text-amber-900">
+            Mock Data Active
+          </span>
+        </div>
+      )}
 
       {/* SUTRA ACTION BAR: "No Alert Without Action" Orchestration Banner */}
       <div className="skill-card p-4 sm:p-5 bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white rounded-3xl shadow-sm">

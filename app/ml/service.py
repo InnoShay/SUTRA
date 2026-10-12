@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import joblib
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import PROJECT_ROOT, settings
 from app.core.errors import ServiceUnavailableError, UnprocessableEntityError
 from app.core.logging import logger
 from app.models.ml import MLInferenceLog
@@ -37,6 +37,19 @@ class MLService:
 
     def load_model(self) -> None:
         """Inspects and loads model estimator from disk or serving baseline."""
+        target_path = self.artifact_path
+        if not os.path.exists(target_path):
+            candidates = [
+                "ml/artifacts/models/v1.0.0",
+                "ml/artifacts/models",
+                str(PROJECT_ROOT / "ml" / "artifacts" / "models" / "v1.0.0"),
+                str(PROJECT_ROOT / "ml" / "artifacts" / "models"),
+            ]
+            for candidate in candidates:
+                if os.path.exists(candidate):
+                    target_path = candidate
+                    break
+
         try:
             from sutra_ml.models.baseline import LogisticRegressionBaseline
             self.model = LogisticRegressionBaseline(

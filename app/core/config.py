@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import List, Optional
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,11 +40,16 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/sutra",
         description="Async PostgreSQL connection URL (e.g. postgresql+asyncpg://... or sqlite+aiosqlite://...)",
     )
-    # Sync URL for Alembic migrations and synchronous scripts
     DATABASE_SYNC_URL: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("DATABASE_SYNC_URL", "SYNC_DATABASE_URL"),
         description="Sync PostgreSQL connection URL for Alembic. If unset, derived from DATABASE_URL.",
     )
+    DATABASE_POOL_SIZE: int = 10
+    DATABASE_MAX_OVERFLOW: int = 10
+    DATABASE_POOL_RECYCLE: int = 1800
+    DATABASE_POOL_PRE_PING: bool = True
+    DATABASE_STATEMENT_CACHE_SIZE: int = 0
 
     # Supabase Auth & JWT Settings
     SUPABASE_URL: str = "http://localhost:54321"
@@ -55,6 +60,7 @@ class Settings(BaseSettings):
     )
     SUPABASE_JWT_ALGORITHM: str = "HS256"
     SUPABASE_JWT_AUDIENCE: Optional[str] = "authenticated"
+    SUPABASE_JWT_ISSUER: Optional[str] = None
 
     # CORS settings
     CORS_ORIGINS: List[str] = [

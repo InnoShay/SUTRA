@@ -5,7 +5,7 @@
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-red.svg)](https://www.sqlalchemy.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14%20App%20Router-black.svg)](https://nextjs.org/)
 [![Rust](https://img.shields.io/badge/Rust-CLI%201.75%2B-orange.svg)](https://www.rust-lang.org/)
-[![Tests](https://img.shields.io/badge/Tests-77%2F77%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-86%2F86%20Backend%20%7C%206%2F6%20Frontend%20%7C%207%2F7%20CLI%20Passed-brightgreen.svg)]()
 
 > **Core Product Principle:** *“No Alert Without Action.”*
 
@@ -85,6 +85,7 @@ All 9 canonical phases are implemented, automated, and verified:
 | **Phase 6** | **Bounded AI Orchestration** | Advisory review briefs, prompt fencing (`<untrusted_student_evidence>`), catalog confinement, audit logs | **100% COMPLETE** |
 | **Phase 7** | **Rust CLI & PWA Enhancements** | Standalone `sutra-cli` binary, manifest, static-only Service Worker (zero sensitive data cached) | **100% COMPLETE** |
 | **Phase 8** | **Integration, Evaluation & Demo** | E2E traceable workflow tests, negative safety boundaries, latency benchmarks, live demo script | **100% COMPLETE** |
+| **Supabase** | **PostgreSQL & Auth Integration** | Connection pooling (PgBouncer statement cache 0), server JWT validation, RLS lockdown, 9/9 verification tests | **100% COMPLETE** |
 
 ---
 
@@ -204,10 +205,11 @@ cd ..
 
 ## 🧪 Comprehensive Automated Test Suites
 
-### Backend Pytest Suite (77 / 77 Tests Passing)
+### Backend Pytest Suite (86 / 86 Tests Passing)
 ```bash
 pytest tests -v
 ```
+- `tests/test_supabase_integration_readiness.py` — Supabase pooler compatibility (`statement_cache_size=0`, `pool_pre_ping`), server-side JWT verification, forged role rejection, multi-campus isolation, and full end-to-end persistence workflow.
 - `tests/test_phase8_acceptance.py` — Complete 10-stage traceable workflow (observation to closed outcome), negative boundary matrix, and API response time benchmarks.
 - `tests/test_ai_orchestration.py` — Bounded AI review briefs, catalog filtering, prompt injection defense, ADR-003 financial data exclusion, provider fallback, and audit logging.
 - `tests/test_auth_security.py` — Supabase JWT verification, role capabilities, campus boundary isolation.
@@ -280,6 +282,29 @@ SUTRA includes an advisory AI orchestration layer behind `/api/v1/ai/*`:
 - **Executive Privacy Boundary:** Executive leadership is restricted to cohort-level aggregate insights and cannot browse identifiable triage queues (ADR-004).
 - **Client Security Hygiene:** Zero service-role keys, private keys, or LLM API secrets exist in frontend client bundles.
 - **Stateless ML Scoring:** Machine learning inference is stateless and produces auditable Evidence Cards with full governance traceability.
+
+---
+
+## ☁️ Supabase Integration & Production Readiness
+
+SUTRA integrates with Supabase PostgreSQL and Supabase Auth with zero architectural compromises:
+
+- **FastAPI as the Sole Product Gateway:** The browser never queries Supabase tables directly via PostgREST. All operations flow through FastAPI at `/api/v1/*` under strict tenant and capability verification.
+- **Supabase PostgreSQL & Connection Pooling:**
+  - Fully supports Supabase PgBouncer/Supavisor transaction poolers (port `6543`) with `DATABASE_STATEMENT_CACHE_SIZE=0` (`connect_args={"statement_cache_size": 0}`) and `DATABASE_POOL_PRE_PING=true`.
+  - Supports direct/session pooler connections (port `5432`) for schema migrations via Alembic.
+  - Connection pool configuration: `DATABASE_POOL_SIZE=10`, `DATABASE_MAX_OVERFLOW=10`, `DATABASE_POOL_RECYCLE=1800`.
+- **Supabase Auth & Server-Side JWT Verification:**
+  - FastAPI cryptographically validates Supabase-issued Bearer JWTs via `HS256`, checking signature, expiration (`exp`), audience (`aud: authenticated`), and optional issuer (`iss: supabase`).
+  - Roles and campus scopes are **never** trusted from client JWT claims; they are resolved strictly server-side from PostgreSQL `InstitutionMembership`.
+- **Defense-in-Depth Row Level Security (RLS):**
+  - RLS enabled across all 16 core SUTRA tables via [`migrations/supabase_rls_lockdown.sql`](migrations/supabase_rls_lockdown.sql).
+  - Explicitly revokes `ALL` permissions on schema `public` from `anon` and `authenticated` roles to block direct browser bypass.
+- **Client Security Hygiene:**
+  - Browser frontend strictly consumes `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` via [`frontend/lib/supabase.ts`](frontend/lib/supabase.ts) for authentication only.
+  - Zero service-role keys or database credentials exist in client bundles.
+- **Automated Verification Suite:**
+  - Verified by 9 dedicated tests in [`tests/test_supabase_integration_readiness.py`](tests/test_supabase_integration_readiness.py) covering connection pooling, schema integrity, rollback atomicity, JWT verification, forged claim rejection, cross-campus isolation, and full 8-step end-to-end persistence.
 
 ---
 
