@@ -110,9 +110,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     },
     {
       role: "admin",
-      displayLabel: "Admin",
-      fullName: "Admin",
-      title: "System Admin",
+      displayLabel: "Administrator",
+      fullName: "Administrator",
+      title: DEMO_PERSONAS.admin.title,
       avatar: DEMO_PERSONAS.admin.avatar,
     },
   ];
@@ -584,12 +584,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     />
 
                     {/* Apple / iOS-style Floating Glass Menu */}
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 backdrop-blur-xl border border-neutral-200/80 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                      {/* Clean Group Header */}
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-white/95 backdrop-blur-xl border border-neutral-200/80 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      {/* iOS Group Header */}
                       <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
                           {supabaseSession ? "Active Account" : "Active Persona"}
                         </span>
+                        <span
+                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                            supabaseSession
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200/60 font-semibold"
+                              : "bg-neutral-100 text-neutral-600"
+                          }`}
+                        >
+                          {supabaseSession ? "Google SSO Active" : "Local Campus Session"}
+                        </span>
+                      </div>
+
+                      {/* User Card if Authenticated or Active */}
+                      <div className="mx-1 my-1.5 p-2.5 bg-neutral-50/90 rounded-xl border border-neutral-100 flex items-center gap-2.5">
+                        <UserAvatar
+                          src={user.avatar || currentPersonaOption.avatar}
+                          name={user.fullName || user.name || currentPersonaOption.fullName}
+                          className="w-8 h-8 ring-2 ring-emerald-400/60 shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-neutral-900 truncate">
+                            {user.fullName || user.name || currentPersonaOption.fullName}
+                          </div>
+                          <div className="text-[10px] text-neutral-500 truncate">
+                            {user.email || (supabaseSession ? "Google Workspace" : "faculty@sutra.edu")}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Header for Roles / Personas */}
+                      <div className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-t border-neutral-100/80 mt-1">
+                        Switch Role View
                       </div>
 
                       {/* Options List */}
