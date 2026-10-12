@@ -9,6 +9,10 @@ import {
   INITIAL_STUDENTS,
   INITIAL_DISCUSSIONS,
   CURRENT_USER,
+  DEMO_SIGNALS,
+  DEMO_CASES,
+  DEMO_INTERVENTIONS,
+  DEMO_ML_MODEL_INFO,
 } from "./skillhub-data";
 import {
   UserRole,
@@ -66,7 +70,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-2",
     title: "SLA Deadline Warning",
-    desc: "Case CASE-2026-089 has 36 hours remaining on mentor follow-up",
+    desc: "Case CASE-SYN-1007 has 36 hours remaining on mentor follow-up",
     time: "25m ago",
     unread: true,
   },
@@ -80,7 +84,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 const INITIAL_MESSAGES: Record<string, StudentMessage[]> = {
-  "stu-1": [
+  "SYN-1007": [
     {
       id: "m-1",
       sender: "student",
@@ -101,7 +105,7 @@ const INITIAL_COMMENTS: Record<string, DiscussionComment[]> = {
     {
       id: "c-1",
       author: "Dr. Rajeshwar Rao",
-      authorAvatar: "/assets/avatar-albert.jpg",
+      authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
       text: "SLA deadlines are strictly enforced by the Outbox worker daemon. Let's resolve the pending check-ins today.",
       timeAgo: "2h ago",
       likes: 14,
@@ -115,10 +119,12 @@ interface SkillHubContextType {
   // SUTRA RBAC & Backend State
   activeRole: UserRole;
   setActiveRole: (role: UserRole) => void;
+  activeCampusName: string;
   currentPersona: DemoPersona;
   backendConnected: boolean;
   isLoadingBackend: boolean;
   backendError: string | null;
+  dataProvenance: "live" | "demo";
   signals: SignalDTO[];
   cases: CaseDetailDTO[];
   interventions: InterventionItem[];
@@ -201,7 +207,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [interventions, setInterventions] = useState<InterventionItem[]>([]);
   const [mlModelInfo, setMlModelInfo] = useState<MLModelInfo | null>(null);
 
-  // Existing UI compatibility state
+  // UI state initialized with canonical synthetic fixtures
   const [user, setUser] = useState({
     ...CURRENT_USER,
     name: currentPersona.name.split(" ")[0],
@@ -211,7 +217,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES);
-  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
+  // Default initialized with canonical synthetic records only
+  const [students, setStudents] = useState<Student[]>(
+    currentPersona.canViewIndividualStudents ? INITIAL_STUDENTS : []
+  );
   const [discussions, setDiscussions] = useState<CommunityDiscussion[]>(INITIAL_DISCUSSIONS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [studentMessages, setStudentMessages] = useState<Record<string, StudentMessage[]>>(INITIAL_MESSAGES);
@@ -243,6 +252,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       role: persona.title,
       avatar: persona.avatar,
     });
+    // If leadership, immediately clear individual student roster to uphold ADR-004
+    if (!persona.canViewIndividualStudents) {
+      setStudents([]);
+    }
   };
 
   // Sync with Backend
@@ -253,89 +266,128 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       api.setToken(currentPersona.token);
       api.setCampusId(DEMO_CAMPUS_ID);
 
-      // Check health
+      // Check backend health
       await api.health.check();
       setBackendConnected(true);
 
-      // Fetch model info & interventions
+      // 1. Fetch ML model info & interventions
       try {
         const [info, intList] = await Promise.all([
           api.ml.getModelInfo(),
           api.interventions.list(),
         ]);
         setMlModelInfo(info);
-        setInterventions(intList);
-      } catch (e) {
+        setInterventions(intList || []);
+      } catch (e: any) {
         console.warn("Non-fatal error loading model info or interventions:", e);
       }
 
-      // Fetch signals and cases
+      // 2. Fetch signals and cases
+      let fetchedSignals: SignalDTO[] = [];
+      let fetchedCases: CaseDetailDTO[] = [];
       try {
         const [sigList, caseList] = await Promise.all([
           api.signals.list(),
           api.cases.list(),
         ]);
-        setSignals(sigList);
-        setCases(caseList);
-      } catch (e) {
+        fetchedSignals = sigList || [];
+        fetchedCases = caseList || [];
+        setSignals(fetchedSignals);
+        setCases(fetchedCases);
+      } catch (e: any) {
         console.warn("Non-fatal error loading signals/cases:", e);
       }
 
-      // Fetch students if allowed for current role (Leadership is suppressed per Phase 4)
-      if (currentPersona.canViewIndividualStudents) {
+      // 3. Fetch students with strict ADR-004 privacy boundaries
+      if (!currentPersona.canViewIndividualStudents) {
+        // Privacy Safeguard: Leadership accounts strictly restricted to cohort aggregates
+        setStudents([]);
+      } else {
         try {
           const rawStus = await api.students.list({ limit: 50 });
-          if (rawStus && rawStus.length > 0) {
-            // Map backend students into UI format
-            const mappedStudents: Student[] = rawStus.map((rs, idx) => {
-              const matchingCase = cases.find((c) => c.student_id === rs.id);
-              const matchingSignal = signals.find((s) => s.student_id === rs.id);
+          if (Array.isArray(rawStus)) {
+            if (rawStus.length === 0) {
+              // Authoritative empty response remains strictly empty
+              setStudents([]);
+            } else {
+              const mappedStudents: Student[] = rawStus.map((rs, idx) => {
+                const matchingCase = fetchedCases.find(
+                  (c) => c.student_id === rs.id || c.external_student_ref === rs.external_ref
+                );
+                const matchingSignal = fetchedSignals.find(
+                  (s) => s.student_id === rs.id || s.external_student_ref === rs.external_ref
+                );
 
-              let statusText: Student["status"] = "Active";
-              if (matchingCase?.is_escalated || matchingSignal?.result === "concern") {
-                statusText = "At Risk";
-              } else if (rs.enrollment_status === "completed") {
-                statusText = "Completed";
-              } else if (rs.enrollment_status === "inactive") {
-                statusText = "Inactive";
-              }
+                let statusText: Student["status"] = "Active";
+                if (matchingCase?.is_escalated || matchingSignal?.result === "concern") {
+                  statusText = "At Risk";
+                } else if (rs.enrollment_status === "completed") {
+                  statusText = "Completed";
+                } else if (rs.enrollment_status === "inactive") {
+                  statusText = "Inactive";
+                }
 
-              return {
-                id: rs.id,
-                name: rs.display_name,
-                email: `${rs.external_ref.toLowerCase()}@sutra.edu`,
-                course: rs.cohort_code ? `Cohort ${rs.cohort_code}` : "Computer Science (UG)",
-                progress: matchingSignal?.result === "concern" ? 42 : 78,
-                status: statusText,
-                avatar: INITIAL_STUDENTS[idx % INITIAL_STUDENTS.length]?.avatar || "/assets/avatar-sarah.jpg",
-                isOnline: idx % 2 === 0,
-                enrolledDate: "August 2026",
-                lastActive: "Today",
-                grade: matchingSignal?.result === "concern" ? "C-" : "A",
-                attendance: matchingSignal?.result === "concern" ? "58%" : "92%",
-                completedLessons: 6,
-                totalLessons: 12,
-                bio: `Student ID: ${rs.external_ref} • Active Enrollment`,
-              };
-            });
+                const avatarList = [
+                  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+                  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+                  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+                  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
+                  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+                  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
+                ];
 
-            // Merge with initial rich mock students so UI remains visually complete
-            const combined = [
-              ...mappedStudents,
-              ...INITIAL_STUDENTS.filter(
-                (is) => !mappedStudents.some((ms) => ms.name.toLowerCase() === is.name.toLowerCase())
-              ),
-            ];
-            setStudents(combined);
+                return {
+                  id: rs.id,
+                  name: rs.display_name,
+                  email: `${rs.external_ref.toLowerCase()}@sutra.edu`,
+                  course: rs.cohort_code ? `Cohort ${rs.cohort_code}` : "Cohort CS-Y2 (Computer Science)",
+                  progress: matchingSignal?.result === "concern" ? 42 : 78,
+                  status: statusText,
+                  avatar: avatarList[idx % avatarList.length],
+                  isOnline: idx % 2 === 0,
+                  enrolledDate: "August 2026",
+                  lastActive: "Today",
+                  grade: matchingSignal?.result === "concern" ? "C-" : "A",
+                  attendance: matchingSignal?.result === "concern" ? "58%" : "92%",
+                  completedLessons: 6,
+                  totalLessons: 18,
+                  bio: `Student Ref: ${rs.external_ref} • Active Campus Enrollment`,
+                };
+              });
+
+              // Strict Data Integrity: Backend response is authoritative.
+              // NEVER merge with legacy INITIAL_STUDENTS fixtures.
+              setStudents(mappedStudents);
+            }
           }
-        } catch (e: any) {
-          console.warn("Could not load student roster:", e);
+        } catch (stuErr: any) {
+          const errStatus = stuErr?.status || stuErr?.statusCode;
+          if (errStatus === 401 || errStatus === 403) {
+            console.warn("Student list rejected due to authorization/permission policy:", stuErr);
+            setBackendError(stuErr.message || "Authorization denied for student directory");
+            setStudents([]);
+          } else {
+            console.warn("Error fetching student roster from backend:", stuErr);
+            setStudents([]);
+          }
         }
       }
     } catch (err: any) {
-      console.warn("Backend API not reachable; operating in local mode:", err);
+      console.warn("Backend API not reachable; operating in verified SUTRA demo mode:", err);
       setBackendConnected(false);
-      setBackendError(err.message || "Backend offline");
+      setBackendError(err.message || "Backend offline (Operating in Synthetic Demo Mode)");
+
+      // In synthetic demo mode:
+      if (!currentPersona.canViewIndividualStudents) {
+        setStudents([]);
+      } else {
+        // Use verified canonical SUTRA synthetic fixtures only
+        setStudents(INITIAL_STUDENTS);
+      }
+      setSignals(DEMO_SIGNALS);
+      setCases(DEMO_CASES);
+      setInterventions(DEMO_INTERVENTIONS);
+      setMlModelInfo(DEMO_ML_MODEL_INFO);
     } finally {
       setIsLoadingBackend(false);
     }
@@ -460,7 +512,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const addStudent = (newStudent: Omit<Student, "id">) => {
     const student: Student = {
       ...newStudent,
-      id: `stud-${Date.now()}`,
+      id: `SYN-${Date.now()}`,
     };
     setStudents((prev) => [student, ...prev]);
   };
@@ -540,10 +592,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       value={{
         activeRole,
         setActiveRole,
+        activeCampusName: "Apex University Main Campus",
         currentPersona,
         backendConnected,
         isLoadingBackend,
         backendError,
+        dataProvenance: backendConnected ? "live" : "demo",
         signals,
         cases,
         interventions,

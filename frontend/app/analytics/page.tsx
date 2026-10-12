@@ -7,69 +7,70 @@ import { EngagementChart } from "@/components/EngagementChart";
 import { RadialProgressGauge } from "@/components/RadialProgressGauge";
 import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import {
-  Plus,
+  computeCaseStateDistribution,
+  computeInterventionDistribution,
+  computeSignalTimeline,
+  computeRiskAttributions,
+  computeAnalyticsOperationalCards,
+} from "@/lib/analytics-selectors";
+import {
   Users,
-  Clock,
   CheckCircle2,
   TrendingUp,
-  Shield,
   Layers,
   Activity,
   Lock,
+  Download,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function AnalyticsPage() {
   const {
-    setIsCreatePostModalOpen,
     analyticsTimeframe,
     setAnalyticsTimeframe,
     students,
     signals,
     cases,
     activeRole,
+    backendConnected,
+    dataProvenance,
   } = useSkillHub();
 
   const timeframes = ["This Week", "This Month", "This Year"] as const;
 
-  const pendingSignals = signals.filter((s) => !s.reviewed_decision);
-  const triageActionRate =
-    signals.length > 0
-      ? Math.round(
-          ((signals.length - pendingSignals.length) / signals.length) * 100
-        )
-      : 100;
-
-  const metricsByTimeframe = {
-    "This Week": {
-      studentsActive: `${students.length || 6}`,
-      studyHours: `${signals.length} Signals`,
-      completionRate: `${triageActionRate}%`,
-      growth: "+14.2%",
-    },
-    "This Month": {
-      studentsActive: `${students.length || 6}`,
-      studyHours: `${signals.length} Signals`,
-      completionRate: `${triageActionRate}%`,
-      growth: "+8.6%",
-    },
-    "This Year": {
-      studentsActive: `${students.length || 6}`,
-      studyHours: `${signals.length} Signals`,
-      completionRate: `${triageActionRate}%`,
-      growth: "+28.4%",
-    },
-  };
-
-  const metrics = metricsByTimeframe[analyticsTimeframe] || metricsByTimeframe["This Month"];
+  // Compute verified operational metrics through deterministic selector engine
+  const caseDistribution = computeCaseStateDistribution(cases);
+  const interventionDistribution = computeInterventionDistribution(cases);
+  const signalTimeline = computeSignalTimeline(signals, analyticsTimeframe);
+  const riskAttributions = computeRiskAttributions(signals);
+  const operationalCards = computeAnalyticsOperationalCards(
+    signals,
+    cases,
+    students,
+    activeRole,
+    backendConnected,
+    analyticsTimeframe
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* 1. Header with Timeframe Pill Switcher & Export */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
-            Cohort Analytics &amp; Indicators
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
+              Cohort Analytics &amp; Indicators
+            </h1>
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                dataProvenance === "live"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-amber-50 text-amber-700 border border-amber-200"
+              }`}
+            >
+              {dataProvenance === "live" ? "FastAPI Live" : "Verified Demo"}
+            </span>
+          </div>
           <p className="text-xs text-neutral-400 mt-1">
             Aggregated institutional indicators, intervention velocity, and multi-campus retention rhythms
           </p>
@@ -94,16 +95,20 @@ export default function AnalyticsPage() {
           </div>
 
           <button
-            onClick={() => setIsCreatePostModalOpen(true)}
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.print();
+              }
+            }}
             className="flex items-center justify-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[40px]"
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Export Report</span>
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export Audit Report</span>
           </button>
         </div>
       </div>
 
-      {/* Institutional Privacy Badge for Leadership Role */}
+      {/* 2. Institutional Privacy Safeguard Badge (ADR-004) */}
       {activeRole === "leadership" && (
         <div className="p-4 bg-white rounded-3xl border border-neutral-200/80 flex items-center gap-3 text-xs shadow-xs">
           <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0">
@@ -114,89 +119,99 @@ export default function AnalyticsPage() {
               Institutional Privacy Mode Active (ADR-004)
             </div>
             <div className="text-neutral-500 text-[11px]">
-              You are viewing anonymized aggregate cohort indicators. Individual student records and operational triage queues are suppressed.
+              You are viewing anonymized aggregate cohort indicators. Individual student rosters, student 360 views, and operational triage queues are suppressed.
             </div>
           </div>
         </div>
       )}
 
-      {/* Dynamic Summary Cards */}
+      {/* 3. Verified Dynamic Operational Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Card 1: Students in Scope */}
         <div className="skill-card bg-white p-4 space-y-1">
           <div className="flex items-center justify-between text-neutral-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Students Evaluated
+              {operationalCards.studentsInScope.label}
             </span>
             <Users className="w-3.5 h-3.5" />
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
-            {metrics.studentsActive}
+            {operationalCards.studentsInScope.value}
           </div>
-          <p className="text-[10px] text-emerald-600 font-medium flex items-center gap-0.5">
-            <TrendingUp className="w-3 h-3" />
-            <span>Active UG Cohort</span>
+          <p className="text-[10px] text-neutral-500 font-medium">
+            {operationalCards.studentsInScope.sublabel}
           </p>
         </div>
 
+        {/* Card 2: Generated Signals */}
         <div className="skill-card bg-white p-4 space-y-1">
           <div className="flex items-center justify-between text-neutral-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Generated Signals
+              {operationalCards.signalsGenerated.label}
             </span>
             <Activity className="w-3.5 h-3.5" />
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
-            {metrics.studyHours}
+            {operationalCards.signalsGenerated.value}
           </div>
-          <p className="text-[10px] text-neutral-400">
-            Deterministic rule engine
+          <p className="text-[10px] text-neutral-500 font-medium">
+            {operationalCards.signalsGenerated.sublabel}
           </p>
         </div>
 
+        {/* Card 3: Closed-Loop Action Rate */}
         <div className="skill-card bg-white p-4 space-y-1">
           <div className="flex items-center justify-between text-neutral-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Closed-Loop Action Rate
+              {operationalCards.triageReviewRate.label}
             </span>
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
-            {metrics.completionRate}
+            {operationalCards.triageReviewRate.value}
           </div>
-          <p className="text-[10px] text-emerald-600 font-medium">
-            No Alert Without Action
+          <p className="text-[10px] text-neutral-500 font-medium">
+            {operationalCards.triageReviewRate.sublabel}
           </p>
         </div>
 
+        {/* Card 4: Active Support Cases */}
         <div className="skill-card bg-white p-4 space-y-1">
           <div className="flex items-center justify-between text-neutral-400">
             <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Active Cases
+              {operationalCards.activeCases.label}
             </span>
             <Layers className="w-3.5 h-3.5 text-blue-600" />
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-neutral-900">
-            {cases.length}
+            {operationalCards.activeCases.value}
           </div>
-          <p className="text-[10px] text-neutral-400">
-            10-State lifecycle tracked
+          <p className="text-[10px] text-neutral-500 font-medium">
+            {operationalCards.activeCases.sublabel}
           </p>
         </div>
       </div>
 
-      {/* 2x2 Grid matching established design */}
+      {/* 4. 2x2 Grid with Operational Visualizations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-start">
-        {/* Top Left: Learning Progress Overview */}
-        <LearningProgressChart />
+        {/* Top Left: 10-State Case Lifecycle Distribution */}
+        <LearningProgressChart distribution={caseDistribution} />
 
-        {/* Top Right: Student Engagement Trend */}
-        <EngagementChart timeframe={analyticsTimeframe} />
+        {/* Top Right: Signal Generation Velocity & Telemetry */}
+        <EngagementChart
+          timeline={signalTimeline}
+          timeframe={analyticsTimeframe}
+          title="Signal Generation & Evaluation Velocity"
+        />
 
-        {/* Bottom Left: Course Performance */}
-        <RadialProgressGauge />
+        {/* Bottom Left: Intervention Protocol Allocation */}
+        <RadialProgressGauge distribution={interventionDistribution} />
 
-        {/* Bottom Right: Activity by Day */}
-        <ActivityHeatmap />
+        {/* Bottom Right: Observation Ingestion & Policy Risk Drivers */}
+        <ActivityHeatmap
+          attributions={riskAttributions}
+          backendConnected={backendConnected}
+        />
       </div>
     </div>
   );

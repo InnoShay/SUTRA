@@ -1,73 +1,49 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, ArrowUpRight, Check, ChevronDown } from "lucide-react";
+import { Copy, Check, Info } from "lucide-react";
+import { CaseLifecycleDistribution } from "@/lib/analytics-selectors";
 
-interface BarItem {
-  month: string;
-  value: number; // 0 to 4500
-  isHighlight?: boolean;
+interface LearningProgressChartProps {
+  distribution?: CaseLifecycleDistribution;
+  className?: string;
 }
 
-const TIMEFRAME_BARS: Record<string, BarItem[]> = {
-  "This Week": [
-    { month: "Mon", value: 2800 },
-    { month: "Tue", value: 3100 },
-    { month: "Wed", value: 3600 },
-    { month: "Thu", value: 3950, isHighlight: true },
-    { month: "Fri", value: 3400 },
-    { month: "Sat", value: 2900 },
-    { month: "Sun", value: 2500 },
-  ],
-  "This Month": [
-    { month: "Jan", value: 3200 },
-    { month: "Feb", value: 2400 },
-    { month: "Mar", value: 3000 },
-    { month: "Apr", value: 3800, isHighlight: true },
-    { month: "May", value: 2700 },
-    { month: "Jun", value: 3500 },
-    { month: "Jul", value: 4100 },
-  ],
-  "This Year": [
-    { month: "Q1", value: 3100 },
-    { month: "Q2", value: 3750, isHighlight: true },
-    { month: "Q3", value: 3400 },
-    { month: "Q4", value: 4200 },
-  ],
-};
-
 export function LearningProgressChart({
+  distribution,
   className = "",
-}: {
-  data?: BarItem[];
-  className?: string;
-}) {
-  const [selectedTimeframe, setSelectedTimeframe] = useState("This Month");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+}: LearningProgressChartProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const timeframes = ["This Week", "This Month", "This Year"];
-  const currentBars = TIMEFRAME_BARS[selectedTimeframe] || TIMEFRAME_BARS["This Month"];
+  // Fallback if distribution is undefined
+  const states = distribution?.states || [];
+  const totalCases = distribution?.totalCases || 0;
+  const activeCount = distribution?.activeCount || 0;
+  const resolvedCount = distribution?.resolvedCount || 0;
 
-  const width = 500;
-  const height = 220;
-  const padLeft = 40;
-  const padRight = 30;
+  const width = 540;
+  const height = 230;
+  const padLeft = 36;
+  const padRight = 24;
   const padTop = 30;
-  const padBottom = 35;
+  const padBottom = 42;
 
   const chartW = width - padLeft - padRight;
   const chartH = height - padTop - padBottom;
-  const maxVal = 4000;
+
+  // Max scale calculation
+  const maxVal = Math.max(
+    ...states.map((s) => s.count),
+    4 // sensible minimal ceiling for readable axis
+  );
+
   const barWidth = 26;
 
   const handleCopy = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(
-        `Learning Progress (${selectedTimeframe}): Peak ${
-          Math.max(...currentBars.map((b) => b.value))
-        } hrs logged.`
+        `SUTRA Case Lifecycle Distribution: Total ${totalCases} cases (${activeCount} active, ${resolvedCount} resolved).`
       );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -77,52 +53,26 @@ export function LearningProgressChart({
   return (
     <div className={`skill-card p-5 sm:p-6 bg-white relative ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-          Learning Progress Overview
-        </h3>
-        <div className="flex items-center gap-2">
-          {/* Timeframe pill */}
-          <div className="relative">
-            <button
-              onClick={() => setIsDropdownOpen((prev) => !prev)}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-neutral-50 hover:bg-neutral-100 rounded-full border border-neutral-200/60 text-xs font-medium text-neutral-600 transition-colors"
-            >
-              <span>{selectedTimeframe}</span>
-              <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
-            </button>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
+            Case Lifecycle State Distribution
+          </h3>
+          <p className="text-[11px] text-neutral-400 mt-0.5">
+            Canonical 10-state progression across all active institutional cases
+          </p>
+        </div>
 
-            {isDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-20"
-                  onClick={() => setIsDropdownOpen(false)}
-                />
-                <div className="absolute right-0 mt-1.5 w-32 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-30 animate-in fade-in zoom-in-95 duration-150">
-                  {timeframes.map((tf) => (
-                    <button
-                      key={tf}
-                      onClick={() => {
-                        setSelectedTimeframe(tf);
-                        setIsDropdownOpen(false);
-                      }}
-                      className="w-full px-3 py-1.5 text-left text-xs font-medium text-neutral-700 hover:bg-neutral-50 flex items-center justify-between transition-colors"
-                    >
-                      <span>{tf}</span>
-                      {selectedTimeframe === tf && (
-                        <Check className="w-3.5 h-3.5 text-neutral-900" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+        <div className="flex items-center gap-2">
+          <div className="px-2.5 py-1 bg-neutral-100 rounded-full text-[11px] font-medium text-neutral-600">
+            {totalCases} {totalCases === 1 ? "Case" : "Cases"}
           </div>
 
           <button
             onClick={handleCopy}
             className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-700 transition-colors"
             title="Copy Report"
+            aria-label="Copy Case Lifecycle Report"
           >
             {copied ? (
               <Check className="w-4 h-4 text-emerald-600" />
@@ -134,31 +84,36 @@ export function LearningProgressChart({
       </div>
 
       {/* SVG Bar Chart */}
-      <div className="relative w-full aspect-[2.1/1] select-none">
+      <div className="relative w-full aspect-[2.3/1] select-none">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="w-full h-full overflow-visible"
         >
           <defs>
-            {/* Gradient for highlighted bar */}
-            <linearGradient id="highlightBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.9" />
-              <stop offset="40%" stopColor="#86EFAC" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#DCFCE7" stopOpacity="0.2" />
+            {/* Active Case Gradient */}
+            <linearGradient id="activeBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#93C5FD" stopOpacity="0.3" />
             </linearGradient>
 
-            {/* Gradient for standard neutral bars */}
-            <linearGradient id="neutralBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#E2E8F0" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#F1F5F9" stopOpacity="0.4" />
+            {/* Resolved Case Gradient */}
+            <linearGradient id="resolvedBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10B981" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#A7F3D0" stopOpacity="0.3" />
+            </linearGradient>
+
+            {/* Zero Count Striped Gradient */}
+            <linearGradient id="zeroBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#E2E8F0" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#F1F5F9" stopOpacity="0.2" />
             </linearGradient>
           </defs>
 
           {/* Horizontal Grid lines */}
-          {[4000, 3000, 2000, 1000, 0].map((val) => {
+          {[maxVal, Math.round(maxVal / 2), 0].map((val, idx) => {
             const y = padTop + chartH - (val / maxVal) * chartH;
             return (
-              <g key={val}>
+              <g key={idx}>
                 <line
                   x1={padLeft}
                   y1={y}
@@ -168,31 +123,29 @@ export function LearningProgressChart({
                   strokeWidth="1"
                 />
                 <text
-                  x={padLeft - 12}
+                  x={padLeft - 10}
                   y={y + 3.5}
                   textAnchor="end"
                   className="text-[10px] font-medium fill-neutral-400"
                 >
-                  {val === 0 ? "0" : `${val / 1000}K`}
+                  {val}
                 </text>
               </g>
             );
           })}
 
-          {/* Render Vertical Bars */}
-          {currentBars.map((item, idx) => {
-            const x =
-              padLeft +
-              (idx / (currentBars.length - 1)) * chartW -
-              barWidth / 2;
-            const barH = (Math.min(item.value, maxVal) / maxVal) * chartH;
+          {/* Render 10 State Bars */}
+          {states.map((item, idx) => {
+            const step = chartW / states.length;
+            const x = padLeft + idx * step + (step - barWidth) / 2;
+            const barH = item.count > 0 ? (item.count / maxVal) * chartH : 4;
             const y = padTop + chartH - barH;
             const isHovered = hoveredIdx === idx;
 
             return (
               <g
-                key={item.month}
-                className="cursor-pointer transition-opacity"
+                key={item.state}
+                className="cursor-pointer"
                 onMouseEnter={() => setHoveredIdx(idx)}
                 onMouseLeave={() => setHoveredIdx(null)}
                 onTouchStart={() => setHoveredIdx(idx)}
@@ -203,58 +156,91 @@ export function LearningProgressChart({
                   y={y}
                   width={barWidth}
                   height={barH}
-                  rx="6"
+                  rx="4"
                   fill={
-                    item.isHighlight
-                      ? "url(#highlightBarGrad)"
-                      : isHovered
-                      ? "#CBD5E1"
-                      : "url(#neutralBarGrad)"
+                    item.count === 0
+                      ? "url(#zeroBarGrad)"
+                      : item.isTerminal
+                      ? "url(#resolvedBarGrad)"
+                      : "url(#activeBarGrad)"
                   }
-                  className="transition-all duration-300"
+                  className="transition-all duration-200"
                 />
 
-                {/* Highlight top green accent cap if isHighlight */}
-                {item.isHighlight && (
+                {/* Top indicator cap for counts > 0 */}
+                {item.count > 0 && (
                   <rect
                     x={x}
                     y={y}
                     width={barWidth}
-                    height={4}
-                    rx="2"
-                    fill="#22C55E"
+                    height={3}
+                    rx="1.5"
+                    fill={item.isTerminal ? "#059669" : "#2563EB"}
                   />
                 )}
 
-                {/* Hover value indicator */}
+                {/* Value indicator above bar on hover */}
                 {isHovered && (
-                  <text
-                    x={x + barWidth / 2}
-                    y={y - 8}
-                    textAnchor="middle"
-                    className="text-[10px] font-bold fill-neutral-800"
-                  >
-                    {(item.value / 1000).toFixed(1)}K
-                  </text>
+                  <g>
+                    <rect
+                      x={x + barWidth / 2 - 20}
+                      y={y - 24}
+                      width="40"
+                      height="18"
+                      rx="4"
+                      fill="#1E293B"
+                    />
+                    <text
+                      x={x + barWidth / 2}
+                      y={y - 12}
+                      textAnchor="middle"
+                      className="text-[9px] font-bold fill-white"
+                    >
+                      {item.count} {item.count === 1 ? "case" : "cases"}
+                    </text>
+                  </g>
                 )}
 
-                {/* X Axis Month Label */}
+                {/* X Axis State Abbreviation / Label */}
                 <text
                   x={x + barWidth / 2}
-                  y={height - 8}
+                  y={height - 12}
                   textAnchor="middle"
-                  className={`text-[11px] font-medium ${
-                    item.isHighlight
-                      ? "fill-neutral-900 font-semibold"
+                  className={`text-[8.5px] font-medium transition-colors ${
+                    isHovered
+                      ? "fill-neutral-900 font-bold"
                       : "fill-neutral-400"
                   }`}
                 >
-                  {item.month}
+                  {item.state.slice(0, 3)}
                 </text>
               </g>
             );
           })}
         </svg>
+      </div>
+
+      {/* Accessible Footer Legend */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-neutral-100 text-[11px] text-neutral-500">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />
+            <span>Active Lifecycle ({activeCount})</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
+            <span>Terminal / Resolved ({resolvedCount})</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-neutral-200 inline-block" />
+            <span>Zero Count</span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 text-[10px] text-neutral-400">
+          <Info className="w-3 h-3" />
+          <span>Real counts; zero states explicitly preserved</span>
+        </div>
       </div>
     </div>
   );

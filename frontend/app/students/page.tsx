@@ -29,6 +29,7 @@ export default function StudentsPage() {
     deleteStudent,
     courses,
     activeRole,
+    backendConnected,
   } = useSkillHub();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,7 +39,7 @@ export default function StudentsPage() {
   // New Student Form State
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newCourse, setNewCourse] = useState(courses[0]?.title || "Computer Science (UG)");
+  const [newCourse, setNewCourse] = useState(courses[0]?.title || "Cohort CS-Y2 (Computer Science)");
   const [newStatus, setNewStatus] = useState<"Active" | "At Risk" | "Completed" | "Inactive">("Active");
 
   // Leadership Institutional Privacy Safeguard
@@ -98,7 +99,7 @@ export default function StudentsPage() {
     addStudent({
       name: newName.trim(),
       email: newEmail.trim(),
-      avatar: "/assets/avatar-sarah.jpg",
+      avatar: "",
       course: newCourse,
       progress: 10,
       status: newStatus,
@@ -121,9 +122,25 @@ export default function StudentsPage() {
       {/* 1. HEADER: Title + Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
-            Students
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
+              Students Directory
+            </h1>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                backendConnected
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                  : "bg-amber-50 text-amber-700 border-amber-200/60"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  backendConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                }`}
+              />
+              <span>{backendConnected ? "Live FastAPI Connected" : "Synthetic Demo Roster"}</span>
+            </span>
+          </div>
           <p className="text-xs text-neutral-400 mt-1">
             {students.length} enrolled students across your active cohorts
           </p>
@@ -205,13 +222,19 @@ export default function StudentsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3.5">
                   <div className="relative">
-                    <img
-                      src={student.avatar}
-                      alt={student.name}
-                      className="w-12 h-12 rounded-full object-cover ring-2 ring-neutral-100"
-                    />
+                    {student.avatar ? (
+                      <img
+                        src={student.avatar}
+                        alt={student.name}
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-neutral-100"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-sm ring-2 ring-neutral-100">
+                        {student.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
                     {student.isOnline && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-400/50" />
+                      <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-400/50" />
                     )}
                   </div>
                   <div>
@@ -346,7 +369,9 @@ export default function StudentsPage() {
           <div className="col-span-2 text-center py-16 bg-white rounded-3xl border border-neutral-100 text-neutral-400 text-xs">
             {searchQuery
               ? `No students found matching "${searchQuery}"`
-              : `No students found in "${activeStudentFilter}"`}
+              : backendConnected
+              ? `No student records found in "${activeStudentFilter}" for the active campus.`
+              : `No synthetic demonstration students found in "${activeStudentFilter}".`}
           </div>
         )}
       </div>

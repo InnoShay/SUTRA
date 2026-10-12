@@ -10,9 +10,9 @@ module.exports = {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: "1.5rem",
       screens: {
-        "2xl": "1440px",
+        "2xl": "1280px",
       },
     },
     extend: {
@@ -22,6 +22,24 @@ module.exports = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        brand: {
+          50: "#ecfdf5",
+          100: "#d1fae5",
+          200: "#a7f3d0",
+          300: "#6ee7b7",
+          400: "#34d399",
+          500: "#10b981",
+          600: "#059669",
+          700: "#047857",
+          800: "#065f46",
+          900: "#064e3b",
+          950: "#022c22",
+        },
+        slate: {
+          850: "#151e2e",
+          925: "#0b1120",
+          950: "#070b14",
+        },
         skill: {
           canvas: "#F4F5F7",
           surface: "#FFFFFF",
@@ -49,15 +67,42 @@ module.exports = {
         sm: "0.375rem",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        sans: ["var(--font-inter)", "Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        display: ["var(--font-cal)", "'Plus Jakarta Sans'", "Inter", "-apple-system", "sans-serif"],
         heading: ["var(--font-jakarta)", "'Plus Jakarta Sans'", "Inter", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "Fira Code", "monospace"],
       },
       boxShadow: {
+        glow: "0 0 35px -5px rgba(16, 185, 129, 0.25)",
+        "glow-lg": "0 0 60px -10px rgba(16, 185, 129, 0.35)",
+        subtle: "0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
+        card: "0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 10px -2px rgba(0, 0, 0, 0.08)",
+        elevation: "0 20px 40px -15px rgba(0, 0, 0, 0.3)",
         skill: "0 2px 12px -2px rgba(15, 23, 42, 0.03), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
         "skill-card": "0 4px 20px -2px rgba(15, 23, 42, 0.03), 0 1px 2px 0 rgba(15, 23, 42, 0.02)",
         "skill-hover": "0 10px 25px -4px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.02)",
         "skill-pill": "0 2px 8px rgba(0, 0, 0, 0.04)",
         float: "0 20px 40px -10px rgba(15, 23, 42, 0.08)",
+      },
+      keyframes: {
+        shimmer: {
+          "100%": {
+            transform: "translateX(100%)",
+          },
+        },
+        pulseSlow: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.5" },
+        },
+        floatSlow: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
+      },
+      animation: {
+        shimmer: "shimmer 2.5s infinite",
+        "pulse-slow": "pulseSlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "float-slow": "floatSlow 4s ease-in-out infinite",
       },
     },
   },

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSkillHub } from "@/lib/store";
+import { DEMO_OBSERVATIONS } from "@/lib/skillhub-data";
 import { api } from "@/lib/api";
 import { SupportViewResponse, SignalDTO, AISummarizeEvidenceResponse } from "@/lib/types";
 import { SignalReviewModal } from "@/components/SignalReviewModal";
@@ -32,31 +33,56 @@ import {
 export default function StudentDetailPage() {
   const params = useParams();
   const studentId = params?.id as string;
-  const { students, activeRole, signals } = useSkillHub();
-
-  const fallbackStudent =
-    students.find((s) => s.id === studentId) ||
-    students[0] || {
-      id: studentId,
-      name: "Aarav Sharma",
-      email: "aarav.sharma@sutra.edu",
-      course: "Computer Science (UG)",
-      progress: 54,
-      status: "At Risk" as const,
-      avatar: "/assets/avatar-sarah.jpg",
-      isOnline: true,
-      enrolledDate: "August 2026",
-      grade: "C+",
-      attendance: "64%",
-      completedLessons: 6,
-      totalLessons: 12,
-      lastActive: "Today",
-    };
+  const { students, activeRole, signals, backendConnected } = useSkillHub();
 
   const [supportView, setSupportView] = useState<SupportViewResponse | null>(null);
   const [loadingSupportView, setLoadingSupportView] = useState<boolean>(true);
   const [supportViewError, setSupportViewError] = useState<string | null>(null);
   const [selectedSignalForReview, setSelectedSignalForReview] = useState<SignalDTO | null>(null);
+
+  const currentStudent =
+    students.find(
+      (s) =>
+        s.id.toLowerCase() === studentId.toLowerCase() ||
+        s.email.toLowerCase().startsWith(studentId.toLowerCase())
+    ) ||
+    (supportView?.student
+      ? {
+          id: supportView.student.id,
+          name: supportView.student.display_name,
+          email: `${supportView.student.external_ref.toLowerCase()}@sutra.edu`,
+          course: supportView.student.cohort_code
+            ? `Cohort ${supportView.student.cohort_code}`
+            : "Cohort CS-Y2 (Computer Science)",
+          progress: 70,
+          status: (supportView.student.enrollment_status === "active" ? "Active" : "Completed") as any,
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+          isOnline: true,
+          enrolledDate: "August 2026",
+          grade: "B",
+          attendance: "88%",
+          completedLessons: 6,
+          totalLessons: 18,
+          lastActive: "Today",
+        }
+      : null);
+
+  const fallbackStudent = currentStudent || {
+    id: studentId,
+    name: studentId,
+    email: `${studentId.toLowerCase()}@sutra.edu`,
+    course: "Cohort CS-Y2 (Computer Science)",
+    progress: 50,
+    status: "Active" as const,
+    avatar: "/assets/avatar-sarah.jpg",
+    isOnline: false,
+    enrolledDate: "August 2026",
+    grade: "N/A",
+    attendance: "N/A",
+    completedLessons: 0,
+    totalLessons: 18,
+    lastActive: "N/A",
+  };
 
   // Phase 6: AI Evidence Summarization State
   const [aiEvidenceSummary, setAiEvidenceSummary] = useState<AISummarizeEvidenceResponse | null>(null);
@@ -147,12 +173,15 @@ export default function StudentDetailPage() {
 
   // Active signals matching this student
   const studentSignals = signals.filter(
-    (s) => s.student_id === studentId || s.external_student_ref === fallbackStudent.name
+    (s) =>
+      s.student_id === studentId ||
+      s.external_student_ref === studentId ||
+      (currentStudent && (s.student_id === currentStudent.id || s.external_student_ref === currentStudent.id))
   );
 
-  const studentDisplayName = supportView?.student?.display_name || fallbackStudent.name;
-  const externalRef = supportView?.student?.external_ref || "SUTRA-2026-001";
-  const enrollmentStatus = supportView?.student?.enrollment_status || fallbackStudent.status;
+  const studentDisplayName = supportView?.student?.display_name || currentStudent?.name || studentId;
+  const externalRef = supportView?.student?.external_ref || currentStudent?.id || studentId;
+  const enrollmentStatus = supportView?.student?.enrollment_status || currentStudent?.status || "Active";
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -411,7 +440,33 @@ export default function StudentDetailPage() {
                       </td>
                       <td className="py-2.5 px-4">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          obs.quality_state === "valid"
+                          obs.quality_state === "valid" || obs.quality_state === "good"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}>
+                          {obs.quality_state}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono text-[10px] text-neutral-400">
+                        {new Date(obs.event_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))
+                ) : !backendConnected && DEMO_OBSERVATIONS[studentId] && DEMO_OBSERVATIONS[studentId].length > 0 ? (
+                  DEMO_OBSERVATIONS[studentId].map((obs) => (
+                    <tr key={obs.id} className="hover:bg-neutral-50/60">
+                      <td className="py-2.5 px-4 font-semibold text-neutral-800 capitalize">
+                        {obs.domain}
+                      </td>
+                      <td className="py-2.5 px-4 font-mono text-[11px] text-neutral-600">
+                        {obs.metric_key}
+                      </td>
+                      <td className="py-2.5 px-4 font-bold text-neutral-900">
+                        {typeof obs.value === "object" ? JSON.stringify(obs.value) : String(obs.value)} {obs.unit || ""}
+                      </td>
+                      <td className="py-2.5 px-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          obs.quality_state === "good" || obs.quality_state === "valid"
                             ? "bg-emerald-50 text-emerald-700"
                             : "bg-amber-50 text-amber-700"
                         }`}>
@@ -424,35 +479,11 @@ export default function StudentDetailPage() {
                     </tr>
                   ))
                 ) : (
-                  <>
-                    <tr className="hover:bg-neutral-50/60">
-                      <td className="py-2.5 px-4 font-semibold text-neutral-800 capitalize">academic</td>
-                      <td className="py-2.5 px-4 font-mono text-[11px] text-neutral-600">quiz_scores_avg</td>
-                      <td className="py-2.5 px-4 font-bold text-neutral-900">54.0%</td>
-                      <td className="py-2.5 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">valid</span>
-                      </td>
-                      <td className="py-2.5 px-4 text-right font-mono text-[10px] text-neutral-400">Today</td>
-                    </tr>
-                    <tr className="hover:bg-neutral-50/60">
-                      <td className="py-2.5 px-4 font-semibold text-neutral-800 capitalize">attendance</td>
-                      <td className="py-2.5 px-4 font-mono text-[11px] text-neutral-600">lecture_attendance_pct</td>
-                      <td className="py-2.5 px-4 font-bold text-neutral-900">62.5%</td>
-                      <td className="py-2.5 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">valid</span>
-                      </td>
-                      <td className="py-2.5 px-4 text-right font-mono text-[10px] text-neutral-400">Yesterday</td>
-                    </tr>
-                    <tr className="hover:bg-neutral-50/60">
-                      <td className="py-2.5 px-4 font-semibold text-neutral-800 capitalize">lms</td>
-                      <td className="py-2.5 px-4 font-mono text-[11px] text-neutral-600">portal_active_minutes</td>
-                      <td className="py-2.5 px-4 font-bold text-neutral-900">14 min</td>
-                      <td className="py-2.5 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700">stale</span>
-                      </td>
-                      <td className="py-2.5 px-4 text-right font-mono text-[10px] text-neutral-400">3 days ago</td>
-                    </tr>
-                  </>
+                  <tr>
+                    <td colSpan={5} className="py-8 px-4 text-center text-xs text-neutral-400">
+                      No multi-domain observations recorded for this student in the active campus.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

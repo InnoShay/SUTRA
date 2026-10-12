@@ -60,6 +60,43 @@ Principle: **“No Alert Without Action.”**
 
 ---
 
+## 2.1 Supabase Integration, Database Pooler & Security Architecture
+
+SUTRA integrates with Supabase PostgreSQL as its persistent relational datastore and Supabase Auth for identity management.
+
+### Architectural Invariants:
+1. **Single Product Backend:** The browser never accesses database tables directly. All product workflows proxy through FastAPI (`/api/v1`).
+2. **Server-Side Token Verification:** FastAPI cryptographically verifies access token signatures (`HS256`), expiry (`verify_exp: True`), and audience (`aud: authenticated`) against `SUPABASE_JWT_SECRET`.
+3. **Database-Driven Authorization:** User roles and campus permissions are strictly read from `institution_memberships` in PostgreSQL. Role or campus claims in client JWTs are never trusted.
+4. **Defense-in-Depth RLS Lockdown:** Row Level Security (RLS) is enabled across all tables (`migrations/supabase_rls_lockdown.sql`). Default public access is revoked for `anon` and `authenticated` PostgREST roles, preventing browser bypass.
+
+### Supabase Connection Topology:
+
+| Connection Target | Port | Protocol / Driver | Use Case | Required Configuration |
+| :--- | :--- | :--- | :--- | :--- |
+| **Supabase Transaction Pooler** | `6543` | `postgresql+asyncpg` | FastAPI Runtime | `DATABASE_STATEMENT_CACHE_SIZE=0`, `DATABASE_POOL_PRE_PING=true` |
+| **Supabase Session Pooler** | `5432` | `postgresql+psycopg2` | Alembic Migrations | `SYNC_DATABASE_URL=postgresql+psycopg2://...:5432/postgres` |
+| **Supabase Direct DB** | `5432` | `postgresql+asyncpg` | Direct IPv6 VPS | Standard asyncpg connection (requires IPv6 connectivity) |
+| **Local Offline / Demo** | N/A | `sqlite+aiosqlite` | Offline / CI Testing | `sqlite+aiosqlite:///./sutra_dev.db` |
+
+### Supabase Connection Pooler Format:
+```bash
+# Production Async Engine (Port 6543 Transaction Pooler)
+DATABASE_URL="postgresql+asyncpg://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
+
+# Production Alembic Sync Engine (Port 5432 Session Pooler)
+SYNC_DATABASE_URL="postgresql+psycopg2://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres"
+
+# Supabase Auth Settings
+SUPABASE_URL="https://[PROJECT_REF].supabase.co"
+SUPABASE_ANON_KEY="[ANON_PUBLIC_KEY]"
+SUPABASE_JWT_SECRET="[JWT_SECRET_FROM_DASHBOARD]"
+SUPABASE_JWT_ALGORITHM="HS256"
+SUPABASE_JWT_AUDIENCE="authenticated"
+```
+
+---
+
 ## 3. Step-by-Step Clean Setup Guide (< 5 Minutes)
 
 ### Step 1: Clone and Configure Environment

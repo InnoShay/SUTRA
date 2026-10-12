@@ -19,8 +19,16 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Set database connection string dynamically from application settings
-config.set_main_option("sqlalchemy.url", settings.sync_database_url)
+# Set database connection string dynamically from application settings or environment override
+db_url = os.environ.get("ALEMBIC_DATABASE_URL")
+if not db_url:
+    main_url = config.get_main_option("sqlalchemy.url")
+    if main_url and not main_url.endswith("localhost:5432/sutra"):
+        db_url = main_url
+    else:
+        db_url = settings.sync_database_url
+
+config.set_main_option("sqlalchemy.url", db_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

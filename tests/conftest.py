@@ -15,9 +15,12 @@ from app.models.institution import Institution, InstitutionMembership
 # Test Database Engine (In-Memory SQLite with aiosqlite)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
+from sqlalchemy.pool import StaticPool
+
 test_engine = create_async_engine(
     TEST_DATABASE_URL,
     echo=False,
+    poolclass=StaticPool,
     connect_args={"check_same_thread": False},
 )
 
