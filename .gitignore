@@ -38,3 +38,4 @@ dist/
 # Databases
 *.db
 *.sqlite3
+data/*.db*

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SUTRA — Support Evidence Ledger & Advisor Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-logo">S</div>
+      <div class="brand-text">
+        <h1>SUTRA Support Evidence Ledger</h1>
+        <p>From Student Signals to Verified Support &bull; Phase 4 Human Review</p>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Persona Switcher -->
+      <div class="persona-select-container">
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ROLE:</span>
+        <select id="persona-select">
+          <option value="ADV-MAIN-01" selected>Dr. Sarah Chen (Advisor &bull; CAMPUS-MAIN)</option>
+          <option value="COACH-MAIN-01">Marcus Vance (Coach &bull; CAMPUS-MAIN)</option>
+          <option value="TUTOR-MAIN-01">Dr. Liam Patel (Tutor &bull; CAMPUS-MAIN)</option>
+          <option value="ADV-REMOTE-02">Elena Rostova (Advisor &bull; CAMPUS-REMOTE)</option>
+          <option value="ADMIN-01">System Auditor (Cross-Campus Admin)</option>
+        </select>
+      </div>
+
+      <!-- Action Buttons -->
+      <button class="btn btn-secondary btn-sm" id="btn-verify-audit" title="Check Cryptographic Hash Chain">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Audit Integrity
+      </button>
+
+      <button class="btn btn-primary btn-sm" id="btn-seed-modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Seed Demo Case
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+    <!-- View Navigation -->
+    <nav class="view-nav">
+      <button class="view-nav-btn active" data-view="queue">Screen A: Review Queue</button>
+      <button class="view-nav-btn" data-view="detail" id="nav-detail-btn" disabled>Screen B: Case Review & Evidence</button>
+      <button class="view-nav-btn" data-view="timeline" id="nav-timeline-btn" disabled>Screen D: Support Evidence Ledger</button>
+    </nav>
+
+    <!-- Global Notice / Alert Banner -->
+    <div id="status-banner" style="display: none; margin-bottom: 1.5rem;"></div>
+
+    <!-- ======================================================================
+         SCREEN A: REVIEW QUEUE
+         ====================================================================== -->
+    <section id="view-queue">
+      <div class="glass card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div class="card-title">
+            <span>Synthetic Demo Review Queue</span>
+            <span id="queue-campus-badge" class="badge badge-draft">CAMPUS-MAIN</span>
+          </div>
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <label style="font-size: 0.8rem; color: var(--text-muted);">Status Filter:</label>
+            <select id="queue-status-filter" class="form-select" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">
+              <option value="">All Statuses</option>
+              <option value="DRAFT_AWAITING_REVIEW">DRAFT_AWAITING_REVIEW</option>
+              <option value="APPROVED">APPROVED</option>
+              <option value="INFORMATION_REQUESTED">INFORMATION_REQUESTED</option>
+              <option value="REJECTED">REJECTED</option>
+              <option value="TASKS_COMPLETED">TASKS_COMPLETED</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" id="btn-refresh-queue">Refresh</button>
+          </div>
+        </div>
+
+        <div class="alert-box alert-cyan">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <strong>Advisor Decision-Support Boundary:</strong> Risk predictions are decision-support indicators for advisors based on Day-30 engagement patterns, not deterministic verdicts of student dropout. All cases require human review.
+          </div>
+        </div>
+
+        <div class="queue-table-wrapper">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th>Case & Record</th>
+                <th>Campus</th>
+                <th>ML Risk Tier</th>
+                <th>P(At-Risk)</th>
+                <th>Deterministic Gate</th>
+                <th>Advisory Findings</th>
+                <th>Lifecycle Status</th>
+                <th>Updated</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="queue-tbody">
+              <!-- Populated via JavaScript -->
+              <tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading review queue...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SCREEN B: CASE REVIEW & EVIDENCE
+         ====================================================================== -->
+    <section id="view-detail" style="display: none;">
+      <!-- Active Case Header Banner -->
+      <div class="glass card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+              <h2 id="detail-case-id" style="font-size: 1.35rem; font-weight: 800; font-family: var(--font-mono);">CASE-001</h2>
+              <span id="detail-status-badge" class="badge badge-draft">DRAFT_AWAITING_REVIEW</span>
+              <span id="detail-plan-version-badge" class="badge badge-moderate">Plan v1</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">
+              Student Record: <strong id="detail-record-id" style="color: var(--text-primary); font-family: var(--font-mono);">SYNTH-SCENARIO-LOW-02</strong> &bull;
+              Campus: <strong id="detail-campus-id" style="color: var(--text-primary);">CAMPUS-MAIN</strong> &bull;
+              Observation Cutoff: <strong>Day 30</strong>
+            </p>
+          </div>
+
+          <!-- Quick Decision Actions (Screen C Anchor) -->
+          <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" id="btn-jump-to-ledger">
+              View Evidence Ledger
+            </button>
+            <button class="btn btn-warning btn-sm" id="btn-action-request-info">
+              Request Info
+            </button>
+            <button class="btn btn-danger btn-sm" id="btn-action-reject">
+              Reject
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-action-modify">
+              Modify Plan
+            </button>
+            <button class="btn btn-success" id="btn-action-approve">
+              Approve Proposed Plan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Grid of 4-Agent Pipeline Lineage -->
+      <div class="detail-grid">
+        <!-- Panel 1: Authoritative ML Evidence Card -->
+        <div class="glass card">
+          <div class="card-header">
+            <div class="card-title" style="color: #c084fc;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              ML Evidence Card (Authoritative)
+            </div>
+            <span id="card-risk-tier-badge" class="badge badge-high">HIGH RISK</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.825rem;">
+            <div>
+              <span style="color: var(--text-muted);">Calibrated Probability:</span><br>
+              <strong id="card-risk-prob" style="font-size: 1.25rem; font-family: var(--font-mono); color: var(--accent-rose);">0.9287</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted);">Operational Threshold:</span><br>
+              <strong id="card-threshold" style="font-size: 1.25rem; font-family: var(--font-mono);">0.46</strong>
+            </div>
+          </div>
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Top Feature Risk Drivers:</span>
+            <div id="card-drivers-list" style="margin-top: 0.5rem;">
+              <!-- Dynamic drivers -->
+            </div>
+          </div>
+
+          <div class="alert-box alert-amber" style="font-size: 0.75rem;">
+            <strong>Governance Mandate:</strong> Empirical historical pattern. Does NOT represent causation or a diagnostic assessment of learner ability. No alert without human review.
+          </div>
+        </div>
+
+        <!-- Panel 2: Agent 1 Qualitative Signal Interpretation -->
+        <div class="glass card">
+          <div class="card-header">
+            <div class="card-title" style="color: #60a5fa;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              Agent 1 &bull; Signal Interpreter
+            </div>
+            <span class="badge badge-low">STAGE 1</span>
+          </div>
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Engagement Synthesis:</span>
+            <p id="agent1-summary" style="font-size: 0.85rem; color: var(--text-primary); margin-top: 0.25rem;">Loading...</p>
+          </div>
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Velocity Assessment:</span>
+            <p id="agent1-velocity" style="font-size: 0.825rem; color: var(--text-secondary); margin-top: 0.25rem;">Loading...</p>
+          </div>
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Claim-Level Evidence References:</span>
+            <div id="agent1-citations" style="margin-top: 0.5rem;"></div>
+          </div>
+
+          <div id="agent1-info-requests-container" style="display: none;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-amber);">Advisor Clarification Requests:</span>
+            <ul id="agent1-info-requests" style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 1.25rem; margin-top: 0.25rem;"></ul>
+          </div>
+        </div>
+
+        <!-- Panel 3: Agent 2 Intervention Strategist -->
+        <div class="glass card">
+          <div class="card-header">
+            <div class="card-title" style="color: #34d399;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Agent 2 &bull; Intervention Strategist
+            </div>
+            <span class="badge badge-pass">STAGE 2</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Proposed Intervention:</span><br>
+              <strong id="agent2-intervention-id" style="font-size: 1rem; color: var(--accent-cyan); font-family: var(--font-mono);">INT-VLE-ONBOARD-01</strong>
+            </div>
+            <div>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Target Role:</span><br>
+              <strong id="agent2-target-role" class="badge badge-moderate">ACADEMIC_ADVISOR</strong>
+            </div>
+          </div>
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Policy Rationale:</span>
+            <p id="agent2-rationale" style="font-size: 0.85rem; color: var(--text-primary); margin-top: 0.25rem;">Loading...</p>
+          </div>
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Alternative Catalog Options:</span>
+            <p id="agent2-alternatives" style="font-size: 0.825rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 0.25rem;">None</p>
+          </div>
+        </div>
+
+        <!-- Panel 4: Agent 3 Support Plan Designer -->
+        <div class="glass card">
+          <div class="card-header">
+            <div class="card-title" style="color: #facc15;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Agent 3 &bull; Support Plan Designer
+            </div>
+            <span id="agent3-plan-status-badge" class="badge badge-draft">UNAPPROVED DRAFT</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="agent3-plan-title" style="font-size: 0.95rem; font-weight: 700;">Loading plan title...</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Window: <strong id="agent3-target-window" style="color: var(--text-primary);">14</strong> Days</span>
+          </div>
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Proposed Milestone Action Steps:</span>
+            <table class="steps-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Action Description</th>
+                  <th>Assigned Role</th>
+                  <th>Target Days</th>
+                </tr>
+              </thead>
+              <tbody id="agent3-steps-tbody"></tbody>
+            </table>
+          </div>
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Follow-up Evidence Requirements:</span>
+            <ul id="agent3-requirements" style="font-size: 0.8rem; color: var(--text-muted); margin-left: 1.25rem; margin-top: 0.25rem;"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 5: Gate Validation & Agent 4 Adversarial Critique -->
+      <div class="detail-grid">
+        <!-- Deterministic Gate -->
+        <div class="glass card" style="border-left: 4px solid var(--accent-emerald);">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Deterministic Gate Validator (Hard Rules)
+            </div>
+            <span id="val-gate-badge" class="badge badge-pass">PASSED</span>
+          </div>
+          <p style="font-size: 0.825rem; color: var(--text-secondary);">
+            Deterministic schema, catalog role boundaries, and numerical range verification. Hard validation errors strictly block advisor approval.
+          </p>
+          <div id="val-findings-list" style="font-size: 0.825rem; margin-top: 0.5rem;">
+            <span style="color: var(--accent-emerald);">&check; Zero deterministic errors detected.</span>
+          </div>
+        </div>
+
+        <!-- Agent 4 Advisory Critique -->
+        <div class="glass card" style="border-left: 4px solid var(--accent-amber);">
+          <div class="card-header">
+            <div class="card-title" style="color: var(--accent-amber);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Agent 4 &bull; Evidence Challenge Findings
+            </div>
+            <span id="agent4-flags-badge" class="badge badge-elevated">1 Advisory Finding</span>
+          </div>
+          <p id="agent4-summary" style="font-size: 0.825rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Loading critique...</p>
+          <div id="agent4-findings-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SCREEN D: SUPPORT EVIDENCE LEDGER & TASK EXECUTION
+         ====================================================================== -->
+    <section id="view-timeline" style="display: none;">
+      <!-- Active Tasks Execution Section -->
+      <div class="glass card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Authorized Actionable Tasks Execution
+          </div>
+          <span id="tasks-count-badge" class="badge badge-moderate">0 Tasks</span>
+        </div>
+
+        <div class="alert-box alert-amber" style="font-size: 0.8rem;">
+          <strong>CRITICAL INTEGRITY PRINCIPLE:</strong> Task completion does NOT automatically infer or record a positive student outcome. Task execution and student retention/achievement remain strictly decoupled in SUTRA.
+        </div>
+
+        <div id="tasks-table-container">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th>Step #</th>
+                <th>Task ID</th>
+                <th>Action Description</th>
+                <th>Assigned Role</th>
+                <th>Target Days</th>
+                <th>Status</th>
+                <th>Completion Note</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="tasks-tbody">
+              <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No tasks created yet. Plan must be approved by an authorized advisor first.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Follow-up Records & Student Outcome Section -->
+      <div class="detail-grid">
+        <!-- Follow-up Notes -->
+        <div class="glass card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Follow-Up & Contact Observations
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-add-followup">Add Follow-Up</button>
+          </div>
+          <div id="followup-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <p style="font-size: 0.825rem; color: var(--text-muted);">No manual follow-up notes recorded.</p>
+          </div>
+        </div>
+
+        <!-- Student Outcome Observation -->
+        <div class="glass card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>
+              Distinct Student Course Outcome
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-record-outcome">Update Outcome</button>
+          </div>
+          <div style="font-size: 0.85rem;">
+            <div style="margin-bottom: 0.75rem;">
+              <span style="color: var(--text-muted);">Current Outcome Status:</span><br>
+              <strong id="outcome-status-display" class="badge badge-draft" style="margin-top: 0.25rem;">UNOBSERVED</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted);">Authoritative Outcome Summary:</span>
+              <p id="outcome-summary-display" style="color: var(--text-primary); margin-top: 0.25rem;">No subsequent academic course assessment available yet.</p>
+            </div>
+            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted);">
+              Recorded At: <span id="outcome-time-display">&mdash;</span> &bull; By: <span id="outcome-by-display">&mdash;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Support Evidence Ledger Chronological Hash Chain Stream -->
+      <div class="glass card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Tamper-Evident Support Evidence Ledger Timeline
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-verify-timeline-audit">Verify Chain</button>
+        </div>
+
+        <div class="timeline" id="ledger-timeline">
+          <!-- Populated dynamically with cryptographic SHA-256 event nodes -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================================================================
+       MODALS
+       ====================================================================== -->
+
+  <!-- Modal: Seed Synthetic Case -->
+  <div class="modal-overlay" id="modal-seed">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Seed Synthetic Demonstration Case</h3>
+        <button class="modal-close" data-close>&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-secondary);">
+        Select a reproducible Day-30 synthetic student profile. The backend executes real ML inference followed by the complete four-agent triage orchestration pipeline and persists the case.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Synthetic Scenario Profile:</label>
+        <select class="form-select" id="seed-scenario-select">
+          <option value="LOW_ENGAGEMENT_AT_RISK" selected>LOW_ENGAGEMENT_AT_RISK &bull; (SYNTH-SCENARIO-LOW-02, High Inactivity, P &approx; 0.93)</option>
+          <option value="HIGH_ENGAGEMENT_ON_TRACK">HIGH_ENGAGEMENT_ON_TRACK &bull; (SYNTH-SCENARIO-HIGH-01, High LMS Clicks, Low Risk)</option>
+          <option value="MODERATE_ENGAGEMENT_BORDERLINE">MODERATE_ENGAGEMENT_BORDERLINE &bull; (SYNTH-SCENARIO-BORDER-03, Marginal Velocity)</option>
+        </select>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-seed">Run Pipeline & Seed Case</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Advisor Review Decision -->
+  <div class="modal-overlay" id="modal-decision">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="decision-modal-title">Submit Advisor Review Decision</h3>
+        <button class="modal-close" data-close>&times;</button>
+      </div>
+      <p id="decision-modal-desc" style="font-size: 0.85rem; color: var(--text-secondary);"></p>
+
+      <div class="form-group">
+        <label class="form-label">Decision Notes & Rationale (Mandatory):</label>
+        <textarea class="form-textarea" id="decision-notes-input" placeholder="Document the clinical/advisory rationale for this decision..."></textarea>
+      </div>
+
+      <!-- Modify Plan Container (Shown only when decision is MODIFY) -->
+      <div id="modify-plan-container" style="display: none; flex-direction: column; gap: 0.75rem;">
+        <div class="alert-box alert-amber" style="font-size: 0.75rem;">
+          Advisor modifications create a new versioned plan (v2+) linked to this decision. The original AI-drafted plan v1 remains immutably preserved in the provenance ledger.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modified Plan Title:</label>
+          <input type="text" class="form-input" id="mod-plan-title" value="Customized Supportive Action Plan">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Completion Window (Days, 1-60):</label>
+          <input type="number" class="form-input" id="mod-plan-days" value="10" min="1" max="60">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Step 1 Action Description:</label>
+          <input type="text" class="form-input" id="mod-step1-desc" value="Diagnostic phone outreach by advisor">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Step 1 Assigned Role (Catalog Standard):</label>
+          <select class="form-select" id="mod-step1-role">
+            <option value="ACADEMIC_ADVISOR" selected>ACADEMIC_ADVISOR</option>
+            <option value="STUDENT_SUCCESS_COACH">STUDENT_SUCCESS_COACH</option>
+            <option value="MODULE_TUTOR">MODULE_TUTOR</option>
+            <option value="PEER_MENTOR">PEER_MENTOR</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-decision-confirm">Confirm Decision</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Complete Task -->
+  <div class="modal-overlay" id="modal-task-complete">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Record Task Execution Status</h3>
+        <button class="modal-close" data-close>&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-secondary);">
+        Update task progress. Completing a task does NOT automatically update or assume student academic outcome.
+      </p>
+      <input type="hidden" id="task-modal-id">
+      <div class="form-group">
+        <label class="form-label">New Status:</label>
+        <select class="form-select" id="task-modal-status">
+          <option value="COMPLETED" selected>COMPLETED</option>
+          <option value="IN_PROGRESS">IN_PROGRESS</option>
+          <option value="CANCELLED">CANCELLED</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Execution Note / Verification Observation:</label>
+        <textarea class="form-textarea" id="task-modal-note" placeholder="Advisor conducted planned phone check-in and verified student credentials..."></textarea>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-task-update">Save Task Status</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Follow-up -->
+  <div class="modal-overlay" id="modal-followup">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Record Follow-up Observation</h3>
+        <button class="modal-close" data-close>&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observation Note:</label>
+        <textarea class="form-textarea" id="followup-note-input" placeholder="Document interaction details, student response, or observed platform re-engagement..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Supporting Evidence Reference (Optional):</label>
+        <input type="text" class="form-input" id="followup-ref-input" placeholder="e.g. vle_clicks_forumng_d30 or email_reply_received">
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-followup">Record Follow-Up</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Record Student Outcome -->
+  <div class="modal-overlay" id="modal-outcome">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Record Student Course Outcome</h3>
+        <button class="modal-close" data-close>&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-secondary);">
+        Student course outcomes are recorded separately from task execution to maintain scientific and operational honesty.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Outcome Status:</label>
+        <select class="form-select" id="outcome-status-input">
+          <option value="UNOBSERVED">UNOBSERVED (No subsequent grade/mark available yet)</option>
+          <option value="IN_PROGRESS">IN_PROGRESS (Currently enrolled in assessment window)</option>
+          <option value="RECORDED">RECORDED (Final assessment or presentation completion observed)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Authoritative Outcome Summary:</label>
+        <textarea class="form-textarea" id="outcome-summary-input" placeholder="Student completed final module presentation BBB-2014J with passing mark of 68%..."></textarea>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-outcome">Commit Outcome Record</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Audit Verification Result -->
+  <div class="modal-overlay" id="modal-audit-result">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Support Evidence Ledger Integrity Verification</h3>
+        <button class="modal-close" data-close>&times;</button>
+      </div>
+      <div id="audit-verification-content">
+        <!-- Dynamic verification report -->
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+        <button class="btn btn-primary" data-close>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
