@@ -33,14 +33,15 @@ def upgrade() -> None:
     op.create_index("idx_idemp_created", "idempotency_records", ["institution_id", "created_at"])
 
     # 2. Add unique constraint on cases for institution_id + originating_signal_id
-    op.create_unique_constraint(
-        "uq_cases_inst_originating_signal",
-        "cases",
-        ["institution_id", "originating_signal_id"],
-    )
+    with op.batch_alter_table("cases") as batch_op:
+        batch_op.create_unique_constraint(
+            "uq_cases_inst_originating_signal",
+            ["institution_id", "originating_signal_id"],
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint("uq_cases_inst_originating_signal", "cases", type_="unique")
+    with op.batch_alter_table("cases") as batch_op:
+        batch_op.drop_constraint("uq_cases_inst_originating_signal", type_="unique")
     op.drop_index("idx_idemp_created", table_name="idempotency_records")
     op.drop_table("idempotency_records")
