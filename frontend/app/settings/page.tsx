@@ -23,14 +23,15 @@ export default function SettingsPage() {
     updateUser,
     activeRole,
     setActiveRole,
+    activeCampusName,
     currentPersona,
     backendConnected,
     backendError,
   } = useSkillHub();
 
-  const [name, setName] = useState(user.fullName);
+  const [name, setName] = useState(user.fullName || user.name);
   const [role, setRole] = useState(user.role);
-  const [email, setEmail] = useState("educator.sutra@apex.edu");
+  const [email, setEmail] = useState(user.email || "faculty@sutra.edu");
   const [saved, setSaved] = useState(false);
   const [tokenCopied, setTokenCopied] = useState(false);
 
@@ -133,7 +134,7 @@ export default function SettingsPage() {
               {DEMO_CAMPUS_ID}
             </span>
             <span className="text-[10px] text-neutral-400 block">
-              Apex University Main Campus
+              {activeCampusName}
             </span>
           </div>
 
@@ -184,13 +185,19 @@ export default function SettingsPage() {
       {/* Profile Card */}
       <div className="skill-card bg-white p-5 sm:p-6 md:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 pb-6 border-b border-neutral-100">
-          <img
-            src={user.avatar}
-            alt={user.fullName}
-            className="w-16 h-16 rounded-full object-cover ring-4 ring-neutral-100 flex-shrink-0"
-          />
+          {user.avatar ? (
+            <img
+              src={user.avatar}
+              alt={user.fullName || user.name}
+              className="w-16 h-16 rounded-full object-cover ring-4 ring-neutral-100 flex-shrink-0"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-xl ring-4 ring-neutral-100 flex-shrink-0">
+              {(user.fullName || user.name || "U").charAt(0).toUpperCase()}
+            </div>
+          )}
           <div>
-            <h3 className="text-lg font-bold text-neutral-900">{user.fullName}</h3>
+            <h3 className="text-lg font-bold text-neutral-900">{user.fullName || user.name}</h3>
             <p className="text-xs text-neutral-400">{user.role}</p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200/50">

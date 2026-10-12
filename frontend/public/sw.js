@@ -6,7 +6,7 @@ const CACHE_NAME = 'sutra-static-v1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/assets/avatar-sarah.jpg',
+  '/sutra-logo.svg',
 ];
 
 // Install: Cache core static assets

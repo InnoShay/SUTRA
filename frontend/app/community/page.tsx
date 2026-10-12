@@ -288,33 +288,27 @@ export default function CommunityPage() {
           </h4>
           <div className="flex items-center justify-between text-xs py-1">
             <div className="flex items-center gap-2">
-              <img
-                src="/assets/avatar-sarah.jpg"
-                alt="Sarah"
-                className="w-5 h-5 rounded-full object-cover"
-              />
+              <div className="w-5 h-5 rounded-full bg-neutral-900 text-white text-[10px] font-bold flex items-center justify-center">
+                SW
+              </div>
               <span className="font-semibold text-neutral-800">Dr. Sarah Wilson</span>
             </div>
             <span className="text-[11px] text-emerald-600 font-semibold font-mono">Faculty (Lead)</span>
           </div>
           <div className="flex items-center justify-between text-xs py-1">
             <div className="flex items-center gap-2">
-              <img
-                src="/assets/avatar-marvin.jpg"
-                alt="Mike"
-                className="w-5 h-5 rounded-full object-cover"
-              />
+              <div className="w-5 h-5 rounded-full bg-neutral-800 text-white text-[10px] font-bold flex items-center justify-center">
+                MV
+              </div>
               <span className="font-semibold text-neutral-800">Prof. Marcus Vance</span>
             </div>
             <span className="text-[11px] text-emerald-600 font-semibold font-mono">Academic Dean</span>
           </div>
           <div className="flex items-center justify-between text-xs py-1">
             <div className="flex items-center gap-2">
-              <img
-                src="/assets/avatar-jane.jpg"
-                alt="Emma"
-                className="w-5 h-5 rounded-full object-cover"
-              />
+              <div className="w-5 h-5 rounded-full bg-neutral-700 text-white text-[10px] font-bold flex items-center justify-center">
+                ER
+              </div>
               <span className="font-semibold text-neutral-800">Elena Rostova</span>
             </div>
             <span className="text-[11px] text-emerald-600 font-semibold font-mono">Lead Counselor</span>

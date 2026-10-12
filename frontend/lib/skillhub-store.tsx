@@ -183,6 +183,8 @@ interface SkillHubContextType {
   setGrowthTimeframe: (tf: TimeframeOption) => void;
   analyticsTimeframe: TimeframeOption;
   setAnalyticsTimeframe: (tf: TimeframeOption) => void;
+  activeCampusName: string;
+  setActiveCampusName: (name: string) => void;
 }
 
 const SkillHubContext = createContext<SkillHubContextType | undefined>(undefined);
@@ -190,6 +192,7 @@ const SkillHubContext = createContext<SkillHubContextType | undefined>(undefined
 export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   // 1. Role and Authentication State
   const [activeRole, setActiveRoleState] = useState<UserRole>("faculty");
+  const [activeCampusName, setActiveCampusName] = useState<string>("Amrita Vishwa Vidyapeetham");
   const currentPersona = DEMO_PERSONAS[activeRole] || DEMO_PERSONAS.faculty;
 
   const [backendConnected, setBackendConnected] = useState<boolean>(false);
@@ -205,10 +208,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   // Existing UI compatibility state
   const [user, setUser] = useState({
     ...CURRENT_USER,
-    name: currentPersona.name.split(" ")[0],
-    fullName: currentPersona.name,
-    role: currentPersona.title,
-    avatar: currentPersona.avatar,
+    name: "Faculty",
+    fullName: "Faculty Member",
+    role: "Faculty Mentor",
+    avatar: "",
   });
 
   const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES);
@@ -235,15 +238,33 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const setActiveRole = (newRole: UserRole) => {
     setActiveRoleState(newRole);
     const persona = DEMO_PERSONAS[newRole];
-    api.setToken(persona.token);
-    api.setCampusId(DEMO_CAMPUS_ID);
-    setUser({
-      ...CURRENT_USER,
-      name: persona.name.split(" ")[0],
-      fullName: persona.name,
-      role: persona.title,
-      avatar: persona.avatar,
-    });
+    const hasLiveAuth =
+      typeof window !== "undefined" &&
+      !!localStorage.getItem("sutra_auth_token");
+
+    if (!hasLiveAuth) {
+      api.setToken(persona.token);
+      api.setCampusId(DEMO_CAMPUS_ID);
+      setUser({
+        ...CURRENT_USER,
+        name: persona.name.split(" ")[0],
+        fullName: persona.name,
+        role: persona.title,
+        avatar: persona.avatar,
+      });
+    } else {
+      const roleLabels: Record<UserRole, string> = {
+        faculty: "Faculty Mentor",
+        counselor: "Student Counselor",
+        dean: "Dean / HOD",
+        leadership: "Leadership",
+        superadmin: "System Administrator",
+      };
+      setUser((prev) => ({
+        ...prev,
+        role: roleLabels[newRole] || "Faculty Member",
+      }));
+    }
   };
 
   // Sync with Backend
@@ -276,6 +297,24 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         ]);
         setMlModelInfo(info);
         setInterventions(intList);
+
+        if (intList && intList.length > 0) {
+          const mappedCourses: Course[] = intList.map((item, idx) => ({
+            id: item.id || `inv-${idx}`,
+            title: item.display_label,
+            subtitle: item.description || `Domain: ${item.domain} • Role: ${item.recipient_role}`,
+            category: item.domain.toUpperCase(),
+            image: "",
+            studentsCount: "Active",
+            progress: 100,
+            status: "Published",
+            lessonsCount: 1,
+            duration: `${item.domain} Pathway`,
+            rating: 5.0,
+            instructor: item.recipient_role,
+          }));
+          setCourses(mappedCourses);
+        }
       } catch (e) {
         console.warn("Non-fatal error loading model info or interventions:", e);
       }
@@ -315,29 +354,25 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
                 id: rs.id,
                 name: rs.display_name,
                 email: `${rs.external_ref.toLowerCase()}@sutra.edu`,
-                course: rs.cohort_code ? `Cohort ${rs.cohort_code}` : "Computer Science (UG)",
-                progress: matchingSignal?.result === "concern" ? 42 : 78,
+                course: rs.cohort_code ? `Cohort ${rs.cohort_code}` : "Academic Track",
+                progress: matchingSignal?.result === "concern" ? 42 : 88,
                 status: statusText,
-                avatar: INITIAL_STUDENTS[idx % INITIAL_STUDENTS.length]?.avatar || "/assets/avatar-sarah.jpg",
+                avatar: "",
                 isOnline: idx % 2 === 0,
                 enrolledDate: "August 2026",
                 lastActive: "Today",
                 grade: matchingSignal?.result === "concern" ? "C-" : "A",
-                attendance: matchingSignal?.result === "concern" ? "58%" : "92%",
+                attendance: matchingSignal?.result === "concern" ? "58%" : "94%",
                 completedLessons: 6,
                 totalLessons: 12,
                 bio: `Student ID: ${rs.external_ref} • Active Enrollment`,
               };
             });
 
-            // Merge with initial rich mock students so UI remains visually complete
-            const combined = [
-              ...mappedStudents,
-              ...INITIAL_STUDENTS.filter(
-                (is) => !mappedStudents.some((ms) => ms.name.toLowerCase() === is.name.toLowerCase())
-              ),
-            ];
-            setStudents(combined);
+            // Set ONLY real live students from database
+            setStudents(mappedStudents);
+          } else {
+            setStudents([]);
           }
         } catch (e: any) {
           console.warn("Could not load student roster:", e);
@@ -379,7 +414,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       const avatarUrl =
         metadata.avatar_url ||
         metadata.picture ||
-        "/assets/avatar-sarah.jpg";
+        "";
 
       setUser((prev) => ({
         ...prev,
@@ -396,12 +431,24 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         if (authMe.memberships && authMe.memberships.length > 0) {
           const primaryCampus = authMe.memberships[0];
           api.setCampusId(primaryCampus.institution_id);
+          setActiveCampusName(primaryCampus.institution_name || "Amrita Vishwa Vidyapeetham");
           if (typeof window !== "undefined") {
             localStorage.setItem("sutra_active_campus_id", primaryCampus.institution_id);
           }
           if (primaryCampus.roles && primaryCampus.roles.length > 0) {
             const role = primaryCampus.roles[0] as UserRole;
             setActiveRoleState(role);
+            const roleLabels: Record<string, string> = {
+              faculty: "Faculty Mentor",
+              counselor: "Student Counselor",
+              dean: "Dean / HOD",
+              leadership: "Leadership",
+              superadmin: "System Administrator",
+            };
+            setUser((prev) => ({
+              ...prev,
+              role: roleLabels[role] || "Faculty Mentor",
+            }));
           }
         }
       } catch (e) {
@@ -701,6 +748,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         setGrowthTimeframe,
         analyticsTimeframe,
         setAnalyticsTimeframe,
+        activeCampusName,
+        setActiveCampusName,
       }}
     >
       {children}

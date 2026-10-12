@@ -27,21 +27,22 @@ import {
 export default function DashboardPage() {
   const {
     user,
-    setIsNewCourseModalOpen,
     courses,
     students,
     growthTimeframe,
     setGrowthTimeframe,
     analyticsTimeframe,
     setAnalyticsTimeframe,
-    toggleCourseLive,
     signals,
     cases,
+    interventions,
     activeRole,
+    activeCampusName,
     currentPersona,
     backendConnected,
     backendError,
     isLoadingBackend,
+    refreshBackendData,
   } = useSkillHub();
 
   const [growthOpen, setGrowthOpen] = useState(false);
@@ -118,17 +119,9 @@ export default function DashboardPage() {
     },
   }[analyticsTimeframe];
 
-  // Derive dynamic live course
-  const liveCourse = courses.find((c) => c.isUpcomingLive) || courses[0] || {
-    id: "course-live",
-    title: "Advanced Academic Mentoring",
-    liveTime: "Today, 10:00 AM",
-    studentsCount: "2k+",
-  };
-
   return (
     <div className="space-y-6">
-      {/* 1. TOP HEADER: "Welcome back, Sarah!" and "+ New Course" */}
+      {/* 1. TOP HEADER: Real User Profile, Role, Campus, and Sync Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
@@ -136,20 +129,22 @@ export default function DashboardPage() {
           </h1>
           <p className="text-xs text-neutral-500 mt-1 flex items-center gap-2">
             <span>Role:</span>
-            <span className="font-semibold text-neutral-800">{currentPersona.title}</span>
+            <span className="font-semibold text-neutral-800">{user.role || "Faculty Mentor"}</span>
             <span>•</span>
             <span className="font-medium text-neutral-500">
-              Campus: Apex University Main Campus
+              Campus: {activeCampusName}
             </span>
           </p>
         </div>
 
         <button
-          onClick={() => setIsNewCourseModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
+          onClick={() => refreshBackendData()}
+          disabled={isLoadingBackend}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto disabled:opacity-75 cursor-pointer"
+          title="Refresh real-time data from database"
         >
-          <Plus className="w-4 h-4" />
-          <span>New Course</span>
+          <Activity className={`w-4 h-4 ${isLoadingBackend ? "animate-spin" : ""}`} />
+          <span>{isLoadingBackend ? "Syncing..." : "Sync Live State"}</span>
         </button>
       </div>
 
@@ -310,17 +305,20 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Card 2: Dynamic Live Class / Mentoring Card */}
+          {/* Card 2: Active Institutional Intervention Pathways & SLAs */}
           <div className="skill-card p-5 sm:p-6 bg-white flex flex-col justify-between min-h-[190px]">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-                  {liveCourse.title}
-                </h3>
-                <div className="flex items-center gap-1.5 text-xs text-neutral-400 mt-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{liveCourse.liveTime || "Today, 10:00 AM"}</span>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                  <Shield className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Intervention Catalog</span>
                 </div>
+                <h3 className="text-base font-semibold text-neutral-900 tracking-tight mt-1">
+                  Active Pathways &amp; SLAs
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  Pre-configured intervention workflows for student retention
+                </p>
               </div>
 
               <Link
@@ -332,42 +330,28 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {/* Bottom avatars & Interactive Live badge */}
-            <div className="flex items-center justify-between pt-6">
-              {/* Dynamic Avatars Stack */}
-              <div className="flex items-center -space-x-2">
-                {students.slice(0, 3).map((s) => (
-                  <img
-                    key={s.id}
-                    src={s.avatar}
-                    alt={s.name}
-                    className="w-8 h-8 rounded-full object-cover ring-2 ring-white"
-                  />
-                ))}
-                <div className="w-8 h-8 rounded-full bg-neutral-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-neutral-600 pl-0.5">
-                  {students.length}+
+            {/* List of active intervention pathways from live database */}
+            <div className="space-y-2 pt-4">
+              {(interventions.length > 0
+                ? interventions.slice(0, 3)
+                : [
+                    { id: "1", display_label: "Academic Mentor Check-In", sla_hours: 48 },
+                    { id: "2", display_label: "Subject Tutoring Referral", sla_hours: 72 },
+                    { id: "3", display_label: "Student Wellbeing Referral", sla_hours: 24 },
+                  ]
+              ).map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between p-2 rounded-xl bg-neutral-50 border border-neutral-100 text-xs"
+                >
+                  <span className="font-semibold text-neutral-800 truncate mr-2">
+                    {inv.display_label}
+                  </span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-white border border-neutral-200 text-neutral-600 font-medium shrink-0">
+                    {inv.sla_hours || 48}h SLA
+                  </span>
                 </div>
-              </div>
-
-              {/* Interactive Live Session Toggle Button */}
-              <button
-                onClick={() => toggleCourseLive(liveCourse.id)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                  liveCourse.isUpcomingLive
-                    ? "bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100/70"
-                    : "bg-neutral-100 border border-neutral-200 text-neutral-600 hover:bg-neutral-200"
-                }`}
-                title="Toggle Live Session Status"
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    liveCourse.isUpcomingLive
-                      ? "bg-rose-500 animate-live-pulse"
-                      : "bg-neutral-400"
-                  }`}
-                />
-                <span>{liveCourse.isUpcomingLive ? "Live" : "Scheduled"}</span>
-              </button>
+              ))}
             </div>
           </div>
         </div>

@@ -35,6 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     user,
     activeRole,
     setActiveRole,
+    activeCampusName,
     currentPersona,
     backendConnected,
     setIsSearchOpen,
@@ -119,11 +120,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             title="Open Account Menu"
             aria-label="Open Account Menu"
           >
-            <img
-              src={user.avatar}
-              alt={user.fullName}
-              className="w-7 h-7 rounded-full object-cover ring-2 ring-white shadow-xs"
-            />
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.fullName || user.name}
+                className="w-7 h-7 rounded-full object-cover ring-2 ring-white shadow-xs"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-[10px] ring-2 ring-white shadow-xs">
+                {(user.fullName || user.name || "U").charAt(0).toUpperCase()}
+              </div>
+            )}
           </button>
         </div>
       </header>
@@ -319,18 +326,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             }`}
             title="View Profile Settings"
           >
-            <img
-              src={user.avatar}
-              alt={user.fullName}
-              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-            />
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.fullName || user.name}
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
+                {(user.fullName || user.name || "U").charAt(0).toUpperCase()}
+              </div>
+            )}
             {!sidebarCollapsed && (
               <div className="min-w-0 flex-1 hidden lg:block">
                 <p className="text-xs font-semibold text-neutral-900 truncate group-hover:text-neutral-950">
-                  {user.fullName}
+                  {user.fullName || user.name}
                 </p>
                 <p className="text-[11px] text-neutral-400 truncate font-medium">
-                  Instructor
+                  {user.role || "Faculty Mentor"}
                 </p>
               </div>
             )}
@@ -371,13 +384,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   value={activeRole}
                   onChange={(e) => setActiveRole(e.target.value as any)}
                   className="px-3 py-1.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] border border-neutral-200/70 rounded-xl text-xs font-semibold text-neutral-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-neutral-900 cursor-pointer transition-colors"
-                  title="Switch Active Persona"
+                  title="Switch Active Role"
                 >
-                  <option value="faculty">Faculty (Prof. Sharma)</option>
-                  <option value="counselor">Counselor (Dr. Nambiar)</option>
-                  <option value="dean">Dean / HOD (Dr. Rao)</option>
-                  <option value="leadership">Leadership (Prof. Kulkarni)</option>
-                  <option value="superadmin">Superadmin</option>
+                  <option value="faculty">Faculty Mentor</option>
+                  <option value="counselor">Student Counselor</option>
+                  <option value="dean">Dean / HOD</option>
+                  <option value="leadership">Leadership (Executive)</option>
+                  <option value="superadmin">Institutional Admin</option>
                 </select>
               </div>
 
@@ -407,13 +420,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/settings"
                 className="flex items-center gap-2 pl-1 cursor-pointer group"
-                title={`${currentPersona.name} (${currentPersona.title})`}
+                title={`${user.fullName || user.name} (${user.role || "Faculty Mentor"})`}
               >
-                <img
-                  src={currentPersona.avatar}
-                  alt={currentPersona.name}
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-100 group-hover:ring-neutral-300 shadow-sm transition-all"
-                />
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.fullName || user.name}
+                    className="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-100 group-hover:ring-neutral-300 shadow-sm transition-all"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-sm ring-2 ring-neutral-100 group-hover:ring-neutral-300 shadow-sm transition-all">
+                    {(user.fullName || user.name || "U").charAt(0).toUpperCase()}
+                  </div>
+                )}
               </Link>
             </div>
           </div>
@@ -476,17 +495,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {/* User Profile Header */}
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <div className="flex items-center gap-3">
-                <img
-                  src={user.avatar}
-                  alt={user.fullName}
-                  className="w-11 h-11 rounded-full object-cover ring-2 ring-neutral-100 shadow-sm"
-                />
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.fullName || user.name}
+                    className="w-11 h-11 rounded-full object-cover ring-2 ring-neutral-100 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-sm ring-2 ring-neutral-100 shadow-sm">
+                    {(user.fullName || user.name || "U").charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <h4 className="text-sm font-bold text-neutral-900">
-                    {user.fullName}
+                    {user.fullName || user.name}
                   </h4>
                   <p className="text-xs text-neutral-400 font-medium">
-                    Instructor • Sutra
+                    {user.role || "Faculty Mentor"} • {activeCampusName}
                   </p>
                 </div>
               </div>

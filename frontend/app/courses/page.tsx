@@ -138,16 +138,30 @@ export default function CoursesPage() {
               className="skill-card bg-white p-5 flex flex-col justify-between group hover:shadow-skill-hover transition-all duration-200 relative"
             >
               <div>
-                {/* 3D Image Artwork */}
-                <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-50 border border-neutral-100 flex items-center justify-center mb-4">
-                  <img
-                    src={courses[idx % courses.length]?.image || "/assets/course-figma.jpg"}
-                    alt={item.display_label}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 right-3">
-                    <span className="px-2.5 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-[10px] font-bold text-neutral-800 shadow-xs uppercase">
+                {/* Institutional Pathway Banner */}
+                <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-950 p-4 flex flex-col justify-between mb-4 border border-neutral-800 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="w-8 h-8 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white">
+                      {item.domain === "academic" ? (
+                        <BookOpen className="w-4 h-4" />
+                      ) : item.domain === "counselling" ? (
+                        <Shield className="w-4 h-4" />
+                      ) : item.domain === "finance" ? (
+                        <Activity className="w-4 h-4" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-bold text-neutral-200 tracking-wider uppercase border border-white/10">
                       {item.domain}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono uppercase text-neutral-400 block">
+                      Target Role
+                    </span>
+                    <span className="text-sm font-bold text-white tracking-tight">
+                      {item.recipient_role ? `Action: ${item.recipient_role.toUpperCase()}` : "Active Protocol"}
                     </span>
                   </div>
                 </div>

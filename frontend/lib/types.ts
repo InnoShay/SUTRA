@@ -259,6 +259,7 @@ export interface InterventionItem {
   required_purpose_key: string;
   requires_human_approval: boolean;
   description?: string | null;
+  sla_hours?: number | null;
 }
 
 export interface MLModelInfo {

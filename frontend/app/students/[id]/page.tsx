@@ -43,7 +43,7 @@ export default function StudentDetailPage() {
       course: "Computer Science (UG)",
       progress: 54,
       status: "At Risk" as const,
-      avatar: "/assets/avatar-sarah.jpg",
+      avatar: "",
       isOnline: true,
       enrolledDate: "August 2026",
       grade: "C+",
@@ -180,14 +180,17 @@ export default function StudentDetailPage() {
       <div className="skill-card bg-white p-7 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-neutral-100">
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <img
-                src={fallbackStudent.avatar}
-                alt={studentDisplayName}
-                className="w-16 h-16 rounded-full object-cover ring-4 ring-neutral-100"
-              />
-              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-400/50" />
-            </div>
+              {fallbackStudent.avatar ? (
+                <img
+                  src={fallbackStudent.avatar}
+                  alt={studentDisplayName}
+                  className="w-16 h-16 rounded-full object-cover ring-4 ring-neutral-100"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-xl ring-4 ring-neutral-100">
+                  {studentDisplayName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+              )}
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl font-bold text-neutral-900 font-heading">
