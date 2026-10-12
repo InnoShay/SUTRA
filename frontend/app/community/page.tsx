@@ -1,386 +1,462 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useSkillHub } from "@/lib/store";
-import { DiscussionDetailModal } from "@/components/DiscussionDetailModal";
+import { CaseDetailDTO, CaseState } from "@/lib/types";
 import {
-  Plus,
-  MessageSquare,
-  Eye,
   Users,
-  MoreVertical,
+  Search,
+  Filter,
   ArrowUpRight,
-  Heart,
-  Check,
+  Clock,
+  Shield,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  FolderOpen,
+  Lock,
+  Layers,
+  ChevronRight,
 } from "lucide-react";
 
 export default function CommunityPage() {
   const {
-    discussions,
-    setIsCreatePostModalOpen,
-    likeDiscussion,
     cases,
+    students,
+    activeRole,
+    backendConnected,
+    isLoadingBackend,
+    refreshBackendData,
+    transitionCase,
   } = useSkillHub();
 
-  const [activeTab, setActiveTab] = useState<"forum" | "cases">("forum");
-  const [activeDiscussion, setActiveDiscussion] = useState<string | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [eventJoined, setEventJoined] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStateFilter, setSelectedStateFilter] = useState<string>("all");
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
 
-  // Mapped case discussions for collaboration
-  const caseDiscussions = cases.map((c) => ({
-    id: c.id,
-    title: `Case: ${(c.selected_intervention_key || "Academic Mentoring").replace(/_/g, " ")}`,
-    summary: `Student: ${c.student_display_name || "Enrolled Student"} (${c.external_student_ref}) • State: ${c.state} • Follow-ups: ${c.follow_ups?.length || 0} logged`,
-    author: c.primary_owner_user_id ? `Owner: ${c.primary_owner_user_id.slice(0, 8)}` : "Case Coordinator",
-    authorRole: String(c.state),
-    authorAvatar: "/assets/avatar-sarah.jpg",
-    timeAgo: "Active",
-    repliesCount: (c.tasks?.length || 0) + (c.follow_ups?.length || 0),
-    viewsCount: 24,
-    participantsCount: 3,
-    tags: [String(c.state), "Intervention"],
-    isFeatured: c.is_escalated,
-  }));
+  // Canonical Case States for Filtering
+  const stateFilters: { key: string; label: string }[] = [
+    { key: "all", label: "All Cases" },
+    { key: "NEW", label: "New" },
+    { key: "TRIAGED", label: "Triaged" },
+    { key: "IN_PROGRESS", label: "In Progress" },
+    { key: "FOLLOW_UP_REQUIRED", label: "Follow-Up" },
+    { key: "RESOLVED", label: "Resolved" },
+    { key: "CLOSED", label: "Closed" },
+  ];
 
-  const activeList = activeTab === "forum" ? discussions : (caseDiscussions.length > 0 ? caseDiscussions : discussions);
-  const featured = activeList.find((d) => d.isFeatured) || activeList[0] || discussions[0];
+  // Filter cases strictly from authoritative store collection
+  const filteredCases = cases.filter((c) => {
+    const matchesState =
+      selectedStateFilter === "all" ||
+      c.state?.toUpperCase() === selectedStateFilter.toUpperCase();
 
-  const filteredDiscussions = selectedTag
-    ? activeList.filter(
-        (d) =>
-          d.tags?.some((t) => t.toLowerCase().includes(selectedTag.toLowerCase())) ||
-          d.title.toLowerCase().includes(selectedTag.toLowerCase())
-      )
-    : activeList;
+    const matchesSearch =
+      searchQuery === "" ||
+      c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.student_display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.external_student_ref?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.selected_intervention_key &&
+        c.selected_intervention_key.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const recentList = filteredDiscussions.filter((d) => d.id !== featured?.id);
+    return matchesState && matchesSearch;
+  });
 
-  const handleJoinEvent = () => {
-    setEventJoined((prev) => !prev);
-  };
+  const activeSelectedCase =
+    cases.find((c) => c.id === selectedCaseId) ||
+    filteredCases[0] ||
+    cases[0] ||
+    null;
 
   return (
     <div className="space-y-6">
-      {/* 1. HEADER: Title, Mode Tabs & Create Post Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      {/* 1. HEADER: Title, Operational Status & Sync Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
-            Learning Community
-          </h1>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
+              Case Collaboration &amp; Triage
+            </h1>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                backendConnected
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                  : "bg-amber-50 text-amber-700 border-amber-200/60"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  backendConnected
+                    ? "bg-emerald-500 animate-pulse"
+                    : "bg-amber-500"
+                }`}
+              />
+              <span>
+                {backendConnected
+                  ? "Live Cases Connected"
+                  : "Synthetic Cases (Demo)"}
+              </span>
+            </span>
+          </div>
           <p className="text-xs text-neutral-400 mt-1">
-            Exchange insights, ask design questions, and collaborate with peer educators
+            Multidisciplinary closed-loop support threads, action progress tracking, and institutional SLA governance
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Segmented Mode Switcher */}
-          <div className="inline-flex p-1 bg-neutral-100 rounded-full border border-neutral-200/60 shadow-2xs">
-            <button
-              onClick={() => setActiveTab("forum")}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
-                activeTab === "forum"
-                  ? "bg-white text-neutral-950 shadow-xs"
-                  : "text-neutral-500 hover:text-neutral-900"
-              }`}
-            >
-              Forum
-            </button>
-            <button
-              onClick={() => setActiveTab("cases")}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
-                activeTab === "cases"
-                  ? "bg-white text-neutral-950 shadow-xs"
-                  : "text-neutral-500 hover:text-neutral-900"
-              }`}
-            >
-              Case Threads
-            </button>
-          </div>
-
+        <div className="flex items-center gap-2.5">
           <button
-            onClick={() => setIsCreatePostModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
+            onClick={() => refreshBackendData()}
+            disabled={isLoadingBackend}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-neutral-200/80 bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-700 transition-all shadow-2xs active:scale-[0.98]"
+            title="Refresh Cases"
           >
-            <Plus className="w-4 h-4" />
-            <span>Create Post</span>
+            <RefreshCw
+              className={`w-3.5 h-3.5 text-neutral-500 ${
+                isLoadingBackend ? "animate-spin" : ""
+              }`}
+            />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      {/* Tag Filter Pills */}
-      {selectedTag && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-500 font-medium">Filtered by:</span>
-          <span className="px-3 py-1 rounded-full bg-neutral-900 text-white text-xs font-medium flex items-center gap-1.5">
-            #{selectedTag}
-            <button
-              onClick={() => setSelectedTag(null)}
-              className="hover:text-neutral-300 ml-1 font-bold"
-            >
-              ×
-            </button>
-          </span>
-        </div>
-      )}
-
-      {/* 2. MAIN SPLIT: Featured Discussion (left) & Recent Discussions (right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-        {/* LEFT: Featured Discussion Card (~7 cols) */}
-        {featured && (
-          <div className="lg:col-span-7 skill-card bg-white p-5 sm:p-7 relative overflow-hidden flex flex-col justify-between min-h-[340px]">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
-                  Featured Discussion
-                </span>
-                <button
-                  onClick={() => likeDiscussion(featured.id)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition-colors"
-                  title="Upvote discussion"
-                >
-                  <Heart className="w-3.5 h-3.5 fill-rose-500" />
-                  <span>Upvote</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                {/* Text side */}
-                <div className="md:col-span-7 space-y-3">
-                  <h2
-                    onClick={() => setActiveDiscussion(featured.id)}
-                    className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight leading-tight cursor-pointer hover:text-neutral-700 transition-colors"
-                  >
-                    {featured.title}
-                  </h2>
-                  {featured.summary && (
-                    <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed">
-                      {featured.summary}
-                    </p>
-                  )}
-                </div>
-
-                {/* 3D Bubble Illustration side */}
-                <div className="md:col-span-5 flex items-center justify-center">
-                  <img
-                    src="/assets/community-bubbles.jpg"
-                    alt="3D Speech Bubbles"
-                    className="w-32 h-32 sm:w-36 sm:h-36 object-contain drop-shadow-md cursor-pointer hover:scale-105 transition-transform"
-                    onClick={() => setActiveDiscussion(featured.id)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Stats & Actions */}
-            <div className="pt-6 space-y-4">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-400">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <MessageSquare className="w-4 h-4 text-neutral-400" />
-                  <span>{featured.repliesCount} replies</span>
-                </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                  <Eye className="w-4 h-4 text-neutral-400" />
-                  <span>{featured.viewsCount} views</span>
-                </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                  <Users className="w-4 h-4 text-neutral-400" />
-                  <span>{featured.participantsCount} participants</span>
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-                <button
-                  onClick={() => setActiveDiscussion(featured.id)}
-                  className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-sm transition-colors min-h-[40px]"
-                >
-                  Join Discussion
-                </button>
-
-                <button
-                  onClick={() => setActiveDiscussion(featured.id)}
-                  className="px-5 py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 text-neutral-800 rounded-full text-xs font-semibold transition-colors min-h-[40px]"
-                >
-                  Read More
-                </button>
-
-                <button
-                  onClick={() => setActiveDiscussion(featured.id)}
-                  className="p-2 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 transition-colors"
-                  aria-label="More options"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+      {/* 2. LEADERSHIP ADR-004 PRIVACY ENFORCEMENT */}
+      {activeRole === "leadership" ? (
+        <div className="skill-card p-8 bg-white border border-neutral-200/80 rounded-3xl flex flex-col sm:flex-row items-center gap-5 shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200/60 text-amber-700 flex items-center justify-center flex-shrink-0">
+            <Lock className="w-7 h-7" />
           </div>
-        )}
-
-        {/* RIGHT: Recent Discussions Panel (~5 cols) */}
-        <div className="lg:col-span-5 skill-card bg-white p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-              Recent Discussions
+          <div className="space-y-1.5 text-center sm:text-left flex-1">
+            <h3 className="text-base font-bold text-neutral-900 font-heading">
+              Institutional Privacy Protection (ADR-004)
             </h3>
-            {selectedTag ? (
-              <button
-                onClick={() => setSelectedTag(null)}
-                className="text-xs font-semibold text-neutral-900 hover:underline"
-              >
-                Clear filter
-              </button>
-            ) : (
-              <span className="text-xs font-medium text-neutral-400">
-                {recentList.length} topics
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-4 pt-1">
-            {recentList.map((disc) => (
-              <div
-                key={disc.id}
-                onClick={() => setActiveDiscussion(disc.id)}
-                className="flex items-start justify-between group cursor-pointer p-2.5 -mx-2.5 rounded-2xl hover:bg-neutral-50 transition-colors"
-              >
-                <div>
-                  <h4 className="text-xs font-bold text-neutral-900 group-hover:text-neutral-600 transition-colors">
-                    {disc.title}
-                  </h4>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
-                    {disc.author} • {disc.repliesCount} replies • {disc.timeAgo}
-                  </p>
-                </div>
-                <div className="w-6 h-6 rounded-full bg-neutral-50 group-hover:bg-neutral-100 flex items-center justify-center text-neutral-400 group-hover:text-neutral-900 transition-colors flex-shrink-0">
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </div>
-              </div>
-            ))}
-
-            {recentList.length === 0 && (
-              <div className="py-8 text-center text-xs text-neutral-400">
-                No recent discussions matching this filter
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. BOTTOM ROW: Trending Topics, Top Contributors, Upcoming Event */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Trending Topics */}
-        <div className="skill-card bg-white p-5 space-y-3">
-          <h4 className="text-xs font-bold tracking-tight uppercase text-neutral-400">
-            Trending Topics
-          </h4>
-          <div
-            onClick={() => setSelectedTag("UI Design")}
-            className="flex items-center justify-between text-xs py-1.5 px-2 -mx-2 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors"
-          >
-            <span className="font-semibold text-neutral-800"># UI Design</span>
-            <span className="text-[11px] text-neutral-400 font-mono">124 Posts</span>
-          </div>
-          <div
-            onClick={() => setSelectedTag("Prototyping")}
-            className="flex items-center justify-between text-xs py-1.5 px-2 -mx-2 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors"
-          >
-            <span className="font-semibold text-neutral-800"># Prototyping</span>
-            <span className="text-[11px] text-neutral-400 font-mono">88 Posts</span>
-          </div>
-          <div
-            onClick={() => setSelectedTag("Career Tips")}
-            className="flex items-center justify-between text-xs py-1.5 px-2 -mx-2 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors"
-          >
-            <span className="font-semibold text-neutral-800"># Career Tips</span>
-            <span className="text-[11px] text-neutral-400 font-mono">65 Posts</span>
-          </div>
-        </div>
-
-        {/* Top Contributors */}
-        <div className="skill-card bg-white p-5 space-y-3">
-          <h4 className="text-xs font-bold tracking-tight uppercase text-neutral-400">
-            Top Contributors
-          </h4>
-          <div className="flex items-center justify-between text-xs py-1">
-            <div className="flex items-center gap-2">
-              <img
-                src="/assets/avatar-sarah.jpg"
-                alt="Sarah"
-                className="w-5 h-5 rounded-full object-cover"
-              />
-              <span className="font-semibold text-neutral-800">Sarah Wilson</span>
-            </div>
-            <span className="text-[11px] text-emerald-600 font-semibold font-mono">248 pts</span>
-          </div>
-          <div className="flex items-center justify-between text-xs py-1">
-            <div className="flex items-center gap-2">
-              <img
-                src="/assets/avatar-marvin.jpg"
-                alt="Mike"
-                className="w-5 h-5 rounded-full object-cover"
-              />
-              <span className="font-semibold text-neutral-800">Mike Chen</span>
-            </div>
-            <span className="text-[11px] text-emerald-600 font-semibold font-mono">215 pts</span>
-          </div>
-          <div className="flex items-center justify-between text-xs py-1">
-            <div className="flex items-center gap-2">
-              <img
-                src="/assets/avatar-jane.jpg"
-                alt="Emma"
-                className="w-5 h-5 rounded-full object-cover"
-              />
-              <span className="font-semibold text-neutral-800">Emma Davis</span>
-            </div>
-            <span className="text-[11px] text-emerald-600 font-semibold font-mono">198 pts</span>
-          </div>
-        </div>
-
-        {/* Upcoming Event */}
-        <div className="skill-card bg-white p-5 flex flex-col justify-between">
-          <div>
-            <h4 className="text-xs font-bold tracking-tight uppercase text-neutral-400 mb-2">
-              Upcoming Event
-            </h4>
-            <h5 className="text-sm font-bold text-neutral-900">
-              Community Q&amp;A
-            </h5>
-            <p className="text-xs text-neutral-400 mt-1">
-              Today, 10:00 AM • Live Audio Room
+            <p className="text-xs text-neutral-500 leading-relaxed max-w-xl">
+              Leadership roles are restricted from inspecting individual student case notes and collaborative triage threads. Cohort-level statistical indicators are available on the institutional analytics view.
             </p>
           </div>
-          <div className="flex items-center justify-between pt-3">
-            <button
-              onClick={handleJoinEvent}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                eventJoined
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-neutral-900 text-white hover:bg-neutral-800"
-              }`}
-            >
-              {eventJoined ? (
-                <span className="flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> RSVP Confirmed
-                </span>
-              ) : (
-                "RSVP Now"
-              )}
-            </button>
-            <div
-              onClick={() => setActiveDiscussion(featured?.id || "")}
-              className="w-8 h-8 rounded-full bg-neutral-50 border border-neutral-200/60 flex items-center justify-center text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer"
-            >
-              <ArrowUpRight className="w-4 h-4" />
+          <Link
+            href="/analytics"
+            className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-full shadow-sm whitespace-nowrap transition-all"
+          >
+            View Cohort Analytics →
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* 3. CASE SEARCH & STATE FILTERS */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* State filter pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {stateFilters.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setSelectedStateFilter(tab.key)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[34px] ${
+                    selectedStateFilter === tab.key
+                      ? "bg-neutral-900 text-white shadow-sm"
+                      : "bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/70 border border-neutral-200/60"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search Input */}
+            <div className="relative min-w-[260px]">
+              <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by case ID, student, protocol..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-full bg-white border border-neutral-200/80 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 transition-all shadow-2xs"
+              />
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Discussion Detail & Comments Modal */}
-      <DiscussionDetailModal
-        discussionId={activeDiscussion}
-        onClose={() => setActiveDiscussion(null)}
-      />
+          {/* 4. MAIN COLLABORATION SPLIT: Case Thread List (Left) & Active Case Detail Inspector (Right) */}
+          {cases.length === 0 ? (
+            <div className="skill-card p-12 bg-white border border-neutral-200/70 rounded-3xl text-center space-y-3 shadow-xs">
+              <FolderOpen className="w-10 h-10 text-neutral-300 mx-auto" />
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-neutral-800">
+                  No Active Support Cases
+                </h3>
+                <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+                  Zero active support cases recorded. Any future triaged signals will open case threads here.
+                </p>
+              </div>
+            </div>
+          ) : filteredCases.length === 0 ? (
+            <div className="skill-card p-12 bg-white border border-neutral-200/70 rounded-3xl text-center space-y-3 shadow-xs">
+              <Filter className="w-8 h-8 text-neutral-300 mx-auto" />
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-neutral-800">
+                  No Cases Match Filter
+                </h3>
+                <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+                  No cases found for the selected state or search criteria.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedStateFilter("all");
+                  setSearchQuery("");
+                }}
+                className="px-4 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-full transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* LEFT: Case Threads Roster (5 cols) */}
+              <div className="lg:col-span-5 space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Tracked Cases ({filteredCases.length})
+                  </span>
+                  <span className="text-xs text-neutral-400 font-mono">
+                    SLA Window: 48h
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {filteredCases.map((c) => {
+                    const isSelected = activeSelectedCase?.id === c.id;
+                    const isEscalated = c.is_escalated;
+
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => setSelectedCaseId(c.id)}
+                        className={`skill-card p-4 rounded-2xl cursor-pointer transition-all border text-left ${
+                          isSelected
+                            ? "bg-neutral-900 text-white border-neutral-900 shadow-md ring-2 ring-neutral-900/10"
+                            : "bg-white hover:bg-neutral-50/80 border-neutral-200/70 text-neutral-800 shadow-2xs"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                              isSelected
+                                ? "bg-white/10 text-white border-white/20"
+                                : "bg-neutral-100 text-neutral-800 border-neutral-200/60"
+                            }`}
+                          >
+                            {c.state}
+                          </span>
+                          <span
+                            className={`text-[11px] font-mono ${
+                              isSelected ? "text-neutral-400" : "text-neutral-400"
+                            }`}
+                          >
+                            {c.id}
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <h4
+                            className={`text-sm font-bold tracking-tight truncate ${
+                              isSelected ? "text-white" : "text-neutral-900"
+                            }`}
+                          >
+                            {c.student_display_name || "Enrolled Student"}
+                          </h4>
+                          <p
+                            className={`text-xs truncate ${
+                              isSelected ? "text-neutral-300" : "text-neutral-500"
+                            }`}
+                          >
+                            Protocol:{" "}
+                            {(c.selected_intervention_key || "Academic Mentorship").replace(/_/g, " ")}
+                          </p>
+                        </div>
+
+                        <div
+                          className={`mt-3 pt-2.5 flex items-center justify-between text-[11px] border-t ${
+                            isSelected
+                              ? "border-white/10 text-neutral-400"
+                              : "border-neutral-100 text-neutral-400"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>
+                              {c.due_at
+                                ? new Date(c.due_at).toLocaleDateString()
+                                : "Scheduled"}
+                            </span>
+                          </span>
+                          {isEscalated ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                              Escalated
+                            </span>
+                          ) : (
+                            <span
+                              className={`font-medium ${
+                                isSelected ? "text-emerald-300" : "text-emerald-600"
+                              }`}
+                            >
+                              On Track
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* RIGHT: Active Case Detail & Verified Collaboration Workspace (7 cols) */}
+              {activeSelectedCase && (
+                <div className="lg:col-span-7 skill-card bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/70 space-y-6 shadow-sm sticky top-6">
+                  {/* Case Title & Actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-4 border-b border-neutral-100">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-neutral-100 text-neutral-800 border border-neutral-200/60">
+                          {activeSelectedCase.state}
+                        </span>
+                        <span className="text-xs font-mono text-neutral-400">
+                          {activeSelectedCase.id}
+                        </span>
+                      </div>
+                      <h2 className="text-xl font-bold text-neutral-900 tracking-tight font-heading">
+                        {activeSelectedCase.student_display_name || "Enrolled Student"}
+                      </h2>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Student Ref: <span className="font-mono text-neutral-700">{activeSelectedCase.external_student_ref}</span> • 
+                        Originating Signal: <span className="font-mono text-neutral-700">{activeSelectedCase.originating_signal_id || "Direct Referral"}</span>
+                      </p>
+                    </div>
+
+                    <Link
+                      href={`/students/${activeSelectedCase.student_id}`}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-neutral-50 hover:bg-neutral-100 text-xs font-semibold text-neutral-700 border border-neutral-200/60 transition-colors self-start"
+                      title="Inspect Student 360"
+                    >
+                      <span>360° Profile</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-neutral-400" />
+                    </Link>
+                  </div>
+
+                  {/* Case Metadata Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                    <div className="p-3.5 bg-neutral-50/80 rounded-2xl border border-neutral-100 space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                        Assigned Intervention
+                      </span>
+                      <span className="font-bold text-neutral-900 block capitalize">
+                        {(activeSelectedCase.selected_intervention_key || "Academic Mentoring").replace(/_/g, " ")}
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 bg-neutral-50/80 rounded-2xl border border-neutral-100 space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                        Case Owner
+                      </span>
+                      <span className="font-bold text-neutral-900 block truncate">
+                        {activeSelectedCase.primary_owner_user_id || "Unassigned Coordinator"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Canonical 10-State Progression Action */}
+                  <div className="p-4 rounded-2xl bg-neutral-50/80 border border-neutral-100 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-neutral-800">
+                        Lifecycle Progression
+                      </span>
+                      <span className="text-[11px] font-mono text-neutral-400">
+                        State Machine v1.0
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 leading-relaxed">
+                      Advance case through institutional SLA review states according to established case governance policy.
+                    </p>
+                    <div className="pt-2 flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const nextState: CaseState =
+                            activeSelectedCase.state === "NEW"
+                              ? "TRIAGED"
+                              : activeSelectedCase.state === "TRIAGED"
+                              ? "UNDER_REVIEW"
+                              : activeSelectedCase.state === "UNDER_REVIEW"
+                              ? "ACTIONABLE"
+                              : activeSelectedCase.state === "ACTIONABLE"
+                              ? "ASSIGNED"
+                              : activeSelectedCase.state === "ASSIGNED"
+                              ? "ACCEPTED"
+                              : activeSelectedCase.state === "ACCEPTED"
+                              ? "IN_PROGRESS"
+                              : activeSelectedCase.state === "IN_PROGRESS"
+                              ? "FOLLOW_UP_REQUIRED"
+                              : activeSelectedCase.state === "FOLLOW_UP_REQUIRED"
+                              ? "RESOLVED"
+                              : "CLOSED";
+
+                          transitionCase(activeSelectedCase.id, {
+                            to_state: nextState,
+                            reason_code: "collaborative_progress",
+                          });
+                        }}
+                        className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white text-xs font-semibold rounded-full shadow-sm transition-all"
+                      >
+                        Advance State ({activeSelectedCase.state} → Next)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Logged Follow-ups & Collaboration Audit Trail */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                        Formal Follow-Up Records ({activeSelectedCase.follow_ups?.length || 0})
+                      </h4>
+                      <span className="text-[11px] text-neutral-400 font-mono">
+                        Auditable History
+                      </span>
+                    </div>
+
+                    {!activeSelectedCase.follow_ups || activeSelectedCase.follow_ups.length === 0 ? (
+                      <div className="p-4 rounded-2xl bg-neutral-50 text-center text-xs text-neutral-400">
+                        No formal follow-up contacts recorded yet for this case.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {activeSelectedCase.follow_ups.map((fu, idx) => (
+                          <div
+                            key={fu.id || idx}
+                            className="p-3.5 rounded-2xl bg-neutral-50/80 border border-neutral-100 text-xs space-y-1"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-neutral-900 capitalize">
+                                {fu.follow_up_type.replace(/_/g, " ")} • {fu.contact_status || "Completed"}
+                              </span>
+                              <span className="text-[10px] text-neutral-400 font-mono">
+                                {fu.proof_kind}
+                              </span>
+                            </div>
+                            {fu.sanitized_note && (
+                              <p className="text-neutral-600 leading-relaxed text-[11px]">
+                                {fu.sanitized_note}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

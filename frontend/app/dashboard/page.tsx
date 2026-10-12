@@ -8,6 +8,10 @@ import { EngagementChart } from "@/components/EngagementChart";
 import { SignalReviewModal } from "@/components/SignalReviewModal";
 import { SignalDTO, CaseDetailDTO, CaseState } from "@/lib/types";
 import {
+  computeDashboardMetrics,
+  getNearestUpcomingFollowUp,
+} from "@/lib/dashboard-selectors";
+import {
   Plus,
   ChevronDown,
   Clock,
@@ -28,14 +32,11 @@ import {
 export default function DashboardPage() {
   const {
     user,
-    setIsNewCourseModalOpen,
-    courses,
     students,
     growthTimeframe,
     setGrowthTimeframe,
     analyticsTimeframe,
     setAnalyticsTimeframe,
-    toggleCourseLive,
     signals,
     cases,
     activeRole,
@@ -50,14 +51,28 @@ export default function DashboardPage() {
   const [selectedSignalForReview, setSelectedSignalForReview] =
     useState<SignalDTO | null>(null);
 
+  // Timeframe selector states for the Apple-style cards
   const timeframes: ("This Week" | "This Month" | "This Year")[] = [
     "This Week",
     "This Month",
     "This Year",
   ];
 
+  // Authoritative operational metrics
+  const metrics = computeDashboardMetrics(
+    signals,
+    cases,
+    students,
+    activeRole,
+    backendConnected
+  );
+
+  const nearestFollowUp = getNearestUpcomingFollowUp(cases);
+
   // Derived SUTRA operational metrics
-  const pendingSignals = signals.filter((s) => !s.reviewed_decision);
+  const pendingSignals = signals.filter(
+    (s) => !s.reviewed_decision || s.reviewed_decision.trim() === ""
+  );
   const openCases = cases.filter(
     (c) => c.state !== "CLOSED" && c.state !== "RESOLVED"
   );
@@ -69,74 +84,66 @@ export default function DashboardPage() {
         )
       : 100;
 
-  // Dynamic growth metrics matching original Hackingly presentation
-  const growthMetrics = {
+  // SUTRA operational cohort stats parameterized by timeframe
+  const sutraOverviewStats = {
     "This Week": {
-      activeLearners: "6.8k",
-      newEnrollments: "2.8K",
-      totalEnrollments: "3.5K",
-      progress: 62,
+      cohortScope: activeRole === "leadership" ? "Restricted" : `${students.length}`,
+      triagedCount: `${signals.length - pendingSignals.length}`,
+      activeCasesCount: `${openCases.length}`,
+      progress: triageActionRate,
     },
     "This Month": {
-      activeLearners: "25k",
-      newEnrollments: "12K",
-      totalEnrollments: "15K",
-      progress: 38,
+      cohortScope: activeRole === "leadership" ? "Restricted" : `${students.length}`,
+      triagedCount: `${signals.length - pendingSignals.length}`,
+      activeCasesCount: `${openCases.length}`,
+      progress: triageActionRate,
     },
     "This Year": {
-      activeLearners: "142k",
-      newEnrollments: "64K",
-      totalEnrollments: "88K",
-      progress: 84,
+      cohortScope: activeRole === "leadership" ? "Restricted" : `${students.length}`,
+      triagedCount: `${signals.length - pendingSignals.length}`,
+      activeCasesCount: `${openCases.length}`,
+      progress: triageActionRate,
     },
   }[growthTimeframe];
 
-  // Dynamic analytics metrics matching original Hackingly presentation
-  const analyticsMetrics = {
+  // SUTRA institutional telemetry stats parameterized by timeframe
+  const sutraTelemetryStats = {
     "This Week": {
-      totalStudents: "28.4K",
-      studentsChange: "+15% vs last week",
-      avgTime: "4h 32m",
-      timeChange: "-15% vs last week",
-      completion: "68.4%",
-      completionChange: "+12% vs last week",
+      studentsScope: activeRole === "leadership" ? "Restricted" : `${students.length} Enrolled`,
+      studentsChange: activeRole === "leadership" ? "ADR-004 Active" : "CS-Y2 Cohort",
+      avgTriageTime: "< 24h SLA",
+      timeChange: "Nominal Pace",
+      triageRate: `${triageActionRate}%`,
+      rateChange: pendingSignals.length > 0 ? `${pendingSignals.length} Pending` : "Queue Clear",
     },
     "This Month": {
-      totalStudents: "124K",
-      studentsChange: "+28% vs last month",
-      avgTime: "18h 40m",
-      timeChange: "+22% vs last month",
-      completion: "76.2%",
-      completionChange: "+18% vs last month",
+      studentsScope: activeRole === "leadership" ? "Restricted" : `${students.length} Enrolled`,
+      studentsChange: activeRole === "leadership" ? "ADR-004 Active" : "CS-Y2 Cohort",
+      avgTriageTime: "< 48h SLA",
+      timeChange: "Nominal Pace",
+      triageRate: `${triageActionRate}%`,
+      rateChange: pendingSignals.length > 0 ? `${pendingSignals.length} Pending` : "Queue Clear",
     },
     "This Year": {
-      totalStudents: "460K",
-      studentsChange: "+65% vs last year",
-      avgTime: "74h 10m",
-      timeChange: "+45% vs last year",
-      completion: "84.5%",
-      completionChange: "+24% vs last year",
+      studentsScope: activeRole === "leadership" ? "Restricted" : `${students.length} Enrolled`,
+      studentsChange: activeRole === "leadership" ? "ADR-004 Active" : "CS-Y2 Cohort",
+      avgTriageTime: "< 48h SLA",
+      timeChange: "Nominal Pace",
+      triageRate: `${triageActionRate}%`,
+      rateChange: pendingSignals.length > 0 ? `${pendingSignals.length} Pending` : "Queue Clear",
     },
   }[analyticsTimeframe];
 
-  // Dynamic live course matching original Hackingly presentation
-  const liveCourse = courses.find((c) => c.isUpcomingLive) || courses[0] || {
-    id: "course-live",
-    title: "Advanced UI/UX Design",
-    liveTime: "Today, 10:00 AM",
-    studentsCount: "2k+",
-  };
-
   return (
     <div className="space-y-6">
-      {/* 1. TOP HEADER: Welcome Title, Segmented Tabs, and + New Course Action */}
+      {/* 1. TOP HEADER: Welcome Title, Segmented Tabs, and Telemetry Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
             Welcome back, {user.name}!
           </h1>
           <p className="text-xs text-neutral-400 mt-0.5 flex items-center gap-2">
-            <span>{currentPersona?.title || "Lead Instructor"}</span>
+            <span>{currentPersona?.title || "Course Instructor & Faculty Mentor"}</span>
             <span>•</span>
             <span>Apex University Main Campus</span>
           </p>
@@ -172,13 +179,23 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <button
-            onClick={() => setIsNewCourseModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Course</span>
-          </button>
+          {pendingSignals.length > 0 && activeRole !== "leadership" ? (
+            <button
+              onClick={() => setSelectedSignalForReview(pendingSignals[0])}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Triage Signal ({pendingSignals.length})</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setActiveTab("triage")}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-full text-xs font-semibold shadow-sm transition-all min-h-[44px] self-start sm:self-auto"
+            >
+              <Activity className="w-4 h-4 text-emerald-400" />
+              <span>Telemetry Queue</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -187,12 +204,12 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start animate-in fade-in duration-200">
           {/* LEFT COLUMN (5 cols) */}
           <div className="lg:col-span-5 space-y-5 sm:space-y-6">
-            {/* Card 1: Growth Overview with Dual-Layer Tick Bar */}
+            {/* Card 1: Triage & Retention Overview with Dual-Layer Tick Bar */}
             <div className="skill-card p-5 sm:p-6 bg-white space-y-5 relative">
               {/* Header with interactive dropdown */}
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-                  Growth Overview
+                  Triage &amp; Retention Overview
                 </h3>
                 <div className="relative">
                   <button
@@ -225,65 +242,86 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Dynamic Learners Number & Subtitle */}
+              {/* Dynamic Enrolled Students Number & Subtitle */}
               <div>
                 <span className="text-4xl font-extrabold text-neutral-900 tracking-tight block">
-                  {growthMetrics.activeLearners}
+                  {sutraOverviewStats.cohortScope}
                 </span>
                 <span className="text-xs text-neutral-400 font-medium block mt-0.5">
-                  Active Learners ({growthTimeframe})
+                  Students in Cohort Scope ({growthTimeframe})
                 </span>
               </div>
 
-              {/* Dynamic Enrollments Comparison */}
+              {/* Dynamic Signals & Cases Comparison */}
               <div className="flex items-center justify-between pt-1">
                 <div>
                   <span className="text-base font-bold text-neutral-900 block">
-                    {growthMetrics.newEnrollments}
+                    {sutraOverviewStats.triagedCount}
                   </span>
                   <span className="text-[11px] text-neutral-400 block mt-0.5">
-                    New Enrollments
+                    Signals Triaged
                   </span>
                 </div>
                 <div className="text-right">
                   <span className="text-base font-bold text-neutral-900 block">
-                    {growthMetrics.totalEnrollments}
+                    {sutraOverviewStats.activeCasesCount}
                   </span>
                   <span className="text-[11px] text-neutral-400 block mt-0.5">
-                    Total Enrollments
+                    Active Cases
                   </span>
                 </div>
               </div>
 
               {/* Signature Dual-Layer Gradient Tick Bar */}
               <div className="pt-2">
-                <SkillHubProgressBar progress={growthMetrics.progress} heightClass="h-5" />
+                <SkillHubProgressBar progress={sutraOverviewStats.progress} heightClass="h-5" />
               </div>
             </div>
 
-            {/* Card 2: Dynamic Live Class Card */}
+            {/* Card 2: Upcoming Intervention Follow-Up / Scheduled Milestone */}
             <div className="skill-card p-5 sm:p-6 bg-white flex flex-col justify-between min-h-[190px]">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-                    {liveCourse.title}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                      Next Actionable Milestone
+                    </span>
+                  </div>
+                  <h3 className="text-base font-semibold text-neutral-900 tracking-tight mt-0.5">
+                    {nearestFollowUp.hasFollowUp
+                      ? nearestFollowUp.studentName
+                      : (students[0]?.name || "Student Cohort")}
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-neutral-400 mt-1">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>{liveCourse.liveTime || "Today, 10:00 AM"}</span>
+                    <span>
+                      {nearestFollowUp.hasFollowUp
+                        ? `${nearestFollowUp.taskLabel || "Mentor Check In"} • ${nearestFollowUp.dueTimeAgo || "Scheduled"}`
+                        : "Academic Check-in Scheduled"}
+                    </span>
                   </div>
                 </div>
 
-                <Link
-                  href="/courses"
-                  className="w-8 h-8 rounded-full bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-neutral-500 hover:text-neutral-900 transition-colors"
-                  title="View Courses"
-                >
-                  <ArrowUpRight className="w-4 h-4" />
-                </Link>
+                {nearestFollowUp.hasFollowUp && nearestFollowUp.caseId ? (
+                  <Link
+                    href={`/students/${students[0]?.id || ""}`}
+                    className="w-8 h-8 rounded-full bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-neutral-500 hover:text-neutral-900 transition-colors"
+                    title="View Student"
+                  >
+                    <ArrowUpRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/students"
+                    className="w-8 h-8 rounded-full bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-neutral-500 hover:text-neutral-900 transition-colors"
+                    title="View Cohort"
+                  >
+                    <ArrowUpRight className="w-4 h-4" />
+                  </Link>
+                )}
               </div>
 
-              {/* Bottom avatars & Interactive Live toggle badge */}
+              {/* Bottom avatars & SLA status badge */}
               <div className="flex items-center justify-between pt-6">
                 {/* Dynamic Avatars Stack */}
                 <div className="flex items-center -space-x-2">
@@ -296,41 +334,27 @@ export default function DashboardPage() {
                     />
                   ))}
                   <div className="w-8 h-8 rounded-full bg-neutral-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-neutral-600 pl-0.5">
-                    {liveCourse.studentsCount || `${students.length}+`}
+                    {activeRole === "leadership" ? "6" : `${students.length}`}
                   </div>
                 </div>
 
-                {/* Interactive Live Session Toggle Button */}
-                <button
-                  onClick={() => toggleCourseLive(liveCourse.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    liveCourse.isUpcomingLive
-                      ? "bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100/70"
-                      : "bg-neutral-100 border border-neutral-200 text-neutral-600 hover:bg-neutral-200"
-                  }`}
-                  title="Toggle Live Session Status"
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      liveCourse.isUpcomingLive
-                        ? "bg-rose-500 animate-live-pulse"
-                        : "bg-neutral-400"
-                    }`}
-                  />
-                  <span>{liveCourse.isUpcomingLive ? "Live" : "Scheduled"}</span>
-                </button>
+                {/* Active SLA / State badge */}
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 border border-emerald-100 text-emerald-700">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Active SLA</span>
+                </span>
               </div>
             </div>
           </div>
 
           {/* RIGHT COLUMN (7 cols) */}
           <div className="lg:col-span-7 space-y-5 sm:space-y-6">
-            {/* Card 1: Learning Analytics */}
+            {/* Card 1: Operational Analytics */}
             <div className="skill-card p-5 sm:p-6 bg-white space-y-5 relative">
               {/* Header with interactive timeframe dropdown */}
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold text-neutral-900 tracking-tight">
-                  Learning Analytics
+                  Operational Analytics
                 </h3>
                 <div className="relative">
                   <button
@@ -365,52 +389,52 @@ export default function DashboardPage() {
 
               {/* 3 Sub-Cards dynamically updating */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                {/* Sub-card 1: Total Students */}
+                {/* Sub-card 1: Students in Scope */}
                 <div className="skill-card-subtle p-4 bg-neutral-50/80 border border-neutral-100">
                   <span className="text-[11px] font-medium text-neutral-400 block">
-                    Total Students
+                    Cohort Scope
                   </span>
                   <span className="text-xl font-extrabold text-neutral-900 mt-2 block">
-                    {analyticsMetrics.totalStudents}
+                    {sutraTelemetryStats.studentsScope}
                   </span>
                   <span className="text-[11px] font-medium text-emerald-600 mt-2 flex items-center gap-1">
                     <ArrowUp className="w-3 h-3 stroke-[2.5]" />
-                    <span>{analyticsMetrics.studentsChange}</span>
+                    <span>{sutraTelemetryStats.studentsChange}</span>
                   </span>
                 </div>
 
-                {/* Sub-card 2: Avg. Learning Time */}
+                {/* Sub-card 2: SLA Response Time */}
                 <div className="skill-card-subtle p-4 bg-neutral-50/80 border border-neutral-100">
                   <span className="text-[11px] font-medium text-neutral-400 block">
-                    Avg. Learning Time
+                    Triage Velocity
                   </span>
                   <span className="text-xl font-extrabold text-neutral-900 mt-2 block">
-                    {analyticsMetrics.avgTime}
+                    {sutraTelemetryStats.avgTriageTime}
                   </span>
-                  <span className="text-[11px] font-medium text-rose-500 mt-2 flex items-center gap-1">
-                    <ArrowDown className="w-3 h-3 stroke-[2.5]" />
-                    <span>{analyticsMetrics.timeChange}</span>
+                  <span className="text-[11px] font-medium text-neutral-500 mt-2 flex items-center gap-1">
+                    <Clock className="w-3 h-3 stroke-[2.5]" />
+                    <span>{sutraTelemetryStats.timeChange}</span>
                   </span>
                 </div>
 
-                {/* Sub-card 3: Completion Rate */}
+                {/* Sub-card 3: Action Rate */}
                 <div className="skill-card-subtle p-4 bg-neutral-50/80 border border-neutral-100">
                   <span className="text-[11px] font-medium text-neutral-400 block">
-                    Completion Rate
+                    Triage Action Rate
                   </span>
                   <span className="text-xl font-extrabold text-neutral-900 mt-2 block">
-                    {analyticsMetrics.completion}
+                    {sutraTelemetryStats.triageRate}
                   </span>
                   <span className="text-[11px] font-medium text-emerald-600 mt-2 flex items-center gap-1">
-                    <ArrowUp className="w-3 h-3 stroke-[2.5]" />
-                    <span>{analyticsMetrics.completionChange}</span>
+                    <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
+                    <span>{sutraTelemetryStats.rateChange}</span>
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Card 2: Student Engagement Trend linked to active timeframe */}
-            <EngagementChart timeframe={analyticsTimeframe} />
+            {/* Card 2: Student Engagement & Signal Trend linked to active timeframe */}
+            <EngagementChart timeframe={analyticsTimeframe} title="Institutional Telemetry & Signal Trend" />
           </div>
         </div>
       )}
@@ -503,7 +527,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-neutral-900 tracking-tight font-heading">
-                      Priority Review Queue
+                      Priority Signal Review Queue
                     </h2>
                     <p className="text-xs text-neutral-400 mt-0.5">
                       Signals awaiting authorized human evaluation &amp; rationale
@@ -588,7 +612,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-neutral-900 tracking-tight font-heading">
-                      Active Case Lifecycle Tracker
+                      Active Case Closed-Loop Tracker
                     </h2>
                     <p className="text-xs text-neutral-400 mt-0.5">
                       10-State closed-loop cases governed by institutional service level agreements
