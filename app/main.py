@@ -125,20 +125,37 @@ def create_application() -> FastAPI:
     app.include_router(api_router, prefix=settings.API_V1_STR)
 
     # Root-level backwards compatibility route aliases (ADR-005, ADR-001)
-    from app.ml.service import ml_service
-    from app.schemas.ml import MLPredictBatchRequest, MLPredictRequest
+    # Secured per Phase 3B.1: Root compatibility routes delegate to the canonical
+    # ML route handlers to guarantee identical authentication, campus scoping,
+    # role authorization, and audit logging.
+    from typing import Any, Dict, List
+    from app.api.v1.ml import get_model_info, predict_batch, predict_single
+    from app.schemas.ml import MLPredictResponse
 
-    @app.get("/model-info", tags=["ML Compatibility"])
-    async def root_model_info():
-        return ml_service.get_metadata()
-
-    @app.post("/predict", tags=["ML Compatibility"])
-    async def root_predict(payload: MLPredictRequest):
-        return ml_service.predict_single(payload)
-
-    @app.post("/predict/batch", tags=["ML Compatibility"])
-    async def root_predict_batch(payload: MLPredictBatchRequest):
-        return ml_service.predict_batch(payload)
+    app.add_api_route(
+        "/model-info",
+        get_model_info,
+        methods=["GET"],
+        response_model=Dict[str, Any],
+        tags=["ML Compatibility"],
+        summary="Root compatibility alias for ML model info",
+    )
+    app.add_api_route(
+        "/predict",
+        predict_single,
+        methods=["POST"],
+        response_model=MLPredictResponse,
+        tags=["ML Compatibility"],
+        summary="Root compatibility alias for ML single prediction",
+    )
+    app.add_api_route(
+        "/predict/batch",
+        predict_batch,
+        methods=["POST"],
+        response_model=List[MLPredictResponse],
+        tags=["ML Compatibility"],
+        summary="Root compatibility alias for ML batch prediction",
+    )
 
     return app
 

@@ -2,6 +2,7 @@ mod client;
 mod commands;
 mod config;
 mod models;
+mod session;
 
 use clap::{Args, Parser, Subcommand};
 use client::SutraApiClient;
@@ -44,6 +45,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[command(about = "Manage authentication sessions (login, whoami, logout)")]
+    Auth(AuthArgs),
+
     #[command(about = "Check backend service health and database readiness")]
     Health,
 
@@ -58,6 +62,37 @@ enum Commands {
 
     #[command(about = "Query bounded AI orchestration assistance (advisory only)")]
     Ai(AiArgs),
+
+    #[command(about = "Execute Day-30 early-warning ML inference from a validated feature JSON file")]
+    Predict(PredictArgs),
+}
+
+#[derive(Args)]
+struct PredictArgs {
+    #[arg(
+        long,
+        short,
+        help = "Path to JSON file containing canonical Day-30 student feature vector"
+    )]
+    file: std::path::PathBuf,
+}
+
+#[derive(Args)]
+struct AuthArgs {
+    #[command(subcommand)]
+    command: AuthCommands,
+}
+
+#[derive(Subcommand)]
+enum AuthCommands {
+    #[command(about = "Securely authenticate and save a local session")]
+    Login,
+
+    #[command(about = "Display active verified identity, campus, and roles")]
+    Whoami,
+
+    #[command(about = "Clear the local authentication session")]
+    Logout,
 }
 
 #[derive(Args)]
@@ -205,7 +240,13 @@ async fn main() {
     let client = SutraApiClient::new(config);
 
     let result = match cli.command {
+        Commands::Auth(args) => match args.command {
+            AuthCommands::Login => commands::auth::run_login(&client).await,
+            AuthCommands::Whoami => commands::auth::run_whoami(&client).await,
+            AuthCommands::Logout => commands::auth::run_logout(),
+        },
         Commands::Health => commands::health::run_health(&client).await,
+        Commands::Predict(args) => commands::predict::run_predict(&client, &args.file).await,
         Commands::Catalogue => commands::catalogue::list_catalogue(&client).await,
         Commands::Signals(args) => match args.command {
             SignalsCommands::List { result } => {

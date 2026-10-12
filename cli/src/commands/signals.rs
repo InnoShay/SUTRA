@@ -10,8 +10,13 @@ pub async fn list_signals(client: &SutraApiClient, result_filter: Option<&str>) 
     }
 
     let signals = client.list_signals(result_filter).await?;
+    let signals: Vec<_> = if let Some(rf) = result_filter {
+        signals.into_iter().filter(|s| s.result.eq_ignore_ascii_case(rf)).collect()
+    } else {
+        signals
+    };
     if signals.is_empty() {
-        println!("{}", "No signals found in current queue.".yellow());
+        println!("{}", "No signals found matching criteria in current queue.".yellow());
         return Ok(());
     }
 
@@ -58,6 +63,23 @@ pub async fn get_signal(client: &SutraApiClient, id: Uuid) -> Result<(), String>
         println!("\n{}", "Evidence Card Explanation:".bold());
         println!("{}", serde_json::to_string_pretty(explanation).unwrap_or_default());
     }
+
+    if s.reviewed_decision.is_none() {
+        println!("\n{}", "Suggested Next Workflow Actions:".yellow().bold());
+        println!("  1. Request non-binding AI advisory review brief:");
+        println!("     {}", format!("sutra ai review-brief {}", s.id).cyan());
+        println!("  2. Record authorized human review (approve and initiate intervention):");
+        println!(
+            "     {}",
+            format!("sutra signals review {} --decision approve --intervention academic_tutoring_offer --rationale \"Verified attendance concern per policy.\"", s.id).cyan()
+        );
+        println!("  3. Dismiss false positive with documented reason:");
+        println!(
+            "     {}",
+            format!("sutra signals review {} --decision dismiss --rationale \"False positive: attendance excused by health center.\"", s.id).cyan()
+        );
+    }
+
     Ok(())
 }
 
@@ -99,6 +121,14 @@ pub async fn review_signal(
     println!("  Decision:   {}", resp.decision.green().bold());
     if let Some(case_id) = resp.case_id {
         println!("  Case Created: #{}", case_id.to_string().cyan().bold());
+        println!("\n{}", "Suggested Next Workflow Steps:".yellow().bold());
+        println!("  1. Inspect created support case:");
+        println!("     {}", format!("sutra cases get {}", case_id).bold());
+        println!("  2. Assign case accountability to primary owner:");
+        println!("     {}", format!("sutra cases assign {} --user-id <STAFF_UUID>", case_id).bold());
+    } else if decision == "dismiss" {
+        println!("\n{}", "Triage Result:".bold());
+        println!("  Signal dismissed as false positive. No case generated.");
     }
     Ok(())
 }
