@@ -11,7 +11,7 @@ import { StudentProfileModal } from "./StudentProfileModal";
 import { GlobalSearchModal } from "./GlobalSearchModal";
 import { NotificationPopover, MessagesDrawer } from "./TopBarActionDrawers";
 import { UserAvatar } from "./UserAvatar";
-import { AccountDialog } from "./AccountDialog";
+import { UserSettingsModal, SettingsTabId } from "./UserSettingsModal";
 import {
   LayoutGrid,
   Bookmark,
@@ -19,7 +19,7 @@ import {
   Users,
   BarChart2,
   Settings,
-  HelpCircle,
+  CircleHelp,
   LogOut,
   Search,
   MessageSquare,
@@ -64,7 +64,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
-  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+  const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
+  const [userSettingsTab, setUserSettingsTab] = useState<SettingsTabId>("profile");
 
   const personaList: {
     role: UserRole;
@@ -128,12 +129,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { name: t("nav.analytics", "Analytics"), href: "/analytics", icon: BarChart2 },
   ];
 
-  const othersNavItems = [
-    { name: t("nav.settings", "Settings"), href: "/settings", icon: Settings },
-    { name: t("nav.help", "Help & Support"), href: "/help", icon: HelpCircle },
-    { name: t("nav.logout", "Sign Out"), href: "/login", icon: LogOut },
-  ];
-
   return (
     <div className="min-h-screen lg:h-screen lg:max-h-screen bg-[#ECEFF3] flex flex-col md:flex-row overflow-x-hidden md:overflow-hidden selection:bg-neutral-900 selection:text-white">
       {/* 0. MOBILE TOP APP BAR (Apple-inspired header for viewports < 768px) */}
@@ -172,10 +167,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* User Profile & Account Action */}
           <button
-            onClick={() => setIsAccountDialogOpen(true)}
+            onClick={() => {
+              setUserSettingsTab("profile");
+              setIsUserSettingsOpen(true);
+            }}
             className="p-1 pl-1 cursor-pointer transition-transform active:scale-95"
-            title="Open Account Menu"
-            aria-label="Open Account Menu"
+            title="Open User Settings"
+            aria-label="Open User Settings"
           >
             <UserAvatar
               src={user.avatar}
@@ -243,7 +241,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation Section: Scrollable middle area */}
-          <div className="flex-1 overflow-y-auto space-y-6 pr-0.5">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar space-y-6">
             {/* Main Navigation Group */}
             <div>
               {!sidebarCollapsed && (
@@ -297,101 +295,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 })}
               </nav>
             </div>
-
-            {/* Others Navigation Group */}
-            <div>
-              {!sidebarCollapsed && (
-                <span className="hidden lg:block text-[11px] font-semibold text-neutral-400 mb-2 px-3.5">
-                  Others
-                </span>
-              )}
-              {sidebarCollapsed && (
-                <div className="w-8 h-px bg-neutral-200/80 mx-auto my-2" />
-              )}
-
-              <nav className="space-y-1.5">
-                {othersNavItems.map((item) => {
-                  const isActive = pathname === item.href;
-
-                  if (item.name === "Logout") {
-                    return (
-                      <button
-                        key="logout-desktop"
-                        type="button"
-                        onClick={handleLogout}
-                        className={`group relative flex items-center transition-all duration-150 w-full cursor-pointer ${
-                          sidebarCollapsed
-                            ? "w-11 h-11 justify-center mx-auto rounded-2xl"
-                            : "justify-center lg:justify-start w-11 h-11 lg:w-auto lg:h-auto lg:gap-3 px-0 lg:px-3.5 py-2.5 rounded-2xl text-xs"
-                        } text-rose-600 hover:text-rose-700 hover:bg-rose-50/80 font-medium`}
-                      >
-                        <item.icon className="w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-105 text-rose-500" />
-                        {!sidebarCollapsed && (
-                          <span className="hidden lg:inline font-semibold">Sign Out</span>
-                        )}
-                        {/* Tooltip on collapsed / tablet hover */}
-                        <div className="lg:hidden absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
-                          Sign Out
-                        </div>
-                        {sidebarCollapsed && (
-                          <div className="hidden lg:block absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
-                            Sign Out
-                          </div>
-                        )}
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`group relative flex items-center transition-all duration-150 ${sidebarCollapsed
-                        ? "w-11 h-11 justify-center mx-auto rounded-2xl"
-                        : "justify-center lg:justify-start w-11 h-11 lg:w-auto lg:h-auto lg:gap-3 px-0 lg:px-3.5 py-2.5 rounded-2xl text-xs"
-                        } ${isActive
-                          ? "bg-white text-neutral-900 font-semibold shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-neutral-200/50"
-                          : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/40 font-medium"
-                        }`}
-                    >
-                      <item.icon
-                        className={`w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-105 ${isActive
-                          ? "text-neutral-900"
-                          : "text-neutral-400 group-hover:text-neutral-600"
-                          }`}
-                      />
-                      {!sidebarCollapsed && (
-                        <span className="hidden lg:inline">{item.name}</span>
-                      )}
-
-                      {/* Tooltip on collapsed / tablet hover */}
-                      <div className="lg:hidden absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
-                        {item.name}
-                      </div>
-                      {sidebarCollapsed && (
-                        <div className="hidden lg:block absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
-                          {item.name}
-                        </div>
-                      )}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
           </div>
         </div>
 
-        {/* Bottom User Profile Section */}
-        <div className="pt-4 border-t border-neutral-200/60 flex-shrink-0">
+        {/* Bottom User Profile Section: Separated with a clean divider line */}
+        <div className="pt-3 border-t border-neutral-300/80 flex-shrink-0">
           <button
             type="button"
-            onClick={() => setIsAccountDialogOpen(true)}
+            onClick={() => {
+              setUserSettingsTab("profile");
+              setIsUserSettingsOpen(true);
+            }}
             className={`group w-full flex items-center transition-all duration-150 rounded-2xl hover:bg-neutral-200/40 cursor-pointer ${sidebarCollapsed
               ? "justify-center p-2 mx-auto"
               : "justify-center lg:justify-start p-2 lg:px-3 lg:py-2.5 lg:gap-3"
               }`}
-            title="Account details and settings"
-            aria-label="Open Account Dialog"
+            title="User Profile & Settings"
+            aria-label="Open User Settings"
           >
             <UserAvatar
               src={user.avatar}
@@ -424,7 +344,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex-1 min-w-0 p-2 sm:p-3 md:p-3 lg:p-5 md:pl-0 flex flex-col h-full max-w-[1920px] mx-auto w-full">
         <main className="floating-window flex-1 min-w-0 flex flex-col p-4 sm:p-6 lg:p-9 rounded-2xl sm:rounded-3xl lg:rounded-[32px] relative overflow-y-auto">
           {/* Dedicated Floating Window Top Bar: visible on desktop/tablet */}
-          <div className="hidden md:flex items-center justify-between gap-4 mb-7 pb-2">
+          <div className="hidden md:flex items-center justify-between gap-4 pb-4 mb-6 border-b border-neutral-100/90 shrink-0">
             {/* Quick Search Pill Input */}
             <div className="flex items-center gap-2.5 px-4 py-2 bg-[#F8F9FA] hover:bg-white focus-within:bg-white border border-neutral-200/70 focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-900/5 rounded-full w-full max-w-sm shadow-2xs transition-all">
               <Search className="w-4 h-4 text-neutral-400 shrink-0" />
@@ -568,40 +488,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {/* Messages Trigger */}
               <button
+                type="button"
                 onClick={() => setIsMessagesOpen(!isMessagesOpen)}
-                className="relative p-2.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] border border-neutral-200/70 rounded-2xl text-neutral-600 hover:text-neutral-900 shadow-sm transition-all"
+                className="relative w-9 h-9 flex items-center justify-center bg-[#F8F9FA] hover:bg-[#F1F3F6] border border-neutral-200/70 rounded-full text-neutral-600 hover:text-neutral-900 shadow-2xs transition-all cursor-pointer shrink-0"
                 title="Messages"
+                aria-label="Messages"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-neutral-900 rounded-full ring-2 ring-white" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-neutral-900 rounded-full ring-2 ring-white" />
               </button>
 
               {/* Notifications Trigger */}
               <button
+                type="button"
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                className="relative p-2.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] border border-neutral-200/70 rounded-2xl text-neutral-600 hover:text-neutral-900 shadow-sm transition-all"
+                className="relative w-9 h-9 flex items-center justify-center bg-[#F8F9FA] hover:bg-[#F1F3F6] border border-neutral-200/70 rounded-full text-neutral-600 hover:text-neutral-900 shadow-2xs transition-all cursor-pointer shrink-0"
                 title="Notifications"
+                aria-label="Notifications"
               >
                 <Bell className="w-4 h-4" />
                 {unreadNotifCount > 0 && (
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
                 )}
-              </button>
-
-              {/* Profile Avatar / Account Dialog Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsAccountDialogOpen(true)}
-                className="flex items-center gap-2 pl-1 cursor-pointer group"
-                title={`${user.fullName || currentPersona.name} (${user.role || currentPersona.title})`}
-                aria-label="Open Account Dialog"
-              >
-                <UserAvatar
-                  src={user.avatar || currentPersona.avatar}
-                  name={user.fullName || currentPersona.name}
-                  size="md"
-                  className="w-10 h-10 ring-2 ring-neutral-100 group-hover:ring-neutral-300 shadow-sm transition-all"
-                />
               </button>
             </div>
           </div>
@@ -687,37 +595,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Secondary Navigation Links */}
-            <div className="space-y-1 pt-1">
-              {othersNavItems.map((item) => {
-                if (item.name === "Logout") {
-                  return (
-                    <button
-                      key="logout-mobile"
-                      type="button"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 active:bg-rose-100 transition-colors cursor-pointer"
-                    >
-                      <item.icon className="w-4 h-4 text-rose-500" />
-                      <span>Sign Out</span>
-                    </button>
-                  );
-                }
+            <div className="space-y-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setUserSettingsTab("profile");
+                  setIsUserSettingsOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-800 hover:text-neutral-950 hover:bg-neutral-50 active:bg-neutral-100 transition-colors cursor-pointer"
+              >
+                <Settings className="w-4 h-4 text-neutral-600" />
+                <span>User Settings</span>
+              </button>
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
-                  >
-                    <item.icon className="w-4 h-4 text-neutral-500" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setUserSettingsTab("help");
+                  setIsUserSettingsOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-neutral-800 hover:text-neutral-950 hover:bg-neutral-50 active:bg-neutral-100 transition-colors cursor-pointer"
+              >
+                <CircleHelp className="w-4 h-4 text-neutral-600" />
+                <span>Help &amp; Knowledge</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 active:bg-rose-100 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 text-rose-500" />
+                <span>Sign Out</span>
+              </button>
             </div>
           </div>
         </div>
@@ -730,9 +645,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <GlobalSearchModal />
       <NotificationPopover />
       <MessagesDrawer />
-      <AccountDialog
-        isOpen={isAccountDialogOpen}
-        onClose={() => setIsAccountDialogOpen(false)}
+      <UserSettingsModal
+        isOpen={isUserSettingsOpen}
+        onClose={() => setIsUserSettingsOpen(false)}
+        initialTab={userSettingsTab}
       />
     </div>
   );
