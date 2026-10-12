@@ -2,8 +2,14 @@ use crate::client::SutraApiClient;
 use colored::*;
 
 pub async fn list_catalogue(client: &SutraApiClient) -> Result<(), String> {
-    println!("{}", "=== SUTRA Controlled Intervention Catalogue ===".bold());
     let items = client.list_catalogue().await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&items).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
+    println!("{}", "=== SUTRA Controlled Intervention Catalogue ===".bold());
 
     if items.is_empty() {
         println!("{}", "No active catalogue items found for this campus.".yellow());

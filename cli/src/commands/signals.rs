@@ -4,17 +4,22 @@ use colored::*;
 use uuid::Uuid;
 
 pub async fn list_signals(client: &SutraApiClient, result_filter: Option<&str>) -> Result<(), String> {
-    println!("{}", "=== SUTRA Signal Triage Queue ===".bold());
-    if let Some(campus_id) = client.config.campus_id {
-        println!("Campus Tenancy: {}", campus_id.to_string().cyan());
-    }
-
     let signals = client.list_signals(result_filter).await?;
     let signals: Vec<_> = if let Some(rf) = result_filter {
         signals.into_iter().filter(|s| s.result.eq_ignore_ascii_case(rf)).collect()
     } else {
         signals
     };
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&signals).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
+    println!("{}", "=== SUTRA Signal Triage Queue ===".bold());
+    if let Some(campus_id) = client.config.campus_id {
+        println!("Campus Tenancy: {}", campus_id.to_string().cyan());
+    }
     if signals.is_empty() {
         println!("{}", "No signals found matching criteria in current queue.".yellow());
         return Ok(());
@@ -45,6 +50,12 @@ pub async fn list_signals(client: &SutraApiClient, result_filter: Option<&str>) 
 
 pub async fn get_signal(client: &SutraApiClient, id: Uuid) -> Result<(), String> {
     let s = client.get_signal(id).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&s).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "=== Signal Details ===".bold());
     println!("  ID:               {}", s.id.to_string().cyan());
     println!("  Student:          {} ({})", s.student_display_name.bold(), s.external_student_ref);
@@ -113,9 +124,14 @@ pub async fn review_signal(
         rationale: rationale.trim().to_string(),
     };
 
-    println!("{}", "Submitting human signal review...".bold());
     let resp = client.review_signal(id, req).await?;
 
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&resp).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
+    println!("{}", "Submitting human signal review...".bold());
     println!("{} Signal review recorded successfully!", "✓".green().bold());
     println!("  Signal ID:  {}", resp.signal_id);
     println!("  Decision:   {}", resp.decision.green().bold());

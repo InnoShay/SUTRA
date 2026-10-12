@@ -3,8 +3,14 @@ use colored::*;
 use uuid::Uuid;
 
 pub async fn ai_status(client: &SutraApiClient) -> Result<(), String> {
-    println!("{}", "=== SUTRA AI Orchestration Subsystem Status ===".bold());
     let status = client.ai_status().await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&status).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
+    println!("{}", "=== SUTRA AI Orchestraction Subsystem Status ===".bold());
 
     println!("  Enabled:        {}", if status.enabled { "YES".green().bold() } else { "NO".red() });
     println!("  Provider:       {}", status.provider.cyan());
@@ -19,10 +25,15 @@ pub async fn ai_status(client: &SutraApiClient) -> Result<(), String> {
 }
 
 pub async fn ai_review_brief(client: &SutraApiClient, signal_id: Uuid) -> Result<(), String> {
+    let brief = client.ai_review_brief(signal_id).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&brief).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "=== SUTRA 5-Tier Evidence Card & Review Brief ===".bold());
     println!("{}\n", "[ADVISORY ONLY • NON-BINDING • REQUIRES HUMAN CONFIRMATION]".yellow().bold());
-
-    let brief = client.ai_review_brief(signal_id).await?;
 
     println!("Target Student: {}", brief.target_student_ref.cyan().bold());
     println!("Signal ID:      {}", brief.signal_id);
@@ -233,10 +244,15 @@ pub async fn ai_review_brief(client: &SutraApiClient, signal_id: Uuid) -> Result
 }
 
 pub async fn ai_summarize_evidence(client: &SutraApiClient, id_or_ref: &str) -> Result<(), String> {
+    let summary = client.ai_summarize_evidence(id_or_ref).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&summary).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "=== SUTRA AI Telemetry Synthesis & Evidence Card ===".bold());
     println!("{}\n", "[ADVISORY ONLY • FINANCIAL RECORDS EXCLUDED PER ADR-003]".yellow().bold());
-
-    let summary = client.ai_summarize_evidence(id_or_ref).await?;
 
     println!("Target Student: {}", summary.target_student_ref.cyan().bold());
     println!("\nSummary:\n  {}", summary.summary.cyan());
@@ -284,10 +300,15 @@ pub async fn ai_summarize_evidence(client: &SutraApiClient, id_or_ref: &str) -> 
 }
 
 pub async fn ai_student_evidence(client: &SutraApiClient, id_or_ref: &str) -> Result<(), String> {
+    let summary = client.get_student_evidence_summary(id_or_ref).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&summary).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "=== SUTRA Student 5-Tier Evidence Card ===".bold());
     println!("{}\n", "[ADVISORY ONLY • FINANCIAL RECORDS EXCLUDED PER ADR-003]".yellow().bold());
-
-    let summary = client.get_student_evidence_summary(id_or_ref).await?;
 
     println!("Target Student: {}", summary.target_student_ref.cyan().bold());
     println!("\nSynthesis Summary:\n  {}", summary.summary.cyan());

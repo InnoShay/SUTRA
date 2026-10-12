@@ -39,6 +39,13 @@ struct Cli {
     )]
     token: Option<String>,
 
+    #[arg(
+        long,
+        global = true,
+        help = "Output structured JSON instead of human-readable text"
+    )]
+    json: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -342,7 +349,13 @@ enum DatasetsCommands {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-    let config = CliConfig::from_env_and_flags(cli.url, cli.campus, cli.token);
+    let config = match CliConfig::from_env_and_flags(cli.url, cli.campus, cli.token, cli.json) {
+        Ok(c) => c,
+        Err(err) => {
+            eprintln!("\nError: {}", err);
+            std::process::exit(2);
+        }
+    };
     let client = SutraApiClient::new(config);
 
     let result = match cli.command {
@@ -498,6 +511,12 @@ async fn main() {
 
     if let Err(e) = result {
         eprintln!("\nError: {}", e);
-        std::process::exit(1);
+        if e.contains("401") || e.contains("403") || e.contains("Unauthorized") || e.contains("Forbidden") {
+            std::process::exit(3);
+        } else if e.contains("Invalid") || e.contains("Validation") || e.contains("Policy Violation") || e.contains("Usage") {
+            std::process::exit(2);
+        } else {
+            std::process::exit(1);
+        }
     }
 }

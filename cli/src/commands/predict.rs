@@ -204,8 +204,15 @@ pub async fn run_predict(client: &SutraApiClient, file_path: &Path) -> Result<()
     );
 
     // 4. Submit prediction request
-    println!("Submitting feature vector to production inference endpoint...");
+    if !client.config.json {
+        println!("Submitting feature vector to production inference endpoint...");
+    }
     let response = client.predict(&req_dto).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
 
     // 5. Render results
     render_prediction_response(&response, "Validated Local Feature File (Canonical 25 Day-30 vector)");
@@ -223,16 +230,24 @@ pub async fn execute_student_predict_flow(
         return Err("Validation Error: Student identifier cannot be empty.".to_string());
     }
 
-    println!("{}", "=== SUTRA Student-Specific Early Warning Prediction ===".bold());
-    println!("Target Student:      {}", clean_id.cyan().bold());
-    if let Some(campus_id) = client.config.campus_id {
-        println!("Campus Tenancy:      {}", campus_id.to_string().cyan());
-    }
-    println!("Source Policy:       Server-side observation ledger aggregation only");
-    println!("Evaluation Cutoff:   Strict Day 30 post-enrollment");
+    if !client.config.json {
+        println!("{}", "=== SUTRA Student-Specific Early Warning Prediction ===".bold());
+        println!("Target Student:      {}", clean_id.cyan().bold());
+        if let Some(campus_id) = client.config.campus_id {
+            println!("Campus Tenancy:      {}", campus_id.to_string().cyan());
+        }
+        println!("Source Policy:       Server-side observation ledger aggregation only");
+        println!("Evaluation Cutoff:   Strict Day 30 post-enrollment");
 
-    println!("\nRequesting authorized inference from backend server...");
+        println!("\nRequesting authorized inference from backend server...");
+    }
+
     let response = client.predict_student(clean_id).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
 
     render_prediction_response(&response, "Authorized Campus Operational Ledger (Server-side aggregated)");
 

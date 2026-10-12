@@ -5,6 +5,11 @@ use colored::*;
 pub async fn run_info(client: &SutraApiClient) -> Result<(), String> {
     let overview = client.get_dataset_provenance().await?;
 
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&overview).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "================================================================================".bold());
     println!("{}", "       SUTRA DATA PROVENANCE & SOURCE ISOLATION FRAMEWORK (ADR-005)              ".bold().cyan());
     println!("{}", "================================================================================".bold());
@@ -57,6 +62,11 @@ pub async fn run_lookup(
     let rec = client
         .lookup_research_record(&clean_source, identifier, module, presentation)
         .await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&rec).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
 
     println!("{}", "================================================================================".bold());
     println!("{}", "       SUTRA NON-INSTITUTIONAL RECORD LOOKUP (RESEARCH / DEMONSTRATION)         ".bold().yellow());

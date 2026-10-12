@@ -140,10 +140,53 @@ pub async fn run_login(client: &SutraApiClient) -> Result<(), String> {
 
 /// Executes the `sutra auth whoami` command.
 pub async fn run_whoami(client: &SutraApiClient) -> Result<(), String> {
-    println!("{}", "=== SUTRA Authenticated Identity ===".bold());
-
     let sm = SessionManager::new();
     let stored_session = sm.load_session()?;
+
+    if client.config.json {
+        match client.auth_me().await {
+            Ok(profile) => {
+                let payload = serde_json::json!({
+                    "authenticated": true,
+                    "status": "verified_active",
+                    "user_id": profile.user_id,
+                    "email": profile.email,
+                    "memberships": profile.memberships,
+                    "session_file": sm.session_file_path().to_string_lossy(),
+                });
+                println!("{}", serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?);
+                return Ok(());
+            }
+            Err(e) => {
+                if let Some(ref s) = stored_session {
+                    let payload = serde_json::json!({
+                        "authenticated": !s.is_expired(),
+                        "status": if s.is_expired() { "session_expired" } else { "offline_cached" },
+                        "user_id": s.user_id,
+                        "email": s.email,
+                        "campus_id": s.active_campus_id,
+                        "roles": s.roles,
+                        "expires_at": s.expires_at,
+                        "backend_error": e,
+                        "session_file": sm.session_file_path().to_string_lossy(),
+                    });
+                    println!("{}", serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?);
+                    return Ok(());
+                } else {
+                    let payload = serde_json::json!({
+                        "authenticated": false,
+                        "status": "not_authenticated",
+                        "error": e,
+                        "session_file": sm.session_file_path().to_string_lossy(),
+                    });
+                    println!("{}", serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?);
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    println!("{}", "=== SUTRA Authenticated Identity ===".bold());
 
     if stored_session.is_none() && client.config.token.is_none() {
         println!("{}", "Status: NOT AUTHENTICATED".red().bold());

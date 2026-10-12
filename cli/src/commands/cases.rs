@@ -37,11 +37,16 @@ pub fn suggested_next_step(case_id: &Uuid, current_state: &str) -> Option<String
 }
 
 pub async fn list_cases(client: &SutraApiClient, state_filter: Option<&str>) -> Result<(), String> {
-    println!("{}", "=== SUTRA Student Support Cases ===".bold());
     let cases = client.list_cases(state_filter).await?;
 
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&cases).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
+    println!("{}", "=== SUTRA Student Support Cases ===".bold());
     if cases.is_empty() {
-        println!("{}", "No active cases found.".yellow());
+        println!("{}", "No active cases found matching criteria in active campus.".yellow());
         return Ok(());
     }
 
@@ -70,6 +75,12 @@ pub async fn list_cases(client: &SutraApiClient, state_filter: Option<&str>) -> 
 
 pub async fn get_case(client: &SutraApiClient, id: Uuid) -> Result<(), String> {
     let c = client.get_case(id).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&c).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "=== Case Details ===".bold());
     println!("  Case ID:       {}", c.id.to_string().cyan().bold());
     println!("  Student:       {} ({})", c.student_display_name.bold(), c.external_student_ref);
@@ -138,9 +149,14 @@ pub async fn transition_case(
         metadata: None,
     };
 
-    println!("Transitioning case #{} to state {}...", id, to_state.bold());
     let updated = client.transition_case(id, req).await?;
 
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&updated).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
+    println!("Transitioning case #{} to state {}...", id, to_state.bold());
     println!("{} State transition confirmed!", "✓".green().bold());
     println!("  New State:   {}", updated.state.green().bold());
     println!("  New Version: {}", updated.version);
@@ -173,9 +189,14 @@ pub async fn assign_case(
         reason_code: Some("MANUAL_CLI_ASSIGNMENT".to_string()),
     };
 
-    println!("Assigning case #{} to user #{}...", id, owner_user_id);
     let updated = client.assign_case(id, req).await?;
 
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&updated).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
+    println!("Assigning case #{} to user #{}...", id, owner_user_id);
     println!("{} Case assigned successfully!", "✓".green().bold());
     println!("  Owner: {}", updated.primary_owner_user_id.map(|u| u.to_string()).unwrap_or_default().cyan());
     println!("  State: {}", updated.state.green().bold());
@@ -204,8 +225,14 @@ pub async fn record_follow_up(
         proof_ref: None,
     };
 
+    let res = client.record_follow_up(id, req).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&res).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("Recording follow-up for case #{}...", id);
-    client.record_follow_up(id, req).await?;
     println!("{} Follow-up action logged in audit trail!", "✓".green().bold());
 
     println!("\n{}", "Suggested Next Workflow Step:".yellow().bold());
@@ -235,8 +262,14 @@ pub async fn record_outcome(
         evidence_kind: Some(evidence_kind.unwrap_or("staff_review").to_string()),
     };
 
+    let res = client.record_outcome(id, req).await?;
+
+    if client.config.json {
+        println!("{}", serde_json::to_string_pretty(&res).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("Recording final intervention outcome for case #{}...", id);
-    client.record_outcome(id, req).await?;
     println!("{} Case outcome recorded! State transitioned to 'outcome_reviewed'.", "✓".green().bold());
 
     println!("\n{}", "Suggested Next Workflow Step:".yellow().bold());

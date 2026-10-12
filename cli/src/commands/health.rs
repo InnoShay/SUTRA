@@ -2,6 +2,17 @@ use crate::client::SutraApiClient;
 use colored::*;
 
 pub async fn run_health(client: &SutraApiClient) -> Result<(), String> {
+    if client.config.json {
+        let h = client.health().await?;
+        let r = client.ready().await?;
+        let payload = serde_json::json!({
+            "health": h,
+            "ready": r,
+        });
+        println!("{}", serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+
     println!("{}", "Checking SUTRA Backend Health & Readiness...".bold());
     println!("API URL: {}", client.config.api_url.cyan());
 
