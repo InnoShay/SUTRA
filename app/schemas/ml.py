@@ -166,3 +166,151 @@ class MLPredictResponse(BaseModel):
     threshold: float = 0.46
     classification: Literal["At_Risk", "On_Track"]
     evidence_card: MLEvidenceCard
+
+
+# ==========================================
+# Phase 6: Model Performance Dashboard Schemas
+# ==========================================
+
+class ModelDatasetProvenance(BaseModel):
+    dataset_label: str = "OULAD Day-30 Processed Dataset"
+    partition: str = "Presentation 2014J (Temporal Holdout)"
+    evaluation_date: str = "2026-10-12"
+    sample_size: int = 9203
+    unique_students: int = 8857
+    raw_rows_examined: int = 27466
+    outcome_definition: str = "Binary early withdrawal or academic failure (target=1 for At-Risk, 0 for On-Track)"
+    class_prevalence: float = 0.4070
+    actual_at_risk_count: int = 3746
+    actual_on_track_count: int = 5457
+    provenance_type: Literal["offline_held_out_benchmark", "live_production_telemetry"] = "offline_held_out_benchmark"
+    provenance_warning: Optional[str] = (
+        "HISTORICAL PARTITION NOTICE: Presentation 2014J represents previously inspected "
+        "development evidence. It must NEVER be reported as an untouched prospective test set. "
+        "Real-world generalization must be assessed on authentic, prospectively collected cohorts."
+    )
+
+
+class ConfusionMatrixDTO(BaseModel):
+    tp: int = Field(..., description="True Positives (actual at-risk correctly caught)")
+    fp: int = Field(..., description="False Positives (actual on-track flagged as at-risk)")
+    tn: int = Field(..., description="True Negatives (actual on-track correctly identified)")
+    fn: int = Field(..., description="False Negatives (actual at-risk missed)")
+
+
+class OperationalWorkloadDTO(BaseModel):
+    total_alerts_fired: int = 4705
+    alert_rate_pct: float = 51.12
+    false_alarms_advisor_burden: int = 2091
+    missed_at_risk_students: int = 1132
+    successful_proactive_catches: int = 2614
+
+
+class ReliabilityBinDTO(BaseModel):
+    bin_range: str
+    samples_count: int
+    mean_predicted_prob: float
+    observed_positive_rate: float
+    calibration_gap: float
+
+
+class SubgroupMetricDTO(BaseModel):
+    dimension: str
+    subgroup: str
+    sample_size: int
+    confidence_flag: Literal["STABLE", "LOW_CONFIDENCE (<100)"]
+    positives_count: int
+    negatives_count: int
+    prevalence: float
+    true_positives: int
+    false_positives: int
+    true_negatives: int
+    false_negatives: int
+    recall: float
+    precision: float
+    specificity: float
+    false_positive_rate: float
+    f1_score: float
+    roc_auc: float
+    pr_auc: float
+    is_suppressed: bool = False
+
+
+class ThresholdIndependentMetricsDTO(BaseModel):
+    roc_auc: float = 0.7216
+    pr_auc: float = 0.6502
+    brier_score: float = 0.2103
+    expected_calibration_error_ece: float = 0.0681
+    maximum_calibration_error_mce: float = 0.0967
+
+
+class ThresholdDependentMetricsDTO(BaseModel):
+    threshold: float = 0.46
+    accuracy: float = 0.6498
+    balanced_accuracy: float = 0.6573
+    precision: float = 0.5556
+    recall: float = 0.6978
+    specificity: float = 0.6168
+    false_positive_rate: float = 0.3832
+    f1_score: float = 0.6186
+    confusion_matrix: ConfusionMatrixDTO
+    operational_workload: OperationalWorkloadDTO
+
+
+class ROCCurvePointDTO(BaseModel):
+    fpr: float
+    tpr: float
+    threshold: float
+
+
+class PRCurvePointDTO(BaseModel):
+    precision: float
+    recall: float
+    threshold: float
+
+
+class LiveMonitoringTelemetryDTO(BaseModel):
+    total_inferences_logged: int
+    average_latency_ms: float
+    active_campus_count: int
+    monitoring_window: str = "Last 30 Days"
+    status: Literal["healthy", "degraded", "idle"] = "healthy"
+    telemetry_notice: str = (
+        "Live telemetry monitors real-time system throughput and execution latency. "
+        "It does not represent measured model accuracy until student outcomes are confirmed."
+    )
+
+
+class ModelPerformanceResponse(BaseModel):
+    model_name: str = "Regularized Logistic Regression Baseline"
+    model_version: str = "v1.0.0"
+    operational_threshold: float = 0.46
+    evaluation_environment: Literal["offline_held_out_benchmark", "live_production_telemetry"] = "offline_held_out_benchmark"
+    dataset_provenance: ModelDatasetProvenance
+    threshold_independent_metrics: ThresholdIndependentMetricsDTO
+    threshold_dependent_metrics: ThresholdDependentMetricsDTO
+    reliability_table: List[ReliabilityBinDTO]
+    roc_curve_points: Optional[List[ROCCurvePointDTO]] = None
+    pr_curve_points: Optional[List[PRCurvePointDTO]] = None
+    subgroup_metrics: List[SubgroupMetricDTO]
+    live_telemetry: Optional[LiveMonitoringTelemetryDTO] = None
+    fairness_disclaimer: str = (
+        "FAIRNESS & PARITY NOTICE: Disaggregated subgroup metrics highlight performance differences "
+        "across courses, demographics, and prior education. The presence of this dashboard does NOT "
+        "demonstrate that the model is fair, unbiased, or suitable for automated high-stakes decisions. "
+        "Differences in recall and false alarm burden reflect historical institutional patterns."
+    )
+    non_causal_disclaimer: str = (
+        "NON-CAUSAL GOVERNANCE NOTICE: Statistical risk estimates reflect retrospective correlations "
+        "in historical data. Predictions must never be treated as diagnostic certainties or proof of "
+        "future student failure. All alerts require human professional judgement."
+    )
+    limitations: List[str] = Field(
+        default_factory=lambda: [
+            "Evaluated on historical Open University course registrations (Presentation 2014J); generalization to prospective cohorts remains unverified.",
+            "Cutoff fixed at Day 30 post-start; early assessment marks are excluded to prevent temporal data leakage.",
+            "ROC curves require genuine per-record scores and labels; they are not fabricated from aggregate single-point values.",
+            "Cell counts under 5 are suppressed to protect student privacy in disaggregated views.",
+        ]
+    )
+

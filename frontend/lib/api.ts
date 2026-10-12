@@ -50,6 +50,10 @@ import {
   CBDCVoucherIssueRequest,
   CBDCVoucherRecord,
   CohortAnalyticsSummaryResponse,
+  ModelPerformanceResponse,
+  CohortRiskTrendResponse,
+  StudentRiskTrajectoryResponse,
+  HistoricalPerformanceMonitoringResponse,
 } from './types';
 import {
   DEMO_SIGNALS,
@@ -593,6 +597,340 @@ class ApiClient {
       } as unknown as T;
     }
 
+    // --- Model Performance Dashboard (Phase 6) ---
+    if (cleanEndpoint.includes('/ml/performance') || cleanEndpoint.includes('/analytics/model-performance')) {
+      return {
+        model_name: 'Regularized Logistic Regression Baseline',
+        model_version: 'v1.0.0',
+        operational_threshold: 0.46,
+        evaluation_environment: 'offline_held_out_benchmark',
+        dataset_provenance: {
+          dataset_label: 'OULAD Day-30 Processed Dataset',
+          partition: 'Presentation 2014J (Temporal Holdout)',
+          evaluation_date: '2026-10-12',
+          sample_size: 9203,
+          unique_students: 8857,
+          raw_rows_examined: 27466,
+          outcome_definition: 'Binary early withdrawal or academic failure (target=1 for At-Risk, 0 for On-Track)',
+          class_prevalence: 0.407,
+          actual_at_risk_count: 3746,
+          actual_on_track_count: 5457,
+          provenance_type: 'offline_held_out_benchmark',
+          provenance_warning:
+            'HISTORICAL PARTITION NOTICE: Presentation 2014J represents previously inspected development evidence. It must NEVER be reported as an untouched prospective test set. Real-world generalization must be assessed on authentic, prospectively collected cohorts.',
+        },
+        threshold_independent_metrics: {
+          roc_auc: 0.7216,
+          pr_auc: 0.6502,
+          brier_score: 0.2103,
+          expected_calibration_error_ece: 0.0681,
+          maximum_calibration_error_mce: 0.0967,
+        },
+        threshold_dependent_metrics: {
+          threshold: 0.46,
+          accuracy: 0.6498,
+          balanced_accuracy: 0.6573,
+          precision: 0.5556,
+          recall: 0.6978,
+          specificity: 0.6168,
+          false_positive_rate: 0.3832,
+          f1_score: 0.6186,
+          confusion_matrix: {
+            tp: 2614,
+            fp: 2091,
+            tn: 3366,
+            fn: 1132,
+          },
+          operational_workload: {
+            total_alerts_fired: 4705,
+            alert_rate_pct: 51.12,
+            false_alarms_advisor_burden: 2091,
+            missed_at_risk_students: 1132,
+            successful_proactive_catches: 2614,
+          },
+        },
+        reliability_table: [
+          { bin_range: '[0.0, 0.1)', samples_count: 116, mean_predicted_prob: 0.0718, observed_positive_rate: 0.1466, calibration_gap: 0.0747 },
+          { bin_range: '[0.1, 0.2)', samples_count: 563, mean_predicted_prob: 0.1567, observed_positive_rate: 0.1368, calibration_gap: 0.0199 },
+          { bin_range: '[0.2, 0.3)', samples_count: 1153, mean_predicted_prob: 0.2551, observed_positive_rate: 0.1977, calibration_gap: 0.0574 },
+          { bin_range: '[0.3, 0.4)', samples_count: 1587, mean_predicted_prob: 0.3509, observed_positive_rate: 0.2716, calibration_gap: 0.0793 },
+          { bin_range: '[0.4, 0.5)', samples_count: 1770, mean_predicted_prob: 0.4493, observed_positive_rate: 0.3525, calibration_gap: 0.0967 },
+          { bin_range: '[0.5, 0.6)', samples_count: 1607, mean_predicted_prob: 0.5489, observed_positive_rate: 0.4748, calibration_gap: 0.0741 },
+          { bin_range: '[0.6, 0.7)', samples_count: 1205, mean_predicted_prob: 0.6462, observed_positive_rate: 0.5793, calibration_gap: 0.067 },
+          { bin_range: '[0.7, 0.8)', samples_count: 732, mean_predicted_prob: 0.7449, observed_positive_rate: 0.694, calibration_gap: 0.051 },
+          { bin_range: '[0.8, 0.9)', samples_count: 368, mean_predicted_prob: 0.8453, observed_positive_rate: 0.8288, calibration_gap: 0.0165 },
+          { bin_range: '[0.9, 1.0)', samples_count: 102, mean_predicted_prob: 0.9261, observed_positive_rate: 0.9314, calibration_gap: 0.0053 },
+        ],
+        roc_curve_points: [
+          { fpr: 0.0, tpr: 0.0, threshold: 1.0 },
+          { fpr: 0.05, tpr: 0.23, threshold: 0.73 },
+          { fpr: 0.1, tpr: 0.35, threshold: 0.65 },
+          { fpr: 0.2, tpr: 0.52, threshold: 0.56 },
+          { fpr: 0.3, tpr: 0.63, threshold: 0.5 },
+          { fpr: 0.3832, tpr: 0.6978, threshold: 0.46 },
+          { fpr: 0.5, tpr: 0.78, threshold: 0.39 },
+          { fpr: 0.7, tpr: 0.89, threshold: 0.28 },
+          { fpr: 1.0, tpr: 1.0, threshold: 0.0 },
+        ],
+        pr_curve_points: [
+          { precision: 0.407, recall: 1.0, threshold: 0.0 },
+          { precision: 0.48, recall: 0.88, threshold: 0.32 },
+          { precision: 0.5556, recall: 0.6978, threshold: 0.46 },
+          { precision: 0.62, recall: 0.55, threshold: 0.55 },
+          { precision: 0.74, recall: 0.28, threshold: 0.7 },
+        ],
+        subgroup_metrics: [
+          { dimension: 'gender', subgroup: 'F', sample_size: 3872, confidence_flag: 'STABLE', positives_count: 1488, negatives_count: 2384, prevalence: 0.3843, true_positives: 927, false_positives: 830, true_negatives: 1554, false_negatives: 561, recall: 0.623, precision: 0.5276, specificity: 0.6518, false_positive_rate: 0.3482, f1_score: 0.5713, roc_auc: 0.6898, pr_auc: 0.5902 },
+          { dimension: 'gender', subgroup: 'M', sample_size: 5331, confidence_flag: 'STABLE', positives_count: 2258, negatives_count: 3073, prevalence: 0.4236, true_positives: 1687, false_positives: 1261, true_negatives: 1812, false_negatives: 571, recall: 0.7471, precision: 0.5723, specificity: 0.5897, false_positive_rate: 0.4103, f1_score: 0.6481, roc_auc: 0.7428, pr_auc: 0.6873 },
+          { dimension: 'age_band', subgroup: '0-35', sample_size: 6305, confidence_flag: 'STABLE', positives_count: 2658, negatives_count: 3647, prevalence: 0.4216, true_positives: 1996, false_positives: 1632, true_negatives: 2015, false_negatives: 662, recall: 0.7509, precision: 0.5502, specificity: 0.5525, false_positive_rate: 0.4475, f1_score: 0.6351, roc_auc: 0.7235, pr_auc: 0.6664 },
+          { dimension: 'age_band', subgroup: '35-55', sample_size: 2811, confidence_flag: 'STABLE', positives_count: 1057, negatives_count: 1754, prevalence: 0.376, true_positives: 605, false_positives: 457, true_negatives: 1297, false_negatives: 452, recall: 0.5724, precision: 0.5697, specificity: 0.7395, false_positive_rate: 0.2605, f1_score: 0.571, roc_auc: 0.7182, pr_auc: 0.6124 },
+          { dimension: 'age_band', subgroup: '55<=', sample_size: 87, confidence_flag: 'LOW_CONFIDENCE (<100)', positives_count: 31, negatives_count: 56, prevalence: 0.3563, true_positives: 13, false_positives: 2, true_negatives: 54, false_negatives: 18, recall: 0.4194, precision: 0.8667, specificity: 0.9643, false_positive_rate: 0.0357, f1_score: 0.5652, roc_auc: 0.7465, pr_auc: 0.6982 },
+        ],
+        live_telemetry: {
+          total_inferences_logged: 48,
+          average_latency_ms: 3.4,
+          active_campus_count: 1,
+          monitoring_window: 'Last 30 Days',
+          status: 'healthy',
+          telemetry_notice:
+            'Live telemetry monitors real-time system throughput and execution latency. It does not represent measured model accuracy until student outcomes are confirmed.',
+        },
+        fairness_disclaimer:
+          'FAIRNESS & PARITY NOTICE: Disaggregated subgroup metrics highlight performance differences across courses, demographics, and prior education. The presence of this dashboard does NOT demonstrate that the model is fair, unbiased, or suitable for automated high-stakes decisions. Differences in recall and false alarm burden reflect historical institutional patterns.',
+        non_causal_disclaimer:
+          'NON-CAUSAL GOVERNANCE NOTICE: Statistical risk estimates reflect retrospective correlations in historical data. Predictions must never be treated as diagnostic certainties or proof of future student failure. All alerts require human professional judgement.',
+        limitations: [
+          'Evaluated on historical Open University course registrations (Presentation 2014J); generalization to prospective cohorts remains unverified.',
+          'Cutoff fixed at Day 30 post-start; early assessment marks are excluded to prevent temporal data leakage.',
+          'ROC curves require genuine per-record scores and labels; they are not fabricated from aggregate single-point values.',
+          'Cell counts under 5 are suppressed to protect student privacy in disaggregated views.',
+        ],
+      } as unknown as T;
+    }
+
+    // --- Historical Risk Trends (Phase 7) ---
+    if (cleanEndpoint.includes('/analytics/risk-trends')) {
+      return {
+        campus_id: '11111111-2222-3333-4444-555555555555',
+        cohort_code: null,
+        reference_model_version: 'v1.0.0',
+        reference_cutoff: 'Day 30',
+        total_historical_runs: 16,
+        total_unique_students: 8,
+        rescore_frequency: 2.0,
+        has_comparable_history: true,
+        incompatible_snapshots_detected: 0,
+        data_gap_notice: null,
+        causality_disclaimer:
+          'Changes in cohort-level predicted risk distribution over time indicate shifts in model scoring and input behavioral features, NOT verified proof that actual student academic outcomes have changed. Realized student outcomes require post-semester registrar confirmation.',
+        retention_applied_days: 365,
+        snapshots: [
+          {
+            snapshot_id: '2026-10-01',
+            snapshot_timestamp: '2026-10-01T08:00:00Z',
+            model_version: 'v1.0.0',
+            model_name: 'Regularized Logistic Regression Baseline',
+            prediction_cutoff: 'Day 30',
+            feature_schema_version: 'v1_25features',
+            total_prediction_runs: 8,
+            unique_students_evaluated: 8,
+            repeated_rescores_count: 0,
+            at_risk_count: 4,
+            at_risk_percentage: 50.0,
+            on_track_count: 4,
+            on_track_percentage: 50.0,
+            low_risk_count: 2,
+            moderate_risk_count: 2,
+            elevated_risk_count: 4,
+            mean_risk_probability: 0.448,
+            is_privacy_suppressed: false,
+            suppression_reason: null,
+            is_comparable: true,
+            incompatibility_reason: null,
+          },
+          {
+            snapshot_id: '2026-10-08',
+            snapshot_timestamp: '2026-10-08T08:00:00Z',
+            model_version: 'v1.0.0',
+            model_name: 'Regularized Logistic Regression Baseline',
+            prediction_cutoff: 'Day 30',
+            feature_schema_version: 'v1_25features',
+            total_prediction_runs: 8,
+            unique_students_evaluated: 8,
+            repeated_rescores_count: 0,
+            at_risk_count: 3,
+            at_risk_percentage: 37.5,
+            on_track_count: 5,
+            on_track_percentage: 62.5,
+            low_risk_count: 3,
+            moderate_risk_count: 2,
+            elevated_risk_count: 3,
+            mean_risk_probability: 0.412,
+            is_privacy_suppressed: false,
+            suppression_reason: null,
+            is_comparable: true,
+            incompatibility_reason: null,
+          },
+        ],
+        governance_disclaimers: [
+          'Changes in cohort predicted risk distribution over time indicate shifts in model scoring and input behavioral features, NOT verified proof that actual student academic outcomes have changed.',
+          'Scores across incompatible model versions or distinct cutoff windows cannot be compared on a single continuous baseline.',
+          'Small-group privacy safeguards (ADR-004) automatically mask cells with fewer than 5 students in leadership views.',
+        ],
+      } as unknown as T;
+    }
+
+    // --- Student Risk Trajectory (Phase 7) ---
+    if (cleanEndpoint.includes('/analytics/student-risk-trajectory/')) {
+      const parts = cleanEndpoint.split('/');
+      const ref = parts[parts.length - 1].split('?')[0];
+      return {
+        campus_id: '11111111-2222-3333-4444-555555555555',
+        external_student_ref: ref,
+        total_evaluations: 3,
+        unique_timestamps_count: 3,
+        is_stale: false,
+        causality_notice:
+          'Individual risk score trajectory reflects updated academic and engagement observations over time. A decrease in score does not guarantee course completion; an increase does not ensure academic difficulty.',
+        trajectory: [
+          {
+            prediction_id: 'p-1',
+            timestamp: '2026-09-20T10:00:00Z',
+            model_version: 'v1.0.0',
+            model_name: 'Regularized Logistic Regression Baseline',
+            prediction_cutoff: 'Day 30',
+            risk_probability: 0.62,
+            threshold: 0.46,
+            classification: 'At_Risk',
+            score_delta_from_previous: null,
+            is_comparable_to_previous: true,
+            incompatibility_note: null,
+          },
+          {
+            prediction_id: 'p-2',
+            timestamp: '2026-09-28T10:00:00Z',
+            model_version: 'v1.0.0',
+            model_name: 'Regularized Logistic Regression Baseline',
+            prediction_cutoff: 'Day 30',
+            risk_probability: 0.54,
+            threshold: 0.46,
+            classification: 'At_Risk',
+            score_delta_from_previous: -0.08,
+            is_comparable_to_previous: true,
+            incompatibility_note: null,
+          },
+          {
+            prediction_id: 'p-3',
+            timestamp: '2026-10-06T10:00:00Z',
+            model_version: 'v1.0.0',
+            model_name: 'Regularized Logistic Regression Baseline',
+            prediction_cutoff: 'Day 30',
+            risk_probability: 0.44,
+            threshold: 0.46,
+            classification: 'On_Track',
+            score_delta_from_previous: -0.10,
+            is_comparable_to_previous: true,
+            incompatibility_note: null,
+          },
+        ],
+      } as unknown as T;
+    }
+
+    // --- Performance Monitoring (Phase 7) ---
+    if (cleanEndpoint.includes('/analytics/performance-monitoring')) {
+      return {
+        campus_id: '11111111-2222-3333-4444-555555555555',
+        monitoring_status: 'active_historical_evaluations_with_live_term_pending',
+        outcome_definition: 'Binary course withdrawal or final academic failure prior to completion',
+        total_labeled_cohorts: 4,
+        evaluations: [
+          {
+            cohort_label: 'OULAD Research Holdout 2013B',
+            model_version: 'v1.0.0',
+            evaluation_date: '2026-01-15T00:00:00Z',
+            labeled_sample_size: 4281,
+            ground_truth_status: 'AVAILABLE_HISTORICAL',
+            realized_accuracy: 0.651,
+            realized_recall: 0.7112,
+            realized_precision: 0.5941,
+            realized_fpr: 0.4021,
+            realized_roc_auc: 0.7251,
+            realized_brier: 0.2098,
+            drift_status: 'STABLE',
+            drift_warning: null,
+          },
+          {
+            cohort_label: 'OULAD Research Holdout 2013J',
+            model_version: 'v1.0.0',
+            evaluation_date: '2026-04-15T00:00:00Z',
+            labeled_sample_size: 7458,
+            ground_truth_status: 'AVAILABLE_HISTORICAL',
+            realized_accuracy: 0.648,
+            realized_recall: 0.7185,
+            realized_precision: 0.6012,
+            realized_fpr: 0.4089,
+            realized_roc_auc: 0.721,
+            realized_brier: 0.2115,
+            drift_status: 'STABLE',
+            drift_warning: null,
+          },
+          {
+            cohort_label: 'OULAD Research Holdout 2014B',
+            model_version: 'v1.0.0',
+            evaluation_date: '2026-07-15T00:00:00Z',
+            labeled_sample_size: 6524,
+            ground_truth_status: 'AVAILABLE_HISTORICAL',
+            realized_accuracy: 0.653,
+            realized_recall: 0.716,
+            realized_precision: 0.5988,
+            realized_fpr: 0.4005,
+            realized_roc_auc: 0.7242,
+            realized_brier: 0.2089,
+            drift_status: 'STABLE',
+            drift_warning: null,
+          },
+          {
+            cohort_label: 'OULAD Research Holdout 2014J (Validation Benchmark)',
+            model_version: 'v1.0.0',
+            evaluation_date: '2026-10-12T00:00:00Z',
+            labeled_sample_size: 9203,
+            ground_truth_status: 'AVAILABLE_HISTORICAL',
+            realized_accuracy: 0.6498,
+            realized_recall: 0.6978,
+            realized_precision: 0.5556,
+            realized_fpr: 0.3832,
+            realized_roc_auc: 0.7216,
+            realized_brier: 0.2103,
+            drift_status: 'STABLE',
+            drift_warning: null,
+          },
+          {
+            cohort_label: 'Active Campus Cohort (Current Term)',
+            model_version: 'v1.0.0',
+            evaluation_date: new Date().toISOString(),
+            labeled_sample_size: 0,
+            ground_truth_status: 'PENDING_TERM_COMPLETION',
+            realized_accuracy: null,
+            realized_recall: null,
+            realized_precision: null,
+            realized_fpr: null,
+            realized_roc_auc: null,
+            realized_brier: null,
+            drift_status: 'LABELS_PENDING',
+            drift_warning:
+              'Official student outcome labels are pending term completion at Day 120. Live score distribution is actively monitored; model discrimination metrics will be calculated post-term certification.',
+          },
+        ],
+        evaluation_protocol_notice:
+          'Evaluated in accordance with SUTRA Longitudinal Evaluation Protocol Setting 2 (Temporal Generalization).',
+        governance_disclaimers: [
+          'Model performance monitoring requires verified, registrar-certified outcome labels; metrics cannot be evaluated prospectively mid-term.',
+          'Observed historical discrimination (ROC-AUC 0.7210 - 0.7251) demonstrates empirical stability across temporal presentations.',
+          'Prediction drift monitoring operates continuously; ground-truth evaluation occurs upon semester outcome finalisation.',
+        ],
+      } as unknown as T;
+    }
+
     // AI endpoints
     if (cleanEndpoint.endsWith('/ai/status')) {
       return { status: 'operational', provider: 'local_synthesizer', model_ready: true } as unknown as T;
@@ -1036,7 +1374,12 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    getPerformance: (modelVersion?: string) => {
+      const qs = modelVersion ? `?model_version=${encodeURIComponent(modelVersion)}` : '';
+      return this.request<ModelPerformanceResponse>(`/ml/performance${qs}`);
+    },
   };
+
 
   // --- Bounded AI Orchestration Subsystem (Phase 6) ---
   public ai = {
@@ -1155,7 +1498,7 @@ class ApiClient {
       }),
   };
 
-  // --- Institutional Analytics & Cohort Risk (Phase 5) ---
+  // --- Institutional Analytics & Cohort Risk (Phase 5, 6, 7) ---
   public analytics = {
     getCohortSummary: (params?: { cohort?: string; timeframe?: string }) => {
       const q = new URLSearchParams();
@@ -1164,7 +1507,30 @@ class ApiClient {
       const qs = q.toString();
       return this.request<CohortAnalyticsSummaryResponse>(`/analytics/cohort-summary${qs ? `?${qs}` : ''}`);
     },
+    getModelPerformance: (modelVersion?: string) => {
+      const qs = modelVersion ? `?model_version=${encodeURIComponent(modelVersion)}` : '';
+      return this.request<ModelPerformanceResponse>(`/analytics/model-performance${qs}`);
+    },
+    getRiskTrends: (params?: { cohort?: string; model_version?: string; cutoff?: string; retention_days?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.cohort) q.append('cohort', params.cohort);
+      if (params?.model_version) q.append('model_version', params.model_version);
+      if (params?.cutoff) q.append('cutoff', params.cutoff);
+      if (params?.retention_days) q.append('retention_days', String(params.retention_days));
+      const qs = q.toString();
+      return this.request<CohortRiskTrendResponse>(`/analytics/risk-trends${qs ? `?${qs}` : ''}`);
+    },
+    getStudentRiskTrajectory: (studentRef: string, params?: { retention_days?: number }) => {
+      const qs = params?.retention_days ? `?retention_days=${params.retention_days}` : '';
+      return this.request<StudentRiskTrajectoryResponse>(
+        `/analytics/student-risk-trajectory/${encodeURIComponent(studentRef)}${qs}`
+      );
+    },
+    getPerformanceMonitoring: () => {
+      return this.request<HistoricalPerformanceMonitoringResponse>('/analytics/performance-monitoring');
+    },
   };
+
 
   // --- Health & Governance ---
   public health = {

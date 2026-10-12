@@ -18,48 +18,48 @@ export function CounselorStatusBadge({
     case "APPROVED":
       return (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white text-neutral-900 border border-neutral-300 ${className}`}
+          className={`inline-block text-[11px] font-mono text-neutral-600 border border-neutral-200 px-2 py-0.5 rounded ${className}`}
         >
-          Verified &amp; Approved
+          Verified
         </span>
       );
     case "PENDING_VERIFICATION":
       return (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-800 border border-neutral-300 ${className}`}
+          className={`inline-block text-[11px] font-mono text-neutral-600 border border-neutral-200 px-2 py-0.5 rounded ${className}`}
         >
-          Pending Verification
+          Pending
         </span>
       );
     case "INCOMPLETE":
       return (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-700 border border-neutral-300 ${className}`}
+          className={`inline-block text-[11px] font-mono text-neutral-600 border border-neutral-200 px-2 py-0.5 rounded ${className}`}
         >
-          Onboarding Incomplete
+          Incomplete
         </span>
       );
     case "REJECTED":
       return (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200 ${className}`}
+          className={`inline-block text-[11px] font-mono text-neutral-900 border border-neutral-900 px-2 py-0.5 rounded ${className}`}
         >
-          Verification Rejected
+          Rejected
         </span>
       );
     case "SUSPENDED":
       return (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-600 text-white ${className}`}
+          className={`inline-block text-[11px] font-mono text-neutral-900 border border-neutral-900 px-2 py-0.5 rounded ${className}`}
         >
-          Account Suspended
+          Suspended
         </span>
       );
     case "NOT_STARTED":
     default:
       return (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200 ${className}`}
+          className={`inline-block text-[11px] font-mono text-neutral-400 border border-neutral-200 px-2 py-0.5 rounded ${className}`}
         >
           Not Started
         </span>

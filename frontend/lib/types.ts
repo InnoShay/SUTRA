@@ -744,6 +744,130 @@ export interface CohortAnalyticsSummaryResponse {
   governance_disclaimers: string[];
 }
 
+// ==========================================
+// Phase 6: Model Performance Dashboard Domain
+// ==========================================
+
+export interface ModelDatasetProvenance {
+  dataset_label: string;
+  partition: string;
+  evaluation_date: string;
+  sample_size: number;
+  unique_students: number;
+  raw_rows_examined: number;
+  outcome_definition: string;
+  class_prevalence: number;
+  actual_at_risk_count: number;
+  actual_on_track_count: number;
+  provenance_type: 'offline_held_out_benchmark' | 'live_production_telemetry';
+  provenance_warning?: string | null;
+}
+
+export interface ConfusionMatrixDTO {
+  tp: number;
+  fp: number;
+  tn: number;
+  fn: number;
+}
+
+export interface OperationalWorkloadDTO {
+  total_alerts_fired: number;
+  alert_rate_pct: number;
+  false_alarms_advisor_burden: number;
+  missed_at_risk_students: number;
+  successful_proactive_catches: number;
+}
+
+export interface ReliabilityBinDTO {
+  bin_range: string;
+  samples_count: number;
+  mean_predicted_prob: number;
+  observed_positive_rate: number;
+  calibration_gap: number;
+}
+
+export interface SubgroupMetricDTO {
+  dimension: string;
+  subgroup: string;
+  sample_size: number;
+  confidence_flag: 'STABLE' | 'LOW_CONFIDENCE (<100)';
+  positives_count: number;
+  negatives_count: number;
+  prevalence: number;
+  true_positives: number;
+  false_positives: number;
+  true_negatives: number;
+  false_negatives: number;
+  recall: number;
+  precision: number;
+  specificity: number;
+  false_positive_rate: number;
+  f1_score: number;
+  roc_auc: number;
+  pr_auc: number;
+  is_suppressed?: boolean;
+}
+
+export interface ThresholdIndependentMetricsDTO {
+  roc_auc: number;
+  pr_auc: number;
+  brier_score: number;
+  expected_calibration_error_ece: number;
+  maximum_calibration_error_mce: number;
+}
+
+export interface ThresholdDependentMetricsDTO {
+  threshold: number;
+  accuracy: number;
+  balanced_accuracy: number;
+  precision: number;
+  recall: number;
+  specificity: number;
+  false_positive_rate: number;
+  f1_score: number;
+  confusion_matrix: ConfusionMatrixDTO;
+  operational_workload: OperationalWorkloadDTO;
+}
+
+export interface ROCCurvePointDTO {
+  fpr: number;
+  tpr: number;
+  threshold: number;
+}
+
+export interface PRCurvePointDTO {
+  precision: number;
+  recall: number;
+  threshold: number;
+}
+
+export interface LiveMonitoringTelemetryDTO {
+  total_inferences_logged: number;
+  average_latency_ms: number;
+  active_campus_count: number;
+  monitoring_window: string;
+  status: 'healthy' | 'degraded' | 'idle';
+  telemetry_notice: string;
+}
+
+export interface ModelPerformanceResponse {
+  model_name: string;
+  model_version: string;
+  operational_threshold: number;
+  evaluation_environment: 'offline_held_out_benchmark' | 'live_production_telemetry';
+  dataset_provenance: ModelDatasetProvenance;
+  threshold_independent_metrics: ThresholdIndependentMetricsDTO;
+  threshold_dependent_metrics: ThresholdDependentMetricsDTO;
+  reliability_table: ReliabilityBinDTO[];
+  roc_curve_points?: ROCCurvePointDTO[] | null;
+  pr_curve_points?: PRCurvePointDTO[] | null;
+  subgroup_metrics: SubgroupMetricDTO[];
+  live_telemetry?: LiveMonitoringTelemetryDTO | null;
+  fairness_disclaimer: string;
+  non_causal_disclaimer: string;
+  limitations: string[];
+}
+
 export interface CounselorCalendarEvent {
   id: string;
   title: string;
@@ -762,3 +886,100 @@ export interface CounselorCalendarEvent {
   hasAttachment?: boolean;
   attachmentTitle?: string;
 }
+
+// ==========================================
+// Phase 7: Historical Risk Trends & Monitoring
+// ==========================================
+
+export interface HistoricalSnapshotPoint {
+  snapshot_id: string;
+  snapshot_timestamp: string;
+  model_version: string;
+  model_name: string;
+  prediction_cutoff: string;
+  feature_schema_version: string;
+  total_prediction_runs: number;
+  unique_students_evaluated: number;
+  repeated_rescores_count: number;
+  at_risk_count?: number | null;
+  at_risk_percentage?: number | null;
+  on_track_count?: number | null;
+  on_track_percentage?: number | null;
+  low_risk_count?: number | null;
+  moderate_risk_count?: number | null;
+  elevated_risk_count?: number | null;
+  mean_risk_probability: number;
+  is_privacy_suppressed: boolean;
+  suppression_reason?: string | null;
+  is_comparable: boolean;
+  incompatibility_reason?: string | null;
+}
+
+export interface CohortRiskTrendResponse {
+  campus_id: string;
+  cohort_code?: string | null;
+  reference_model_version: string;
+  reference_cutoff: string;
+  total_historical_runs: number;
+  total_unique_students: number;
+  rescore_frequency: number;
+  has_comparable_history: boolean;
+  snapshots: HistoricalSnapshotPoint[];
+  incompatible_snapshots_detected: number;
+  data_gap_notice?: string | null;
+  causality_disclaimer: string;
+  retention_applied_days?: number | null;
+  governance_disclaimers: string[];
+}
+
+export interface StudentRiskTrajectoryPoint {
+  prediction_id: string;
+  timestamp: string;
+  model_version: string;
+  model_name: string;
+  prediction_cutoff: string;
+  risk_probability: number;
+  threshold: number;
+  classification: string;
+  score_delta_from_previous?: number | null;
+  is_comparable_to_previous: boolean;
+  incompatibility_note?: string | null;
+}
+
+export interface StudentRiskTrajectoryResponse {
+  campus_id: string;
+  student_id?: string | null;
+  external_student_ref: string;
+  total_evaluations: number;
+  unique_timestamps_count: number;
+  trajectory: StudentRiskTrajectoryPoint[];
+  is_stale: boolean;
+  causality_notice: string;
+}
+
+export interface CohortOutcomeEvaluationPoint {
+  cohort_label: string;
+  model_version: string;
+  evaluation_date: string;
+  labeled_sample_size: number;
+  ground_truth_status: 'AVAILABLE_HISTORICAL' | 'PENDING_TERM_COMPLETION';
+  realized_accuracy?: number | null;
+  realized_recall?: number | null;
+  realized_precision?: number | null;
+  realized_fpr?: number | null;
+  realized_roc_auc?: number | null;
+  realized_brier?: number | null;
+  drift_status: 'STABLE' | 'DEGRADED' | 'LABELS_PENDING';
+  drift_warning?: string | null;
+}
+
+export interface HistoricalPerformanceMonitoringResponse {
+  campus_id: string;
+  monitoring_status: string;
+  outcome_definition: string;
+  total_labeled_cohorts: number;
+  evaluations: CohortOutcomeEvaluationPoint[];
+  evaluation_protocol_notice: string;
+  governance_disclaimers: string[];
+}
+
