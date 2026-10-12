@@ -215,7 +215,7 @@ export function StudentParticipationReport() {
                   <p className="text-neutral-500 flex items-center gap-2 flex-wrap">
                     <span>Spent: <strong className="text-neutral-700">{red.points_spent} pts</strong></span>
                     <span>•</span>
-                    <span>Redeemed: {formatDate(red.redeemed_at)}</span>
+                    <span suppressHydrationWarning>Redeemed: {formatDate(red.redeemed_at)}</span>
                     {red.collection_location && (
                       <>
                         <span>•</span>

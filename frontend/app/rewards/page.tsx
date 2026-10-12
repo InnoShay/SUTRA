@@ -32,6 +32,11 @@ function RewardsPageContent() {
   const initialTab = (searchParams.get("tab") as RewardsTab) || "wallet";
   const [activeTab, setActiveTab] = useState<RewardsTab>(initialTab);
   const [isPulseModalOpen, setIsPulseModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as RewardsTab | null;
@@ -71,7 +76,7 @@ function RewardsPageContent() {
 
         {/* Pulse Quick Action Banner */}
         <div className="flex items-center gap-3">
-          {studentPulseSubmitted ? (
+          {mounted && studentPulseSubmitted ? (
             <div className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-semibold">
               <Sparkles className="w-4 h-4 text-emerald-600" />
               <span>Weekly Pulse Done (+10 pts)</span>

@@ -323,16 +323,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [happinessTrends, setHappinessTrends] = useState<HappinessTrendResponse | null>(
     demoActive ? DEMO_HAPPINESS_TRENDS : null
   );
-  const [studentPulseSubmitted, setStudentPulseSubmitted] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        return window.localStorage.getItem("sutra_pulse_submitted_v1") === "true";
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
+  const [studentPulseSubmitted, setStudentPulseSubmitted] = useState<boolean>(false);
   const [isSubmittingPulse, setIsSubmittingPulse] = useState<boolean>(false);
   const [pulseSubmitError, setPulseSubmitError] = useState<string | null>(null);
 
@@ -814,7 +805,23 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
           setSignals(DEMO_SIGNALS);
           setInterventions(DEMO_INTERVENTIONS);
           setMlModelInfo(DEMO_ML_MODEL_INFO);
+          setHappinessAggregate(DEMO_HAPPINESS_AGGREGATE);
+          setHappinessTrends(DEMO_HAPPINESS_TRENDS);
+          setPointsWallet(DEMO_POINTS_WALLET);
+          setPointsTransactions(DEMO_POINTS_TRANSACTIONS);
+          setLeaderboardWeekly(DEMO_LEADERBOARD_WEEKLY);
+          setLeaderboardMonthly(DEMO_LEADERBOARD_MONTHLY);
+          setMyRedemptions(DEMO_REDEMPTIONS);
+          setAllRedemptions(DEMO_REDEMPTIONS);
           setIsLoadingBackend(false);
+        }
+
+        try {
+          if (localStorage.getItem("sutra_pulse_submitted_v1") === "true") {
+            setStudentPulseSubmitted(true);
+          }
+        } catch {
+          // ignore
         }
       } catch (e) {
         console.warn("Could not parse walkthrough URL parameters:", e);

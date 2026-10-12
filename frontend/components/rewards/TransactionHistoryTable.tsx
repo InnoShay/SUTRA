@@ -125,7 +125,7 @@ export function TransactionHistoryTable({
                   <td className="py-3.5 px-4 text-right text-neutral-500 whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
                       <Clock className="w-3 h-3 text-neutral-400" />
-                      <span>{formatDate(tx.created_at)}</span>
+                      <span suppressHydrationWarning>{formatDate(tx.created_at)}</span>
                     </div>
                   </td>
                 </tr>

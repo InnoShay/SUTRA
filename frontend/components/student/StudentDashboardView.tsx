@@ -353,7 +353,7 @@ export function StudentDashboardView() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {studentPulseSubmitted ? (
+          {mounted && studentPulseSubmitted ? (
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               <span>Check-in Complete</span>
@@ -382,11 +382,11 @@ export function StudentDashboardView() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300">
                 Points &amp; Rewards
               </span>
-              <span className="text-xs text-neutral-500">
+              <span suppressHydrationWarning className="text-xs text-neutral-500">
                 {pointsWallet?.points_this_week ?? 35} pts this week • Rank #{leaderboardWeekly?.current_user_entry?.rank ?? 3}
               </span>
             </div>
-            <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
+            <h3 suppressHydrationWarning className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
               Your SUTRA Points: {(pointsWallet?.available_balance ?? 385).toLocaleString()} Available
             </h3>
             <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
