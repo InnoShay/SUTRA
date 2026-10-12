@@ -427,8 +427,8 @@ export function CounselorOnboardingModal({
                           {contact.service_name}
                         </span>
                         {contact.is_emergency && (
-                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-50 text-rose-700 border border-rose-200/80">
-                            Emergency 24/7
+                          <span className="text-[11px] font-mono text-rose-600 font-semibold">
+                            • Emergency 24/7
                           </span>
                         )}
                       </div>

@@ -30,16 +30,12 @@ export function ModelEvaluationProvenanceCard({
             </span>
             <div>
               <h2 className="text-xl font-bold text-slate-900">{modelName}</h2>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
-                  Version: {modelVersion}
-                </span>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                  Decision Threshold: {operationalThreshold.toFixed(2)}
-                </span>
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                  Cutoff: Day 30
-                </span>
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 font-mono">
+                <span>v{modelVersion}</span>
+                <span className="text-slate-300">•</span>
+                <span>Threshold: {operationalThreshold.toFixed(2)}</span>
+                <span className="text-slate-300">•</span>
+                <span>Cutoff: Day 30</span>
               </div>
             </div>
           </div>

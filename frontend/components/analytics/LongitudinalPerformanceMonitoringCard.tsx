@@ -48,8 +48,8 @@ export default function LongitudinalPerformanceMonitoringCard({
             <h3 className="text-base font-semibold text-white tracking-tight">
               Longitudinal Model Performance &amp; Drift Monitoring
             </h3>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              Protocol: Setting 2
+            <span className="text-[11px] font-mono text-slate-400">
+              • Protocol: Setting 2
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
@@ -103,12 +103,14 @@ export default function LongitudinalPerformanceMonitoringCard({
                   </td>
                   <td className="py-3 px-3">
                     {isHistorical ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" /> Certified Outcomes
+                      <span className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Certified Outcomes
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                        <Clock className="w-3 h-3" /> Pending Day 120
+                      <span className="inline-flex items-center gap-1.5 text-xs font-mono text-amber-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Pending Day 120
                       </span>
                     )}
                   </td>

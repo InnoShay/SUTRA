@@ -69,7 +69,7 @@ export function LanguageSelector({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-150 border cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-150 border cursor-pointer ${
             isOpen
               ? "bg-white/20 text-white border-white/40 shadow-sm"
               : "bg-white/10 hover:bg-white/15 text-white/90 border-white/15"
@@ -100,8 +100,7 @@ export function LanguageSelector({
                   Regional Languages
                 </span>
               </div>
-              <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#d2f831]/15 text-[#d2f831] border border-[#d2f831]/30">
-                <Sparkles className="w-2.5 h-2.5" />
+              <span className="text-[10px] font-mono text-slate-400">
                 Sarvam AI
               </span>
             </div>
@@ -168,7 +167,7 @@ export function LanguageSelector({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3 py-1.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] active:bg-neutral-200/60 border rounded-full text-xs font-semibold text-neutral-800 shadow-2xs focus:outline-none transition-all cursor-pointer ${
+        className={`flex items-center gap-2 px-3 py-1.5 bg-[#F8F9FA] hover:bg-[#F1F3F6] active:bg-neutral-200/60 border rounded-xl text-xs font-semibold text-neutral-800 shadow-2xs focus:outline-none transition-all cursor-pointer ${
           isOpen
             ? "border-neutral-400 bg-white shadow-xs ring-2 ring-neutral-900/5"
             : "border-neutral-200/70"
@@ -205,10 +204,9 @@ export function LanguageSelector({
                 Indic Languages
               </span>
             </div>
-            <div className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/60 font-mono">
-              <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+            <span className="text-[10px] font-mono text-neutral-400">
               Sarvam AI
-            </div>
+            </span>
           </div>
 
           {/* Quick Filter Search */}

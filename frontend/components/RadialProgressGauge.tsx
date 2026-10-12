@@ -44,9 +44,9 @@ export function RadialProgressGauge({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="px-2.5 py-1 bg-neutral-100 rounded-full text-[11px] font-medium text-neutral-600">
-            {totalAssigned} {totalAssigned === 1 ? "Assigned" : "Assigned"}
-          </div>
+          <span className="text-xs font-mono text-neutral-500 font-medium">
+            ({totalAssigned} Assigned)
+          </span>
         </div>
       </div>
 

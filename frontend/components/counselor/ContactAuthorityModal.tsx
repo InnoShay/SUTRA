@@ -103,7 +103,8 @@ export function ContactAuthorityModal({
                 Contact Institutional Authority &amp; Escalate
               </h3>
               {isUrgent && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                   High Priority
                 </span>
               )}
@@ -201,7 +202,8 @@ export function ContactAuthorityModal({
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-neutral-900 truncate">{auth.service_name}</span>
                           {auth.is_emergency && (
-                            <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-red-50 text-red-700 border border-red-200">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-mono text-rose-600 font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                               24/7 Emergency
                             </span>
                           )}
@@ -216,11 +218,12 @@ export function ContactAuthorityModal({
 
                       <div className="shrink-0 text-right">
                         {isSelected ? (
-                          <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-neutral-900 text-white">
+                          <span className="text-xs font-semibold text-neutral-900 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-neutral-900" />
                             Selected
                           </span>
                         ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-neutral-100 text-neutral-800 border border-neutral-300">
+                          <span className="text-xs font-medium text-neutral-500">
                             Verified
                           </span>
                         )}

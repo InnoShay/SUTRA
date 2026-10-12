@@ -28,8 +28,8 @@ export function ActivityHeatmap({
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-700">
-          <Database className="w-3 h-3 text-neutral-500" />
+        <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+          <Database className="w-3.5 h-3.5 text-neutral-400" />
           <span>{backendConnected ? "Live Ingestion" : "Point-in-Time Snapshot"}</span>
         </div>
       </div>

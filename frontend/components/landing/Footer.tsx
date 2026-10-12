@@ -72,22 +72,6 @@ export default function Footer() {
                 <span>SLA-Governed Interventions</span>
               </p>
             </div>
-
-            {/* Quick Micro-Badges matching platform ecosystem */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
-                <span>Canvas LTI 1.3</span>
-              </div>
-              <div className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>FERPA Guarded</span>
-              </div>
-              <div className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#d2f831]" />
-                <span>48h SLA Engine</span>
-              </div>
-            </div>
           </div>
         </div>
 

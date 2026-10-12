@@ -64,9 +64,9 @@ export function LearningProgressChart({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="px-2.5 py-1 bg-neutral-100 rounded-full text-[11px] font-medium text-neutral-600">
-            {totalCases} {totalCases === 1 ? "Case" : "Cases"}
-          </div>
+          <span className="text-xs font-mono text-neutral-500 font-medium">
+            ({totalCases} {totalCases === 1 ? "Case" : "Cases"})
+          </span>
 
           <button
             onClick={handleCopy}

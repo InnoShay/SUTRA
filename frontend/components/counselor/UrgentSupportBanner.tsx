@@ -25,8 +25,8 @@ export function UrgentSupportBanner({
             <h4 className="text-sm font-bold text-white font-heading">
               Institutional Crisis &amp; Emergency Escalation Protocols
             </h4>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-              24/7 Rapid Response
+            <span className="text-[11px] font-mono text-rose-300 font-semibold">
+              • 24/7 Rapid Response
             </span>
           </div>
           <p className="text-xs text-neutral-300 mt-0.5 max-w-xl leading-relaxed">

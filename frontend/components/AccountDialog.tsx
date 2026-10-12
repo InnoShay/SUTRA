@@ -122,12 +122,11 @@ export function AccountDialog({ isOpen, onClose }: AccountDialogProps) {
                 <Mail className="w-3 h-3 text-neutral-400 shrink-0" />
                 <span className="truncate">{displayEmail}</span>
               </p>
-              <div className="flex items-center gap-1.5 mt-2">
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 border border-neutral-200/60 capitalize">
-                  {user.role || activeRole}
-                </span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">
-                  <CheckCircle2 className="w-2.5 h-2.5" />
+              <div className="flex items-center gap-2 mt-2 text-xs text-neutral-500 font-medium">
+                <span className="capitalize">{user.role || activeRole}</span>
+                <span className="text-neutral-300">•</span>
+                <span className="inline-flex items-center gap-1 text-emerald-700">
+                  <CheckCircle2 className="w-3 h-3" />
                   <span>Verified</span>
                 </span>
               </div>

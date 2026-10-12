@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { Globe, Lightbulb, Sparkles, TrendingUp, ShieldCheck } from "lucide-react";
+import { Sparkles, TrendingUp, ShieldCheck } from "lucide-react";
 
 export default function AboutBento() {
   const avatarStack = [
@@ -16,23 +15,14 @@ export default function AboutBento() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-4xl mx-auto mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-slate-500 uppercase mb-3 sm:mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
-            <span>ABOUT SUTRA</span>
+          <div className="text-xs font-bold tracking-widest text-slate-500 uppercase mb-3 sm:mb-4">
+            ABOUT SUTRA
           </div>
 
           <h2 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-slate-900 leading-[1.18]">
             An institutional orchestration partner <br className="hidden sm:inline" />
-            dedicated to building{" "}
-            <span className="inline-flex items-center align-middle mx-1 px-2.5 py-0.5 sm:py-1 rounded-full bg-[#38bdf8] text-white shadow-sm hover:scale-105 transition-transform">
-              <Globe className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-            </span>{" "}
-            smarter <br className="hidden sm:inline" />
-            and{" "}
-            <span className="inline-flex items-center align-middle mx-1 px-2.5 py-0.5 sm:py-1 rounded-full bg-[#d2f831] text-slate-950 shadow-sm hover:scale-105 transition-transform">
-              <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-            </span>{" "}
-            <span className="text-slate-400 font-bold">more accountable</span>
+            dedicated to building smarter <br className="hidden sm:inline" />
+            and <span className="text-slate-400 font-bold">more accountable</span>
           </h2>
         </div>
 
@@ -55,14 +45,14 @@ export default function AboutBento() {
               </div>
             </div>
 
-            {/* Photo of student / mentor against blue sky */}
-            <div className="absolute inset-0 z-0 flex items-center justify-center pt-8">
+            {/* Photo of university student on campus */}
+            <div className="absolute inset-0 z-0">
               <img
-                src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=700&q=80"
-                alt="Student & Mentor Success"
-                className="w-full h-full object-cover object-top opacity-95 group-hover:scale-105 transition-transform duration-700"
+                src="/images/landing-student-hero.jpg"
+                alt="Student Success & Academic Retention"
+                className="w-full h-full object-cover object-[center_20%] opacity-95 group-hover:scale-105 transition-transform duration-700"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1681eb]/95 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1681eb]/90 via-[#1681eb]/20 to-transparent" />
             </div>
 
             {/* Bottom floating white card */}

@@ -157,7 +157,7 @@ export default function DashboardPage() {
             <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
               STUDENTS IN SCOPE
             </span>
-            <span className="bg-neutral-100 text-neutral-600 rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
+            <span className="text-xs text-neutral-400 font-medium">
               {students.length} Learners
             </span>
           </div>
@@ -175,8 +175,9 @@ export default function DashboardPage() {
             <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
               SIGNALS PENDING REVIEW
             </span>
-            <span className="bg-amber-50 text-amber-800 border border-amber-200/60 rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
-              {pendingSignals.length > 0 ? "Action Required" : "Queue Clear"}
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+              <span className={`w-1.5 h-1.5 rounded-full ${pendingSignals.length > 0 ? "bg-amber-500" : "bg-emerald-500"}`} />
+              <span>{pendingSignals.length > 0 ? "Action Required" : "Queue Clear"}</span>
             </span>
           </div>
           <div className="text-3xl font-extrabold text-amber-600 tracking-tight pt-2">
@@ -193,8 +194,9 @@ export default function DashboardPage() {
             <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
               ACTIVE SUPPORT CASES
             </span>
-            <span className="bg-blue-50 text-blue-700 rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
-              In Progress
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+              <span>In Progress</span>
             </span>
           </div>
           <div className="text-3xl font-extrabold text-neutral-900 tracking-tight pt-2">
@@ -211,8 +213,9 @@ export default function DashboardPage() {
             <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
               TRIAGE VELOCITY RATE
             </span>
-            <span className="bg-emerald-50 text-emerald-700 rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
-              Closed Loop
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Closed Loop</span>
             </span>
           </div>
           <div className="text-3xl font-extrabold text-emerald-600 tracking-tight pt-2">
@@ -237,8 +240,8 @@ export default function DashboardPage() {
                 Early-warning triggers awaiting authorized human evaluation &amp; rationale
               </p>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
-              {pendingSignals.length} Pending
+            <span className="text-xs font-mono text-neutral-400">
+              ({pendingSignals.length} Pending)
             </span>
           </div>
 
@@ -287,10 +290,8 @@ export default function DashboardPage() {
                           <td className="py-3.5 px-4 font-semibold text-neutral-800 text-[11px]">
                             {trigger}
                           </td>
-                          <td className="py-3.5 px-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
-                              {conf}%
-                            </span>
+                          <td className="py-3.5 px-4 font-mono font-bold text-amber-600">
+                            {conf}%
                           </td>
                           <td className="py-3.5 px-4 text-neutral-600 font-mono text-[11px]">
                             {factor}
@@ -330,8 +331,9 @@ export default function DashboardPage() {
               <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                 NEXT ACTIONABLE MILESTONE
               </span>
-              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200/60">
-                Active SLA
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Active SLA</span>
               </span>
             </div>
 
@@ -433,10 +435,8 @@ export default function DashboardPage() {
                           <ArrowUpRight className="w-3.5 h-3.5 text-neutral-400" />
                         </Link>
                       </td>
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-neutral-100 text-neutral-800 border border-neutral-200/60">
-                          {c.state}
-                        </span>
+                      <td className="py-3.5 px-4 font-mono text-xs font-semibold text-neutral-700">
+                        {c.state}
                       </td>
                       <td className="py-3.5 px-4 text-neutral-600">
                         {(c.selected_intervention_key || "Academic Mentoring").replace(/_/g, " ")}
@@ -471,7 +471,7 @@ export default function DashboardPage() {
                               reason_code: "progressed_triage",
                             });
                           }}
-                          className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-full text-xs font-medium transition-colors cursor-pointer"
+                          className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-xl text-xs font-medium transition-colors cursor-pointer"
                         >
                           Advance State
                         </button>

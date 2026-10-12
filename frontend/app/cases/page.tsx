@@ -315,16 +315,17 @@ export default function CasesPage() {
                       <span className="text-[11px] font-mono text-neutral-400">
                         ({c.id})
                       </span>
-                      <span
-                        className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                          isResolved
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : c.state === "FOLLOW_UP_REQUIRED"
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : "bg-neutral-100 text-neutral-700 border-neutral-200"
-                        }`}
-                      >
-                        {c.state.replace(/_/g, " ")}
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isResolved
+                              ? "bg-emerald-500"
+                              : c.state === "FOLLOW_UP_REQUIRED"
+                              ? "bg-amber-500"
+                              : "bg-neutral-400"
+                          }`}
+                        />
+                        <span>{c.state.replace(/_/g, " ")}</span>
                       </span>
                     </div>
 

@@ -123,7 +123,7 @@ export function StudentProfileModal() {
             <Link
               href={`/students/${selectedStudent.id}`}
               onClick={() => setSelectedStudent(null)}
-              className="px-3 py-1.5 bg-white text-neutral-900 rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-neutral-100 transition-colors whitespace-nowrap"
+              className="px-3 py-1.5 bg-white text-neutral-900 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-neutral-100 transition-colors whitespace-nowrap shadow-2xs"
             >
               <span>Inspect</span>
               <ArrowUpRight className="w-3.5 h-3.5" />

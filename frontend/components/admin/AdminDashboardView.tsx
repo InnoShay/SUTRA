@@ -71,8 +71,8 @@ export function AdminDashboardView() {
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
               Welcome back, Admin!
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-900 text-white uppercase tracking-wider">
-              System Admin
+            <span className="text-xs font-mono font-bold text-neutral-500 uppercase tracking-wider">
+              (System Admin)
             </span>
           </div>
           <p className="text-xs text-neutral-500 mt-1 flex flex-wrap items-center gap-2">
@@ -202,8 +202,8 @@ export function AdminDashboardView() {
                   ML-evaluated signals with Platt calibration thresholds
                 </p>
               </div>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700">
-                {signals.length} Signals
+              <span className="text-xs font-mono text-neutral-400">
+                ({signals.length} Signals)
               </span>
             </div>
 
@@ -240,15 +240,16 @@ export function AdminDashboardView() {
                               {s.student_display_name || "Enrolled Student"}
                             </td>
                             <td className="py-3.5 px-4 font-mono">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                  riskVal >= 0.7
-                                    ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                    : riskVal >= 0.46
-                                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                }`}
-                              >
+                              <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-neutral-800">
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    riskVal >= 0.7
+                                      ? "bg-rose-500"
+                                      : riskVal >= 0.46
+                                      ? "bg-amber-500"
+                                      : "bg-emerald-500"
+                                  }`}
+                                />
                                 {Math.round(riskVal * 100)}% Risk
                               </span>
                             </td>
@@ -257,13 +258,12 @@ export function AdminDashboardView() {
                                 "Attendance & LMS Telemetry"}
                             </td>
                             <td className="py-3.5 px-4">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                                  isPending
-                                    ? "bg-amber-50 text-amber-800 border border-amber-200"
-                                    : "bg-neutral-100 text-neutral-700"
-                                }`}
-                              >
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-700">
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    isPending ? "bg-amber-500" : "bg-neutral-400"
+                                  }`}
+                                />
                                 {isPending ? "Awaiting Review" : "Reviewed"}
                               </span>
                             </td>
@@ -343,7 +343,8 @@ export function AdminDashboardView() {
                             </Link>
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-neutral-100 text-neutral-800 border border-neutral-200/60">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-neutral-800">
+                              <span className="w-1.5 h-1.5 rounded-full bg-neutral-700" />
                               {c.state}
                             </span>
                           </td>

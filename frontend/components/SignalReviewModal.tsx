@@ -237,8 +237,8 @@ export function SignalReviewModal({
                 <h3 className="text-base sm:text-lg font-bold text-neutral-900 font-heading">
                   Review Student Alert
                 </h3>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-200/80 text-neutral-700">
-                  30-Day Check
+                <span className="text-xs font-mono text-neutral-400 font-medium">
+                  (30-Day Check)
                 </span>
               </div>
               <p className="text-xs text-neutral-500 mt-0.5">
@@ -318,8 +318,8 @@ export function SignalReviewModal({
                     <h4 className="text-xs font-bold text-neutral-900">
                       AI Summary &amp; Suggestions
                     </h4>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                      Suggested
+                    <span className="text-xs font-mono text-neutral-400 font-medium">
+                      (Suggested)
                     </span>
                   </div>
                   <p className="text-[11px] text-neutral-500 mt-0.5">
@@ -333,7 +333,7 @@ export function SignalReviewModal({
                   type="button"
                   onClick={handleGenerateAiBrief}
                   disabled={loadingAi}
-                  className="px-3.5 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 disabled:opacity-60 flex-shrink-0 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 disabled:opacity-60 flex-shrink-0 cursor-pointer"
                 >
                   {loadingAi ? (
                     <>
@@ -466,8 +466,8 @@ export function SignalReviewModal({
                                 <span className="font-bold text-neutral-900 text-xs">
                                   {item.display_label}
                                 </span>
-                                <span className="text-[9px] uppercase px-1.5 py-0.5 bg-neutral-100 text-neutral-600 font-bold rounded">
-                                  {item.recipient_role}
+                                <span className="text-[10px] uppercase font-mono font-bold text-neutral-500">
+                                  [{item.recipient_role}]
                                 </span>
                               </div>
                               <p className="text-[11px] text-neutral-600 leading-snug">
@@ -478,9 +478,9 @@ export function SignalReviewModal({
                             <button
                               type="button"
                               onClick={() => handleAdoptIntervention(item)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition-all flex-shrink-0 cursor-pointer ${
+                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all flex-shrink-0 cursor-pointer ${
                                 isAdopted
-                                  ? "bg-indigo-600 text-white shadow-xs"
+                                  ? "bg-neutral-900 text-white shadow-xs"
                                   : "border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
                               }`}
                             >

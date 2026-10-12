@@ -81,8 +81,8 @@ export default function HistoricalRiskTrendsDashboard({
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-emerald-400" />
             <h2 className="text-lg font-bold text-white tracking-tight">Historical Risk Trends &amp; Monitoring</h2>
-            <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
-              Phase 7 Audited
+            <span className="text-[11px] font-mono text-slate-400 font-normal">
+              • Phase 7 Audited
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">

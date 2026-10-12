@@ -72,7 +72,7 @@ export function MultiTierTrendChart({
 
         <button
           onClick={() => setShowTable(!showTable)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 text-xs text-neutral-600 hover:bg-neutral-50 self-start sm:self-auto font-medium"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200/80 text-xs text-neutral-600 hover:bg-neutral-50 self-start sm:self-auto font-medium shadow-2xs"
         >
           <Table className="w-3.5 h-3.5 text-neutral-500" />
           <span>{showTable ? "Hide Data Table" : "Show Data Table"}</span>

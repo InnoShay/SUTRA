@@ -1,15 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, Menu, X, ArrowUpRight, ShieldCheck, Scale, Users } from "lucide-react";
+import { Menu, X, ArrowUpRight } from "lucide-react";
 import { LanguageSelector } from "../LanguageSelector";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [governanceOpen, setGovernanceOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,18 +17,6 @@ export default function Navbar() {
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setGovernanceOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -85,89 +71,6 @@ export default function Navbar() {
           >
             About Sutra
           </a>
-
-          {/* Governance Dropdown */}
-          <div
-            ref={dropdownRef}
-            className="relative py-1"
-            onMouseEnter={() => setGovernanceOpen(true)}
-            onMouseLeave={() => setGovernanceOpen(false)}
-          >
-            <button
-              type="button"
-              onClick={() => setGovernanceOpen((prev) => !prev)}
-              className="text-xs font-semibold tracking-wider uppercase transition-colors duration-200 flex items-center gap-1.5 cursor-pointer text-white/90 hover:text-white"
-              aria-expanded={governanceOpen}
-            >
-              <span>Governance</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 stroke-[2.5] transition-transform duration-200 ${
-                  governanceOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {/* Flyout Menu */}
-            {governanceOpen && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 z-50">
-                <div className="w-72 p-2 rounded-2xl bg-slate-950/95 backdrop-blur-xl border border-white/15 shadow-2xl text-white space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <a
-                    href="#about"
-                    onClick={() => setGovernanceOpen(false)}
-                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/10 transition-colors group"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5 text-[#d2f831]">
-                      <ShieldCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-white group-hover:text-[#d2f831] transition-colors">
-                        FERPA &amp; Audit Trail
-                      </div>
-                      <div className="text-[11px] text-white/60 font-normal leading-tight mt-0.5">
-                        Tamper-evident logs &amp; student privacy rules
-                      </div>
-                    </div>
-                  </a>
-
-                  <a
-                    href="#orchestration"
-                    onClick={() => setGovernanceOpen(false)}
-                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/10 transition-colors group"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5 text-sky-400">
-                      <Scale className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-white group-hover:text-sky-300 transition-colors">
-                        SLA &amp; Policy Engine
-                      </div>
-                      <div className="text-[11px] text-white/60 font-normal leading-tight mt-0.5">
-                        48h resolution standards &amp; routing rules
-                      </div>
-                    </div>
-                  </a>
-
-                  <a
-                    href="#projects"
-                    onClick={() => setGovernanceOpen(false)}
-                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/10 transition-colors group"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5 text-emerald-400">
-                      <Users className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
-                        Human-in-the-Loop
-                      </div>
-                      <div className="text-[11px] text-white/60 font-normal leading-tight mt-0.5">
-                        Advisor oversight with non-stigmatizing care
-                      </div>
-                    </div>
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
         </nav>
 
         {/* Right Section: Action Buttons & Indic Language Selector */}
@@ -231,7 +134,7 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
             >
-              Case Workflows &amp; Governance
+              Case Workflows
             </a>
           </div>
 

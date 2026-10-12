@@ -57,13 +57,6 @@ export default function CuriousShowcase() {
     ...showcaseProjects.map((p) => ({ ...p, uniqueKey: `set2-${p.id}` })),
   ];
 
-  const pillars = [
-    { num: "01", name: "Signal Provenance" },
-    { num: "02", name: "Mentor Triage" },
-    { num: "03", name: "48h SLA Action" },
-    { num: "04", name: "Verified Outcome" },
-  ];
-
   // Infinite Drag & Dynamic Ratio State
   const containerRef = useRef<HTMLDivElement>(null);
   const [translateX, setTranslateX] = useState(0);
@@ -267,9 +260,8 @@ export default function CuriousShowcase() {
       <div className="max-w-[2400px] mx-auto px-4 sm:px-6 lg:px-12">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
-          <p className="text-xs font-bold tracking-widest text-[#ea580c] uppercase mb-3 flex items-center justify-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ea580c] animate-pulse" />
-            <span>Behind the Interventions</span>
+          <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-3">
+            Behind the Interventions
           </p>
 
           <h2 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-slate-900 leading-[1.12]">
@@ -285,16 +277,15 @@ export default function CuriousShowcase() {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             <Link
               href="/dashboard"
-              className="px-5 py-2.5 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800 transition-all shadow-xs flex items-center gap-2 group"
+              className="px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-xs font-bold text-white transition-all shadow-xs flex items-center gap-2 group"
             >
               <span>Explore Workflows</span>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#f97316] group-hover:scale-110 transition-transform" />
             </Link>
 
             {/* Drag & Infinite Autoplay Cue */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100/80 text-slate-600 text-[11px] font-medium pointer-events-none">
-              <MoveHorizontal className="w-3.5 h-3.5 text-slate-400" />
-              <span>Infinite loop • Drag freely</span>
+            <div className="inline-flex items-center gap-1.5 text-slate-400 text-xs font-medium">
+              <MoveHorizontal className="w-3.5 h-3.5" />
+              <span>Drag to explore</span>
             </div>
           </div>
         </div>
@@ -369,20 +360,6 @@ export default function CuriousShowcase() {
               );
             })}
           </div>
-        </div>
-
-        {/* 4 Process Pillars below */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-12 border-t border-slate-100 max-w-4xl mx-auto text-center sm:text-left">
-          {pillars.map((p, idx) => (
-            <div key={idx} className="space-y-1">
-              <span className="text-xs font-mono font-bold text-slate-400">
-                /{p.num}
-              </span>
-              <p className="text-xs sm:text-sm font-bold text-slate-800">
-                {p.name}
-              </p>
-            </div>
-          ))}
         </div>
       </div>
     </section>

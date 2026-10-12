@@ -488,8 +488,8 @@ export default function SchedulePage() {
                           {/* Student name / confirmed badge */}
                           <div className="flex items-center justify-between gap-1 mt-1">
                             {event.status === "confirmed" ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/90 text-neutral-800 text-[10px] font-bold shadow-2xs border border-white/60">
-                                <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
+                              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold text-neutral-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                 <span>Confirmed</span>
                               </span>
                             ) : (
@@ -701,7 +701,7 @@ export default function SchedulePage() {
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 space-y-5">
             <div className="flex items-start justify-between border-b border-neutral-100 pb-3">
               <div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 uppercase font-mono">
+                <span className="text-[11px] font-bold text-neutral-500 uppercase font-mono tracking-wider">
                   {selectedEventForDetail.category}
                 </span>
                 <h3 className="text-lg font-bold text-neutral-900 mt-1">

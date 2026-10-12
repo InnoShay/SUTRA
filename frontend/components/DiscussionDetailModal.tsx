@@ -188,8 +188,8 @@ export function DiscussionDetailModal({
                 <span className="text-xs sm:text-sm font-bold text-neutral-900">
                   {discussion.author}
                 </span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-700">
-                  {discussion.authorRole || "Case Owner"}
+                <span className="text-xs font-mono text-neutral-400">
+                  ({discussion.authorRole || "Case Owner"})
                 </span>
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5">
@@ -243,7 +243,8 @@ export function DiscussionDetailModal({
                 <span className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-neutral-500" /> 10-State Lifecycle Status
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-neutral-900 text-white">
+                <span className="text-xs font-mono font-bold uppercase text-neutral-900 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-900" />
                   {boundCase.state}
                 </span>
               </div>

@@ -220,8 +220,8 @@ export function GovernedScenarioPanel({
             <div>
               <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2">
                 Governed What-If Scenario Exploration
-                <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                  Phase 8
+                <span className="text-[11px] font-mono text-neutral-400 font-semibold">
+                  (Phase 8)
                 </span>
               </h3>
               <p className="text-xs text-neutral-500">

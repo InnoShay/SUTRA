@@ -218,6 +218,7 @@ export interface FeatureAttributionChartProps {
   threshold?: number | null;
   isSynthetic?: boolean;
   className?: string;
+  theme?: "light" | "dark";
 }
 
 export function FeatureAttributionChart({
@@ -227,7 +228,9 @@ export function FeatureAttributionChart({
   threshold = 0.46,
   isSynthetic = false,
   className = "",
+  theme = "light",
 }: FeatureAttributionChartProps) {
+  const isLight = theme === "light";
   const [activeTab, setActiveTab] = useState<"diverging" | "drivers" | "protective" | "table">("diverging");
   const [showExplanation, setShowExplanation] = useState(false);
 
@@ -332,32 +335,36 @@ export function FeatureAttributionChart({
   const hasOutlier = maxAbsMagnitude > 4.0;
 
   return (
-    <div className={`p-5 rounded-2xl bg-neutral-900/80 border border-neutral-800 space-y-5 text-white ${className}`}>
+    <div className={`p-5 rounded-2xl ${isLight ? "bg-white border border-neutral-200/80 text-neutral-900 shadow-2xs" : "bg-neutral-900/80 border border-neutral-800 text-white"} space-y-5 ${className}`}>
       {/* Header with Title, Model Info, and Units */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-800">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b ${isLight ? "border-neutral-100" : "border-neutral-800"}`}>
         <div>
           <div className="flex items-center gap-2">
-            <h4 className="text-sm font-bold tracking-tight text-neutral-100 flex items-center gap-2">
-              <Scale className="w-4 h-4 text-violet-400" />
+            <h4 className={`text-sm font-bold tracking-tight ${isLight ? "text-neutral-900" : "text-neutral-100"} flex items-center gap-2`}>
+              <Scale className="w-4 h-4 text-violet-500" />
               Feature Attribution Decomposition
             </h4>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-950 text-violet-300 border border-violet-800/60">
+            <span className="text-[11px] font-mono text-neutral-400">
               Unit: Δ Log-Odds
             </span>
           </div>
-          <p className="text-[11px] text-neutral-400 mt-1">
+          <p className={`text-[11px] ${isLight ? "text-neutral-500" : "text-neutral-400"} mt-1`}>
             Method: Linear Log-Odds Decomposition ({modelName} v{modelVersion}) relative to Cohort Baseline Mean
           </p>
         </div>
 
         {/* View Switcher Tabs */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-neutral-950 border border-neutral-800 text-xs">
+        <div className={`flex items-center gap-1 p-1 rounded-xl ${isLight ? "bg-neutral-100 border border-neutral-200/70" : "bg-neutral-950 border border-neutral-800"} text-xs`}>
           <button
             type="button"
             onClick={() => setActiveTab("diverging")}
             className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
               activeTab === "diverging"
-                ? "bg-violet-600 text-white shadow-sm"
+                ? isLight
+                  ? "bg-white text-neutral-900 shadow-xs border border-neutral-200/70 font-semibold"
+                  : "bg-violet-600 text-white shadow-sm"
+                : isLight
+                ? "text-neutral-600 hover:text-neutral-900"
                 : "text-neutral-400 hover:text-neutral-200"
             }`}
             aria-label="View diverging bar chart"
@@ -370,12 +377,16 @@ export function FeatureAttributionChart({
             onClick={() => setActiveTab("drivers")}
             className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
               activeTab === "drivers"
-                ? "bg-rose-900/80 text-rose-200 border border-rose-700/60"
+                ? isLight
+                  ? "bg-rose-50 text-rose-700 border border-rose-200 font-semibold shadow-xs"
+                  : "bg-rose-900/80 text-rose-200 border border-rose-700/60"
+                : isLight
+                ? "text-neutral-600 hover:text-rose-700"
                 : "text-neutral-400 hover:text-rose-300"
             }`}
             aria-label="View risk drivers only"
           >
-            <TrendingUp className="w-3.5 h-3.5 text-rose-400" />
+            <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
             <span>Risk Drivers ({riskDrivers.length})</span>
           </button>
           <button
@@ -383,12 +394,16 @@ export function FeatureAttributionChart({
             onClick={() => setActiveTab("protective")}
             className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
               activeTab === "protective"
-                ? "bg-emerald-900/80 text-emerald-200 border border-emerald-700/60"
+                ? isLight
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shadow-xs"
+                  : "bg-emerald-900/80 text-emerald-200 border border-emerald-700/60"
+                : isLight
+                ? "text-neutral-600 hover:text-emerald-700"
                 : "text-neutral-400 hover:text-emerald-300"
             }`}
             aria-label="View protective factors only"
           >
-            <TrendingDown className="w-3.5 h-3.5 text-emerald-400" />
+            <TrendingDown className="w-3.5 h-3.5 text-emerald-500" />
             <span>Protective ({protectiveFactors.length})</span>
           </button>
           <button
@@ -396,7 +411,11 @@ export function FeatureAttributionChart({
             onClick={() => setActiveTab("table")}
             className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
               activeTab === "table"
-                ? "bg-neutral-800 text-white"
+                ? isLight
+                  ? "bg-white text-neutral-900 shadow-xs border border-neutral-200/70 font-semibold"
+                  : "bg-neutral-800 text-white"
+                : isLight
+                ? "text-neutral-600 hover:text-neutral-900"
                 : "text-neutral-400 hover:text-neutral-200"
             }`}
             aria-label="View accessible data table"
@@ -409,44 +428,44 @@ export function FeatureAttributionChart({
 
       {/* Attribution Balance Summary Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-900/40">
-          <div className="flex items-center justify-between text-xs text-rose-400">
+        <div className={`p-3 rounded-xl ${isLight ? "bg-rose-50/60 border border-rose-200/80" : "bg-rose-950/20 border border-rose-900/40"}`}>
+          <div className={`flex items-center justify-between text-xs ${isLight ? "text-rose-700" : "text-rose-400"}`}>
             <span className="font-semibold flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5" /> Total Risk Drivers
             </span>
             <span className="font-mono font-bold">+{totalRiskImpact.toFixed(2)} Δ logit</span>
           </div>
-          <p className="text-[10px] text-neutral-400 mt-1">
+          <p className={`text-[10px] ${isLight ? "text-neutral-600" : "text-neutral-400"} mt-1`}>
             {riskDrivers.length} factor{riskDrivers.length === 1 ? "" : "s"} elevating risk above cohort mean
           </p>
         </div>
 
-        <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/40">
-          <div className="flex items-center justify-between text-xs text-emerald-400">
+        <div className={`p-3 rounded-xl ${isLight ? "bg-emerald-50/60 border border-emerald-200/80" : "bg-emerald-950/20 border border-emerald-900/40"}`}>
+          <div className={`flex items-center justify-between text-xs ${isLight ? "text-emerald-700" : "text-emerald-400"}`}>
             <span className="font-semibold flex items-center gap-1">
               <TrendingDown className="w-3.5 h-3.5" /> Total Protective Offset
             </span>
             <span className="font-mono font-bold">-{totalProtectiveImpact.toFixed(2)} Δ logit</span>
           </div>
-          <p className="text-[10px] text-neutral-400 mt-1">
+          <p className={`text-[10px] ${isLight ? "text-neutral-600" : "text-neutral-400"} mt-1`}>
             {protectiveFactors.length} protective factor{protectiveFactors.length === 1 ? "" : "s"} lowering risk
           </p>
         </div>
 
-        <div className="p-3 rounded-xl bg-neutral-950/50 border border-neutral-800">
-          <div className="flex items-center justify-between text-xs text-neutral-300">
+        <div className={`p-3 rounded-xl ${isLight ? "bg-neutral-50/80 border border-neutral-200/80" : "bg-neutral-950/50 border border-neutral-800"}`}>
+          <div className={`flex items-center justify-between text-xs ${isLight ? "text-neutral-800" : "text-neutral-300"}`}>
             <span className="font-semibold flex items-center gap-1">
-              <Scale className="w-3.5 h-3.5 text-violet-400" /> Net Telemetry Shift
+              <Scale className="w-3.5 h-3.5 text-violet-500" /> Net Telemetry Shift
             </span>
             <span
               className={`font-mono font-bold ${
-                netLogOdds > 0 ? "text-rose-400" : netLogOdds < 0 ? "text-emerald-400" : "text-neutral-400"
+                netLogOdds > 0 ? "text-rose-600" : netLogOdds < 0 ? "text-emerald-600" : isLight ? "text-neutral-600" : "text-neutral-400"
               }`}
             >
               {netLogOdds >= 0 ? `+${netLogOdds.toFixed(2)}` : netLogOdds.toFixed(2)} Δ logit
             </span>
           </div>
-          <p className="text-[10px] text-neutral-400 mt-1">
+          <p className={`text-[10px] ${isLight ? "text-neutral-500" : "text-neutral-400"} mt-1`}>
             Net directional shift from centered cohort baseline
           </p>
         </div>
@@ -466,12 +485,12 @@ export function FeatureAttributionChart({
       {activeTab === "diverging" && (
         <div className="space-y-4 pt-2">
           {/* Axis Legend Header */}
-          <div className="grid grid-cols-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 border-b border-neutral-800 pb-2">
-            <div className="flex items-center gap-1 text-emerald-400 justify-end pr-6">
+          <div className={`grid grid-cols-2 text-[10px] font-semibold uppercase tracking-wider ${isLight ? "text-neutral-500 border-neutral-200/80" : "text-neutral-400 border-neutral-800"} border-b pb-2`}>
+            <div className={`flex items-center gap-1 ${isLight ? "text-emerald-700" : "text-emerald-400"} justify-end pr-6`}>
               <ArrowLeft className="w-3 h-3" />
               <span>Protective Factors (Decreases Risk)</span>
             </div>
-            <div className="flex items-center gap-1 text-rose-400 pl-6">
+            <div className={`flex items-center gap-1 ${isLight ? "text-rose-700" : "text-rose-400"} pl-6`}>
               <span>Risk Drivers (Increases Risk)</span>
               <ArrowRight className="w-3 h-3" />
             </div>
@@ -486,21 +505,25 @@ export function FeatureAttributionChart({
               return (
                 <div
                   key={idx}
-                  className="group relative p-2.5 rounded-xl bg-neutral-950/40 hover:bg-neutral-950/80 border border-neutral-800/70 transition-colors"
+                  className={`group relative p-2.5 rounded-xl ${
+                    isLight
+                      ? "bg-neutral-50/60 hover:bg-neutral-100/70 border border-neutral-200/70 shadow-2xs"
+                      : "bg-neutral-950/40 hover:bg-neutral-950/80 border border-neutral-800/70"
+                  } transition-colors`}
                   role="listitem"
                 >
                   {/* Feature Label and Canonical Key */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5 text-xs">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-neutral-100">{item.label}</span>
-                      <code className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+                      <span className={`font-semibold ${isLight ? "text-neutral-900" : "text-neutral-100"}`}>{item.label}</span>
+                      <code className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${isLight ? "bg-white text-neutral-600 border border-neutral-200 shadow-2xs" : "bg-neutral-800 text-neutral-300 border border-neutral-700"}`}>
                         {item.rawFeature}
                       </code>
                     </div>
 
-                    <div className="flex items-center gap-3 text-[11px] text-neutral-400 font-mono">
+                    <div className={`flex items-center gap-3 text-[11px] ${isLight ? "text-neutral-600" : "text-neutral-400"} font-mono`}>
                       <span>
-                        Observed: <strong className="text-neutral-200">{item.formattedValue}</strong> {item.unit}
+                        Observed: <strong className={isLight ? "text-neutral-900" : "text-neutral-200"}>{item.formattedValue}</strong> {item.unit}
                       </span>
                       {item.baselineMean !== undefined && (
                         <span className="text-neutral-500">
@@ -522,20 +545,24 @@ export function FeatureAttributionChart({
                   </div>
 
                   {/* Horizontal Diverging Bar Track */}
-                  <div className="relative h-6 w-full rounded-md bg-neutral-900 border border-neutral-800 overflow-hidden flex items-center">
+                  <div className={`relative h-6 w-full rounded-lg overflow-hidden flex items-center ${
+                    isLight ? "bg-neutral-100/90 border border-neutral-200/80" : "bg-neutral-900 border border-neutral-800"
+                  }`}>
                     {/* Centered Zero Guideline */}
-                    <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-neutral-600 z-10" />
+                    <div className={`absolute top-0 bottom-0 left-1/2 w-0.5 z-10 ${
+                      isLight ? "bg-neutral-300" : "bg-neutral-600"
+                    }`} />
 
                     {/* Left Half (Protective / Negative Contributions) */}
                     <div className="w-1/2 h-full flex justify-end items-center pr-0.5">
                       {item.direction === "protective" && (
                         <div
-                          className="h-4 rounded-l bg-gradient-to-l from-emerald-500 to-emerald-600 transition-all duration-300 relative group-hover:brightness-110 flex items-center justify-start pl-2"
+                          className="h-4 rounded-l bg-gradient-to-l from-emerald-500 to-emerald-600 transition-all duration-300 relative group-hover:brightness-105 flex items-center justify-start pl-2"
                           style={{ width: `${barWidthPct}%` }}
                           aria-label={`Protective factor: -${absVal.toFixed(2)} log-odds`}
                         >
                           {barWidthPct > 20 && (
-                            <span className="text-[9px] font-mono font-bold text-emerald-950">
+                            <span className="text-[9px] font-mono font-bold text-white">
                               -{absVal.toFixed(2)}
                             </span>
                           )}
@@ -547,19 +574,21 @@ export function FeatureAttributionChart({
                     <div className="w-1/2 h-full flex justify-start items-center pl-0.5">
                       {item.direction === "risk_driver" && (
                         <div
-                          className="h-4 rounded-r bg-gradient-to-r from-rose-500 to-rose-600 transition-all duration-300 relative group-hover:brightness-110 flex items-center justify-end pr-2"
+                          className="h-4 rounded-r bg-gradient-to-r from-rose-500 to-rose-600 transition-all duration-300 relative group-hover:brightness-105 flex items-center justify-end pr-2"
                           style={{ width: `${barWidthPct}%` }}
                           aria-label={`Risk driver: +${absVal.toFixed(2)} log-odds`}
                         >
                           {barWidthPct > 20 && (
-                            <span className="text-[9px] font-mono font-bold text-rose-950">
+                            <span className="text-[9px] font-mono font-bold text-white">
                               +{absVal.toFixed(2)}
                             </span>
                           )}
                         </div>
                       )}
                       {item.direction === "neutral" && (
-                        <div className="flex items-center gap-1 pl-2 text-[10px] text-neutral-500 italic">
+                        <div className={`flex items-center gap-1 pl-2 text-[10px] font-mono italic ${
+                          isLight ? "text-neutral-500" : "text-neutral-500"
+                        }`}>
                           <Minus className="w-3 h-3" /> Baseline reference (0.00)
                         </div>
                       )}
@@ -691,22 +720,23 @@ export function FeatureAttributionChart({
                     {item.baselineMean !== undefined ? `${item.baselineMean} ${item.unit}` : "N/A"}
                   </td>
                   <td className="py-2.5 font-sans">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        item.direction === "risk_driver"
-                          ? "bg-rose-950 text-rose-300 border border-rose-800/60"
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-300">
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          item.direction === "risk_driver"
+                            ? "bg-rose-500"
+                            : item.direction === "protective"
+                            ? "bg-emerald-500"
+                            : "bg-neutral-500"
+                        }`}
+                      />
+                      <span>
+                        {item.direction === "risk_driver"
+                          ? "Risk Driver"
                           : item.direction === "protective"
-                          ? "bg-emerald-950 text-emerald-300 border border-emerald-800/60"
-                          : "bg-neutral-800 text-neutral-400"
-                      }`}
-                    >
-                      {item.direction === "risk_driver" && <TrendingUp className="w-3 h-3" />}
-                      {item.direction === "protective" && <TrendingDown className="w-3 h-3" />}
-                      {item.direction === "risk_driver"
-                        ? "Risk Driver"
-                        : item.direction === "protective"
-                        ? "Protective Factor"
-                        : "Baseline Neutral"}
+                          ? "Protective Factor"
+                          : "Baseline Neutral"}
+                      </span>
                     </span>
                   </td>
                   <td className="py-2.5 text-right font-bold">

@@ -61,8 +61,8 @@ export default function HistoricalRiskTrendChart({ trendData, isLoading = false 
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-emerald-400" />
             <h3 className="text-base font-semibold text-white tracking-tight">Longitudinal Cohort Risk Trajectory</h3>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Ref: {reference_model_version}
+            <span className="text-[11px] font-mono text-slate-400">
+              • Ref: {reference_model_version}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">

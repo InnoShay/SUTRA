@@ -217,14 +217,8 @@ export default function StudentsPage() {
               }`}
             >
               <span>{tab}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                  activeStudentFilter === tab
-                    ? "bg-white/20 text-white"
-                    : "bg-neutral-100 text-neutral-600"
-                }`}
-              >
-                {count}
+              <span className="text-[10px] text-neutral-400 font-mono">
+                ({count})
               </span>
             </button>
           );
@@ -257,18 +251,19 @@ export default function StudentsPage() {
                       <h3 className="text-base font-bold text-neutral-900 tracking-tight leading-snug">
                         {student.name}
                       </h3>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          student.status === "Active"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : student.status === "At Risk"
-                            ? "bg-amber-50 text-amber-700"
-                            : student.status === "Completed"
-                            ? "bg-blue-50 text-blue-700"
-                            : "bg-neutral-100 text-neutral-600"
-                        }`}
-                      >
-                        {student.status}
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            student.status === "Active"
+                              ? "bg-emerald-500"
+                              : student.status === "At Risk"
+                              ? "bg-amber-500"
+                              : student.status === "Completed"
+                              ? "bg-sky-500"
+                              : "bg-neutral-400"
+                          }`}
+                        />
+                        <span>{student.status}</span>
                       </span>
                     </div>
                     <p className="text-xs text-neutral-400 mt-0.5">

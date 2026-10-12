@@ -108,13 +108,14 @@ export function SubgroupFairnessTable({
                   </td>
                   <td className="px-3.5 py-2">
                     {isLowConfidence ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                        {"Low Confidence (N < 100)"}
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span>{"Low Confidence (N < 100)"}</span>
                       </span>
-
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        Stable Sample
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>Stable Sample</span>
                       </span>
                     )}
                   </td>

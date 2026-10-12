@@ -6,6 +6,7 @@ import Navbar from "./Navbar";
 import { ArrowUpRight, Plus, Star } from "lucide-react";
 
 export default function Hero() {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const ribbonRef = useRef<HTMLDivElement>(null);
   const [isRibbonDragging, setIsRibbonDragging] = useState(false);
   const [isRibbonHovered, setIsRibbonHovered] = useState(false);
@@ -13,7 +14,17 @@ export default function Hero() {
   const scrollLeftRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
 
-  // Ribbon Drag to Scroll on Mouse/Touch
+  // Ensure background video is reliably muted, autoplays, and slowed down smoothly to ~0.8x
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.playbackRate = 0.8;
+      videoRef.current.play().catch(() => {});
+    }
+  }, []);
+
+  // Ribbon Drag to Scroll on Mouse/Touch (Drag-only mode, autoplay disabled)
   const handleRibbonMouseDown = (e: React.MouseEvent) => {
     if (!ribbonRef.current) return;
     setIsRibbonDragging(true);
@@ -33,27 +44,23 @@ export default function Hero() {
     setIsRibbonDragging(false);
   };
 
-  // Continuous Seamless Infinite Autoplay Drift for the Hero Carousel Ribbon
-  useEffect(() => {
-    const drift = () => {
-      if (ribbonRef.current && !isRibbonDragging && !isRibbonHovered) {
-        ribbonRef.current.scrollLeft += 0.6;
-        const halfWidth = ribbonRef.current.scrollWidth / 2;
-        // Seamless circular wrap when first duplicate set scrolls past
-        if (ribbonRef.current.scrollLeft >= halfWidth) {
-          ribbonRef.current.scrollLeft -= halfWidth;
-        }
-      }
-      animFrameRef.current = requestAnimationFrame(drift);
-    };
+  const handleRibbonTouchStart = (e: React.TouchEvent) => {
+    if (!ribbonRef.current) return;
+    setIsRibbonDragging(true);
+    startXRef.current = e.touches[0].pageX - ribbonRef.current.offsetLeft;
+    scrollLeftRef.current = ribbonRef.current.scrollLeft;
+  };
 
-    animFrameRef.current = requestAnimationFrame(drift);
-    return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
-    };
-  }, [isRibbonDragging, isRibbonHovered]);
+  const handleRibbonTouchMove = (e: React.TouchEvent) => {
+    if (!isRibbonDragging || !ribbonRef.current) return;
+    const x = e.touches[0].pageX - ribbonRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+    ribbonRef.current.scrollLeft = scrollLeftRef.current - walk;
+  };
+
+  const handleRibbonTouchEnd = () => {
+    setIsRibbonDragging(false);
+  };
 
   const renderCardSet = (prefix: string) => (
     <React.Fragment key={prefix}>
@@ -61,7 +68,7 @@ export default function Hero() {
       <div className="w-[clamp(190px,16vw,260px)] shrink-0 rounded-2xl sm:rounded-3xl bg-white/95 p-4 sm:p-5 shadow-none border border-white/90 hover:-translate-y-1.5 transition-transform duration-300">
         <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold text-slate-700 mb-3">
           <span>Attendance &amp; LMS</span>
-          <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">+4.2%</span>
+          <span className="text-xs text-emerald-600 font-semibold">+4.2%</span>
         </div>
         <div className="h-24 sm:h-28 flex items-end justify-between gap-2 pt-2 px-1">
           <div className="w-3.5 bg-slate-100 rounded-t h-[40%]" />
@@ -76,7 +83,7 @@ export default function Hero() {
       <div className="w-[clamp(190px,16vw,260px)] shrink-0 rounded-2xl sm:rounded-3xl bg-white/95 p-4 sm:p-5 shadow-none border border-white/90 hover:-translate-y-1.5 transition-transform duration-300">
         <div className="flex items-baseline justify-between mb-2">
           <span className="text-sm sm:text-base font-bold text-slate-900">48h SLA</span>
-          <span className="text-[10px] text-emerald-600 font-bold animate-pulse">18h Left</span>
+          <span className="text-xs text-emerald-600 font-semibold">18h Left</span>
         </div>
         <div className="space-y-2 pt-2">
           <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 flex items-center justify-between text-[11px]">
@@ -98,13 +105,9 @@ export default function Hero() {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
-          <span className="px-2.5 py-1 rounded-full bg-white/95 text-slate-900 font-bold text-[10px] sm:text-[11px]">
-            Case #8941
-          </span>
-          <span className="px-2.5 py-1 rounded-full bg-[#d2f831] text-slate-950 font-bold text-[10px] sm:text-[11px]">
-            Lab Matched
-          </span>
+        <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between text-xs text-white drop-shadow-sm font-semibold">
+          <span>Case #8941</span>
+          <span>Lab Matched</span>
         </div>
       </div>
 
@@ -138,9 +141,8 @@ export default function Hero() {
       {/* Card 5: Dark Charcoal Card (Seamless, Zero Blackish Shadow) */}
       <div className="w-[clamp(210px,18vw,300px)] shrink-0 rounded-2xl sm:rounded-3xl bg-[#111625] p-4 sm:p-5 text-white shadow-none border border-white/20 z-20 flex flex-col justify-between h-52 sm:h-60 hover:-translate-y-1.5 transition-transform duration-300">
         <div>
-          <div className="flex items-center gap-1.5 text-[#d2f831] text-xs font-mono mb-2">
-            <span className="w-2 h-2 rounded-full bg-[#d2f831] animate-ping" />
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Orchestration</span>
+          <div className="text-slate-400 font-mono text-xs uppercase tracking-wider mb-2 font-semibold">
+            Orchestration
           </div>
           <h4 className="font-display font-bold text-xs sm:text-sm leading-snug text-white">
             Combines Provenance, Faculty Mentors &amp; Care
@@ -202,19 +204,24 @@ export default function Hero() {
       {/* Outer Rounded Hero Container with Fluid Dynamic Sizing */}
       <div className="relative rounded-[24px] sm:rounded-[32px] md:rounded-[40px] overflow-hidden bg-gradient-to-b from-[#1075d9] via-[#1a84ec] to-[#3ca3fa] min-h-[700px] sm:min-h-[780px] lg:min-h-[860px] flex flex-col justify-between shadow-none transition-all duration-300">
         
-        {/* Pixel/Photorealistic Cloud Background at bottom */}
-        <div 
-          className="absolute inset-0 z-0 pointer-events-none mix-blend-screen opacity-90 transition-opacity duration-500"
-          style={{
-            backgroundImage: "url('/clouds-bg.jpe')",
-            backgroundPosition: "center bottom",
-            backgroundSize: "cover",
-            backgroundRepeat: "no-repeat",
-          }}
-        />
+        {/* Muted Background Video (Autoplay, Seamless Loop) */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <video
+            ref={videoRef}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/gemini_generated_video_a63509ef.mp4" type="video/mp4" />
+          </video>
+          {/* Subtle translucent gradient overlay to harmonize with theme and ensure clear typography contrast */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1075d9]/40 via-transparent to-[#1075d9]/60" />
+        </div>
 
         {/* Soft Radial Ambient Glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[90vw] max-w-[800px] h-[350px] sm:h-[450px] bg-white/15 blur-[100px] sm:blur-[130px] rounded-full pointer-events-none z-0" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[90vw] max-w-[800px] h-[350px] sm:h-[450px] bg-white/10 blur-[100px] sm:blur-[130px] rounded-full pointer-events-none z-0" />
 
         {/* Top Navbar */}
         <Navbar />
@@ -265,6 +272,9 @@ export default function Hero() {
               onMouseDown={handleRibbonMouseDown}
               onMouseMove={handleRibbonMouseMove}
               onMouseUp={handleRibbonMouseUp}
+              onTouchStart={handleRibbonTouchStart}
+              onTouchMove={handleRibbonTouchMove}
+              onTouchEnd={handleRibbonTouchEnd}
               className={`flex items-center gap-4 sm:gap-5 md:gap-6 overflow-x-auto no-scrollbar py-6 px-4 sm:px-8 select-none transition-all duration-300 ${
                 isRibbonDragging ? "cursor-grabbing" : "cursor-grab"
               }`}

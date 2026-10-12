@@ -321,7 +321,7 @@ export default function DocumentsPage() {
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
               Document Integrity
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-600 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Base Sepolia (84532)
             </span>
@@ -516,31 +516,33 @@ export default function DocumentsPage() {
 
                     <div className="flex items-center gap-2 shrink-0">
                       {isDraft && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-amber-700 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                           Draft
                         </span>
                       )}
                       {isFinalized && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-700 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                           Finalized
                         </span>
                       )}
                       {isAnchored && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-700 font-medium">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                           Anchored
                         </span>
                       )}
 
                       {doc.verification_status === "verified_match" && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                          <Check className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-700 font-semibold">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
                           Authentic Match
                         </span>
                       )}
                       {doc.verification_status === "mismatch" && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono text-rose-600 font-semibold">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                           Tamper Alert
                         </span>
                       )}
@@ -870,8 +872,8 @@ export default function DocumentsPage() {
                 <h2 className="text-sm font-bold text-neutral-900 font-heading">
                   SBI Digital Rupee (e₹) Milestone Rewards
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                  Simulated Boundary
+                <span className="text-[11px] font-mono text-amber-700 font-medium">
+                  (Simulated Boundary)
                 </span>
               </div>
               <p className="text-xs text-neutral-500 mt-0.5">
@@ -949,7 +951,8 @@ export default function DocumentsPage() {
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-neutral-900">{v.voucher_id}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-neutral-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                       {v.status}
                     </span>
                   </div>

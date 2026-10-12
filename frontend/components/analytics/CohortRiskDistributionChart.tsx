@@ -44,7 +44,7 @@ export function CohortRiskDistributionChart({
             <h3 className="text-base font-bold text-neutral-900 tracking-tight font-heading">
               Cohort Early-Warning Risk Distribution
             </h3>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200/60">
+            <span className="text-[11px] font-mono text-neutral-500 font-medium">
               Threshold: {threshold.toFixed(2)}
             </span>
           </div>

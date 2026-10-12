@@ -93,7 +93,8 @@ export function GuidanceReportView({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Self-Reflection Profile
               </span>
               <span className="text-xs font-semibold text-neutral-500">
@@ -338,13 +339,21 @@ function DimensionScoreCard({ dimension }: { dimension: DimensionScoreResult }) 
           </div>
 
           {isScored && dimension.band ? (
-            <span
-              className={`px-3 py-1 rounded-full text-[10px] font-extrabold border shrink-0 ${dimension.band.badgeClass}`}
-            >
+            <span className="text-xs font-semibold text-neutral-800 flex items-center gap-1.5 shrink-0">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  dimension.band.key === "current_resource"
+                    ? "bg-emerald-500"
+                    : dimension.band.key === "mixed_developing"
+                    ? "bg-amber-500"
+                    : "bg-neutral-500"
+                }`}
+              />
               {dimension.band.label}
             </span>
           ) : (
-            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-600 border border-neutral-200 shrink-0">
+            <span className="text-xs font-medium text-neutral-500 flex items-center gap-1.5 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
               Insufficient responses
             </span>
           )}

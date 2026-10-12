@@ -126,14 +126,13 @@ export default function CaseDetailPage() {
                       .replace(/\b\w/g, (l) => l.toUpperCase())
                   : "Academic Support & Mentorship Plan"}
               </h1>
-              <span
-                className={`text-xs font-semibold px-3 py-1 rounded-full border ${
-                  isResolved
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-amber-50 text-amber-700 border-amber-200"
-                }`}
-              >
-                {matchedCase.state.replace(/_/g, " ")}
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    isResolved ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
+                />
+                <span>{matchedCase.state.replace(/_/g, " ")}</span>
               </span>
             </div>
             <p className="text-xs text-neutral-500 flex items-center gap-2">
@@ -144,7 +143,7 @@ export default function CaseDetailPage() {
           </div>
 
           <div className="shrink-0 flex items-center gap-2">
-            <span className="text-xs text-neutral-500 bg-neutral-50 px-3 py-1.5 rounded-full border border-neutral-200/70">
+            <span className="text-xs text-neutral-500 font-medium">
               Assigned Mentor: <strong className="text-neutral-800 font-semibold">{matchedCase.primary_owner_user_id || "Faculty Mentor"}</strong>
             </span>
           </div>
@@ -192,7 +191,7 @@ export default function CaseDetailPage() {
                       Target Window: Within 48 hours • Assignee: Faculty Mentor
                     </p>
                   </div>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-200/70 text-neutral-700 shrink-0">
+                  <span className="text-xs font-mono text-neutral-500 shrink-0">
                     {t.state}
                   </span>
                 </div>

@@ -139,8 +139,8 @@ export default function AnalyticsPage() {
             <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
               Cohort Risk Analytics &amp; Indicators
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
-              {dataProvenance === "live" ? "Live Telemetry" : "Demo Snapshot"}
+            <span className="text-[11px] font-mono text-neutral-400">
+              ({dataProvenance === "live" ? "Live Telemetry" : "Demo Snapshot"})
             </span>
           </div>
           <p className="text-xs text-neutral-500 mt-1">
@@ -149,14 +149,14 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Timeframe Pill Switcher */}
-          <div className="flex items-center p-1 bg-neutral-100 rounded-full border border-neutral-200/50">
+          {/* Timeframe Segmented Control */}
+          <div className="flex items-center p-0.5 bg-neutral-100/90 rounded-xl border border-neutral-200/60">
             {timeframes.map((tf) => (
               <button
                 key={tf}
                 onClick={() => setAnalyticsTimeframe(tf)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${analyticsTimeframe === tf
-                  ? "bg-white text-neutral-900 shadow-sm"
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${analyticsTimeframe === tf
+                  ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200/60 font-bold"
                   : "text-neutral-500 hover:text-neutral-800"
                   }`}
               >
@@ -170,7 +170,7 @@ export default function AnalyticsPage() {
             onClick={fetchCohortAnalytics}
             disabled={isRefreshing}
             title={`Last refreshed at ${lastRefreshedAt}`}
-            className="p-2 rounded-full border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600 transition-colors"
+            className="p-2 rounded-xl border border-neutral-200/80 bg-white hover:bg-neutral-50 text-neutral-600 transition-colors shadow-2xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-neutral-900" : ""}`} />
           </button>

@@ -79,8 +79,8 @@ export function StudentEvidenceLedger({
               <h3 className="text-base font-bold text-neutral-900 tracking-tight">
                 SUTRA 5-Tier Evidence Architecture
               </h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200">
-                Hierarchical Audit
+              <span className="text-[11px] font-mono text-neutral-400">
+                (Hierarchical Audit)
               </span>
             </div>
             <p className="text-xs text-neutral-500">
@@ -276,8 +276,8 @@ export function StudentEvidenceLedger({
               <h3 className="text-base font-bold text-neutral-900 tracking-tight">
                 Model Input Evidence &amp; Completeness Audit
               </h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                25 Day-30 Canonical Features
+              <span className="text-[11px] font-mono text-neutral-400">
+                • 25 Day-30 Canonical Features
               </span>
             </div>
             <p className="text-xs text-neutral-500">
@@ -285,28 +285,23 @@ export function StudentEvidenceLedger({
             </p>
           </div>
 
-          {/* Readiness Status Badge */}
+          {/* Readiness Status Indicator */}
           {readiness && (
             <div className="flex items-center gap-2">
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
-                  readiness.is_ready_for_inference
-                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                    : "bg-amber-100 text-amber-800 border border-amber-300"
-                }`}
-              >
-                {readiness.is_ready_for_inference ? (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Input Vector Complete (25/25)</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Incomplete Telemetry ({readiness.features_available_count}/25)</span>
-                  </>
-                )}
-              </span>
+              <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-700">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    readiness.is_ready_for_inference ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
+                />
+                <span>
+                  {readiness.is_ready_for_inference ? (
+                    "Input Vector Complete (25/25)"
+                  ) : (
+                    `Incomplete Telemetry (${readiness.features_available_count}/25)`
+                  )}
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -316,113 +311,126 @@ export function StudentEvidenceLedger({
           <button
             type="button"
             onClick={() => setReadinessFilter("available")}
-            className={`p-3 rounded-2xl border text-left transition-all ${
-              readinessFilter === "available" ? "bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400" : "bg-neutral-50 border-neutral-200/70 hover:bg-neutral-100"
+            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+              readinessFilter === "available"
+                ? "bg-white border-[#ff5b1a] shadow-xs ring-1 ring-[#ff5b1a]/30"
+                : "bg-white border-neutral-200/80 hover:border-neutral-300"
             }`}
           >
-            <div className="text-xs font-semibold text-emerald-800">Available Features</div>
-            <div className="text-lg font-bold font-mono text-emerald-900 mt-0.5">
+            <div className="text-xs font-semibold text-neutral-600">Available Features</div>
+            <div className="text-xl font-bold font-mono text-neutral-900 mt-1">
               {readiness?.features_available_count ?? 25}
             </div>
-            <p className="text-[10px] text-neutral-500 mt-0.5">Observed in active campus</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Observed in active campus</p>
           </button>
 
           <button
             type="button"
             onClick={() => setReadinessFilter("missing")}
-            className={`p-3 rounded-2xl border text-left transition-all ${
-              readinessFilter === "missing" ? "bg-rose-50 border-rose-300 ring-1 ring-rose-400" : "bg-neutral-50 border-neutral-200/70 hover:bg-neutral-100"
+            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+              readinessFilter === "missing"
+                ? "bg-white border-[#ff5b1a] shadow-xs ring-1 ring-[#ff5b1a]/30"
+                : "bg-white border-neutral-200/80 hover:border-neutral-300"
             }`}
           >
-            <div className="text-xs font-semibold text-rose-800">Missing Telemetry</div>
-            <div className="text-lg font-bold font-mono text-rose-900 mt-0.5">
+            <div className="text-xs font-semibold text-neutral-600">Missing Telemetry</div>
+            <div className="text-xl font-bold font-mono text-neutral-900 mt-1">
               {readiness?.features_missing_count ?? 0}
             </div>
-            <p className="text-[10px] text-neutral-500 mt-0.5">Omitted from profile</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Omitted from profile</p>
           </button>
 
           <button
             type="button"
             onClick={() => setReadinessFilter("underivable")}
-            className={`p-3 rounded-2xl border text-left transition-all ${
-              readinessFilter === "underivable" ? "bg-slate-100 border-slate-300 ring-1 ring-slate-400" : "bg-neutral-50 border-neutral-200/70 hover:bg-neutral-100"
+            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+              readinessFilter === "underivable"
+                ? "bg-white border-[#ff5b1a] shadow-xs ring-1 ring-[#ff5b1a]/30"
+                : "bg-white border-neutral-200/80 hover:border-neutral-300"
             }`}
           >
-            <div className="text-xs font-semibold text-slate-800">Underivable / Gap</div>
-            <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
+            <div className="text-xs font-semibold text-neutral-600">Underivable / Gap</div>
+            <div className="text-xl font-bold font-mono text-neutral-900 mt-1">
               {readiness?.features_underivable_count ?? 0}
             </div>
-            <p className="text-[10px] text-neutral-500 mt-0.5">Not recorded by LMS</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Not recorded by LMS</p>
           </button>
 
           <button
             type="button"
             onClick={() => setReadinessFilter("all")}
-            className={`p-3 rounded-2xl border text-left transition-all ${
-              readinessFilter === "all" ? "bg-violet-50 border-violet-300 ring-1 ring-violet-400" : "bg-neutral-50 border-neutral-200/70 hover:bg-neutral-100"
+            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+              readinessFilter === "all"
+                ? "bg-white border-[#ff5b1a] shadow-xs ring-1 ring-[#ff5b1a]/30"
+                : "bg-white border-neutral-200/80 hover:border-neutral-300"
             }`}
           >
-            <div className="text-xs font-semibold text-violet-800">Total Canonical Schema</div>
-            <div className="text-lg font-bold font-mono text-violet-900 mt-0.5">
+            <div className="text-xs font-semibold text-neutral-600">Total Canonical Schema</div>
+            <div className="text-xl font-bold font-mono text-neutral-900 mt-1">
               25 Features
             </div>
-            <p className="text-[10px] text-neutral-500 mt-0.5">Frozen Day-30 schema</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Frozen Day-30 schema</p>
           </button>
         </div>
 
         {/* Feature Readiness Ledger Table */}
-        <div className="border border-neutral-200/80 rounded-2xl overflow-hidden">
+        <div className="border border-neutral-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs">
           <table className="w-full text-left text-xs" aria-label="Model Input Features Completeness Audit">
             <caption className="sr-only">
               Audit table verifying canonical Day-30 features required by the early warning model, showing input availability, observed values, and provenance notes.
             </caption>
-            <thead className="bg-neutral-50 border-b border-neutral-200/70 text-neutral-500 uppercase text-[10px] font-bold">
+            <thead className="bg-neutral-50/70 border-b border-neutral-200/80 text-neutral-400 uppercase text-[10px] font-semibold tracking-wider">
               <tr>
-                <th scope="col" className="py-2.5 px-4">Canonical Feature</th>
-                <th scope="col" className="py-2.5 px-4">Domain Category</th>
-                <th scope="col" className="py-2.5 px-4">Observed Model Input</th>
-                <th scope="col" className="py-2.5 px-4">Availability Status</th>
-                <th scope="col" className="py-2.5 px-4 text-right">Derivation &amp; Telemetry Audit Note</th>
+                <th scope="col" className="py-3 px-4 font-semibold">Canonical Feature</th>
+                <th scope="col" className="py-3 px-4 font-semibold">Domain Category</th>
+                <th scope="col" className="py-3 px-4 font-semibold">Observed Model Input</th>
+                <th scope="col" className="py-3 px-4 font-semibold">Availability Status</th>
+                <th scope="col" className="py-3 px-4 text-right font-semibold">Derivation &amp; Telemetry Audit Note</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {filteredFeatures.length > 0 ? (
                 filteredFeatures.map((feat, idx) => (
-                  <tr key={idx} className="hover:bg-neutral-50/50">
-                    <td className="py-2.5 px-4 font-mono font-medium text-neutral-900">
+                  <tr key={idx} className="hover:bg-neutral-50/60 transition-colors">
+                    <td className="py-3 px-4 font-mono text-xs text-neutral-900 font-medium">
                       <code>{feat.feature_name}</code>
                     </td>
-                    <td className="py-2.5 px-4 text-neutral-600 capitalize">
+                    <td className="py-3 px-4 text-neutral-600 text-xs capitalize">
                       {feat.category.replace(/_/g, " ")}
                     </td>
-                    <td className="py-2.5 px-4 font-mono font-bold text-neutral-800">
+                    <td className="py-3 px-4 font-mono font-bold text-neutral-900 text-xs">
                       {feat.observed_value !== null && feat.observed_value !== undefined ? (
                         <span>{String(feat.observed_value)}</span>
                       ) : (
                         <span className="text-neutral-400 font-normal italic">Unavailable</span>
                       )}
                     </td>
-                    <td className="py-2.5 px-4">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          feat.status === "available"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : feat.status === "missing"
-                            ? "bg-rose-50 text-rose-700 border border-rose-200"
-                            : "bg-slate-100 text-slate-700 border border-slate-200"
-                        }`}
-                      >
-                        {feat.status.toUpperCase()}
-                      </span>
+                    <td className="py-3 px-4">
+                      {feat.status === "available" ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span>Available</span>
+                        </span>
+                      ) : feat.status === "missing" ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-rose-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                          <span>Missing</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
+                          <span>Underivable</span>
+                        </span>
+                      )}
                     </td>
-                    <td className="py-2.5 px-4 text-right text-[11px] text-neutral-500 max-w-xs truncate">
+                    <td className="py-3 px-4 text-right text-xs text-neutral-400 font-mono truncate max-w-xs">
                       {feat.derivation_note}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-6 px-4 text-center text-xs text-neutral-400">
+                  <td colSpan={5} className="py-8 px-4 text-center text-xs text-neutral-400">
                     {loadingReadiness ? "Auditing model input feature completeness..." : "All 25 canonical features verified and complete in active campus ledger."}
                   </td>
                 </tr>
