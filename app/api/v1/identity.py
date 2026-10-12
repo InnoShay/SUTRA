@@ -46,7 +46,7 @@ def _identity_response(identity: StudentIdentity) -> StudentIdentityResponse:
         contract_address=settings.BASE_SEPOLIA_NFT_CONTRACT_ADDRESS,
         explorer_url=f"https://sepolia.basescan.org/tx/{tx_hash}" if tx_hash else None,
         onchain_enabled=onchain_enabled,
-        artwork_url=f"/identity/art/{identity.sutra_id}.png",
+        artwork_url=f"/api/v1/identity/art/{identity.sutra_id}.png",
     )
 
 
