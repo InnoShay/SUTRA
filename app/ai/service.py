@@ -175,7 +175,8 @@ class AIService:
                 "event_at": o.event_at.isoformat() if o.event_at else None,
             }
             for o in raw_obs
-            if o.domain.lower() not in ("finance", "fee", "billing", "financial_aid", "scholarship")
+            if o.domain.lower() not in ("financial", "finance", "fee", "fees", "billing", "financial_aid", "scholarship")
+            and not o.domain.lower().startswith("financ")
         ]
 
         # 4. Fetch Campus Intervention Catalog
@@ -397,7 +398,8 @@ class AIService:
                 "event_at": o.event_at.isoformat() if o.event_at else None,
             }
             for o in obs_res.scalars().all()
-            if o.domain.lower() not in ("finance", "fee", "billing", "financial_aid", "scholarship")
+            if o.domain.lower() not in ("financial", "finance", "fee", "fees", "billing", "financial_aid", "scholarship")
+            and not o.domain.lower().startswith("financ")
         ]
 
         catalog = await self._get_campus_catalog(db, institution_id)

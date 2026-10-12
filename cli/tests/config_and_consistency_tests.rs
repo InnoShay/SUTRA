@@ -100,9 +100,12 @@ fn test_invalid_uuid_rejection() {
 #[test]
 fn test_exit_code_heuristics() {
     fn classify_exit_code(err: &str) -> i32 {
-        if err.contains("401") || err.contains("403") || err.contains("Unauthorized") || err.contains("Forbidden") {
+        if err.contains("401") || err.contains("403") || err.contains("Unauthorized") || err.contains("Permission Denied") {
             3
-        } else if err.contains("Invalid") || err.contains("Validation") || err.contains("Policy Violation") || err.contains("Usage") {
+        } else if err.contains("400") || err.contains("404") || err.contains("409") || err.contains("422")
+            || err.contains("Invalid") || err.contains("Validation") || err.contains("Policy Violation")
+            || err.contains("Usage") || err.contains("Unprocessable") || err.contains("Conflict") || err.contains("Not Found")
+            || err.contains("Anti-leakage") || err.contains("forbidden") || err.contains("Forbidden") {
             2
         } else {
             1
@@ -111,6 +114,10 @@ fn test_exit_code_heuristics() {
 
     assert_eq!(classify_exit_code("HTTP 401 Unauthorized: token expired"), 3);
     assert_eq!(classify_exit_code("HTTP 403 Forbidden: campus tenant mismatch"), 3);
+    assert_eq!(classify_exit_code("HTTP 422 Unprocessable Entity: missing required features"), 2);
+    assert_eq!(classify_exit_code("HTTP 409 Conflict: cannot transition state"), 2);
+    assert_eq!(classify_exit_code("HTTP 404 Not Found: student does not exist"), 2);
+    assert_eq!(classify_exit_code("Anti-leakage Violation: Input features contain strictly forbidden target outcome"), 2);
     assert_eq!(classify_exit_code("Validation Error: Student identifier cannot be empty."), 2);
     assert_eq!(classify_exit_code("Invalid --campus UUID 'abc'."), 2);
     assert_eq!(classify_exit_code("Policy Violation: Cannot transition from RESOLVED to OPEN"), 2);

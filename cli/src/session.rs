@@ -9,7 +9,7 @@ use uuid::Uuid;
 use std::os::unix::fs::PermissionsExt;
 
 /// Structure representing a locally stored, verified CLI authentication session.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct CliSession {
     /// Supabase JWT access token
     pub access_token: String,
@@ -28,6 +28,21 @@ pub struct CliSession {
     pub expires_at: Option<i64>,
     /// ISO-8601 timestamp when this session was stored locally
     pub stored_at: String,
+}
+
+impl std::fmt::Debug for CliSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CliSession")
+            .field("access_token", &redact_token(&self.access_token))
+            .field("user_id", &self.user_id)
+            .field("email", &self.email)
+            .field("active_campus_id", &self.active_campus_id)
+            .field("campus_name", &self.campus_name)
+            .field("roles", &self.roles)
+            .field("expires_at", &self.expires_at)
+            .field("stored_at", &self.stored_at)
+            .finish()
+    }
 }
 
 impl CliSession {

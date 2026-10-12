@@ -2,7 +2,7 @@ use crate::session::{CliSession, SessionManager};
 use std::env;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CliConfig {
     pub api_url: String,
     pub campus_id: Option<Uuid>,
@@ -10,6 +10,18 @@ pub struct CliConfig {
     pub json: bool,
     #[allow(dead_code)]
     pub session: Option<CliSession>,
+}
+
+impl std::fmt::Debug for CliConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CliConfig")
+            .field("api_url", &self.api_url)
+            .field("campus_id", &self.campus_id)
+            .field("token", &self.token.as_ref().map(|t| crate::session::redact_token(t)))
+            .field("json", &self.json)
+            .field("session", &self.session)
+            .finish()
+    }
 }
 
 impl CliConfig {
