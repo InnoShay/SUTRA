@@ -287,111 +287,111 @@ export function StudentDashboardView() {
         <div className="flex items-center gap-2.5 flex-wrap">
           <Link
             href="/assessment"
-            className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 border border-neutral-200/80 rounded-xl text-xs font-semibold shadow-2xs transition-all min-h-[42px]"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 border border-neutral-200 rounded-xl text-xs font-semibold shadow-2xs transition-all min-h-[42px]"
           >
-            <Sparkles className="w-4 h-4 text-purple-600" />
+            <Sparkles className="w-4 h-4 text-neutral-900" />
             <span>Self-Reflection Assessment</span>
           </Link>
           <Link
             href="/request-support"
-            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all min-h-[42px]"
+            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-2xs transition-all min-h-[42px]"
           >
-            <HeartHandshake className="w-4 h-4 text-emerald-400" />
+            <HeartHandshake className="w-4 h-4 text-white" />
             <span>Request Support</span>
           </Link>
         </div>
       </div>
 
-      {/* Assessment Interactive Callout Banner */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white border border-purple-200/70 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Assessment Interactive Callout Card */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-neutral-200 shadow-2xs hover:border-neutral-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start sm:items-center gap-3.5">
-          <div className="p-3 bg-purple-700 text-white rounded-2xl shadow-sm shrink-0">
-            <Sparkles className="w-5 h-5 text-purple-200" />
+          <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 text-neutral-900 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-neutral-900" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full border border-purple-200">
-                Student Self-Reflection
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200">
+                Self-Reflection
               </span>
-              <span className="text-xs text-neutral-500">18 Questions · 3–4 Minutes · Confidential</span>
+              <span className="text-xs text-neutral-400 font-mono">18 Questions</span>
             </div>
             <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
               Explore Your Learning Strengths &amp; Support Priorities
             </h3>
-            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
-              Confidential, non-evaluative guidance assessment across 6 dimensions to prepare for your next mentor check-in.
+            <p className="text-xs text-neutral-500 mt-0.5 max-w-xl">
+              Confidential guidance assessment across 6 dimensions to prepare for your mentor check-in.
             </p>
           </div>
         </div>
         <Link
           href="/assessment"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all shrink-0 active:scale-[0.98]"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all shrink-0 active:scale-[0.98]"
         >
           <span>Take Assessment</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      {/* Weekly Happiness Pulse Compact Card */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-50/80 via-orange-50/30 to-white border border-rose-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 2. Weekly Happiness Pulse Compact Card */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-neutral-200 shadow-2xs hover:border-neutral-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start sm:items-center gap-3.5">
-          <div className="p-3 bg-rose-600 text-white rounded-2xl shadow-sm shrink-0">
-            <Heart className="w-5 h-5 fill-rose-100 text-rose-100" />
+          <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 text-neutral-900 flex items-center justify-center shrink-0">
+            <Heart className="w-5 h-5 text-neutral-900 fill-neutral-900" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full border border-rose-200">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200">
                 Weekly Pulse
               </span>
-              <span className="text-xs text-neutral-500">About 1–2 minutes • Confidential</span>
+              <span className="text-xs text-neutral-400 font-mono">6 Questions · Confidential</span>
             </div>
             <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
               Your Weekly Happiness Pulse
             </h3>
-            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
-              A quick check-in to help us improve your college experience. Six lightweight questions across wellbeing, community, and support.
+            <p className="text-xs text-neutral-500 mt-0.5 max-w-xl">
+              Quick check-in to share feedback on wellbeing, campus life, and student support.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {mounted && studentPulseSubmitted ? (
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 bg-neutral-100 border border-neutral-300 text-neutral-900 rounded-xl text-xs font-semibold">
+              <CheckCircle2 className="w-3.5 h-3.5 text-neutral-900" />
               <span>Check-in Complete</span>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setIsPulseModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
             >
-              <Heart className="w-3.5 h-3.5 fill-white" />
+              <Heart className="w-3.5 h-3.5 fill-white text-white" />
               <span>Start check-in</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Voluntary Student Engagement & Rewards Summary Card */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-50/70 via-orange-50/30 to-white border border-amber-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 3. Voluntary Student Engagement & Rewards Summary Card */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-neutral-200 shadow-2xs hover:border-neutral-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start sm:items-center gap-3.5">
-          <div className="p-3 bg-amber-600 text-white rounded-2xl shadow-sm shrink-0">
-            <Coins className="w-5 h-5 text-amber-100" />
+          <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 text-neutral-900 flex items-center justify-center shrink-0">
+            <Coins className="w-5 h-5 text-neutral-900" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200">
                 Points &amp; Rewards
               </span>
-              <span suppressHydrationWarning className="text-xs text-neutral-500">
-                {pointsWallet?.points_this_week ?? 85} pts this week • Rank #{myPrivateRankWeekly?.current_rank ?? 12} (Private)
+              <span suppressHydrationWarning className="text-xs text-neutral-400 font-mono">
+                {pointsWallet?.points_this_week ?? 85} pts this week
               </span>
             </div>
             <h3 suppressHydrationWarning className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
               Your SUTRA Points: {(pointsWallet?.available_balance ?? 385).toLocaleString()} Available
             </h3>
-            <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
-              Earned through voluntary participation in pulses, workshops, and campus initiatives. Keep your position private.
+            <p className="text-xs text-neutral-500 mt-0.5 max-w-xl">
+              Earned through voluntary participation in pulses, workshops, and campus activities.
             </p>
           </div>
         </div>
@@ -399,16 +399,16 @@ export function StudentDashboardView() {
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <Link
             href="/rewards?tab=store"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
           >
-            <Gift className="w-3.5 h-3.5 text-amber-300" />
+            <Gift className="w-3.5 h-3.5 text-white" />
             <span>Rewards Store</span>
           </Link>
           <Link
             href="/rewards?tab=leaderboard"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 border border-neutral-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-900 border border-neutral-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
           >
-            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+            <Trophy className="w-3.5 h-3.5 text-neutral-700" />
             <span>My Progress</span>
           </Link>
         </div>
