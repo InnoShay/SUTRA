@@ -1,0 +1,31 @@
+{
+  "external_student_ref": "TEST-STUDENT-001",
+  "cutoff_days": 30,
+  "features": {
+    "num_of_prev_attempts": 0,
+    "studied_credits": 60,
+    "days_registered_before_start": -32.0,
+    "has_missing_registration_date": 0,
+    "vle_total_clicks_d30": 350,
+    "vle_active_days_d30": 18,
+    "vle_clicks_precourse": 45,
+    "vle_clicks_poststart_d30": 305,
+    "vle_clicks_last_7d": 65,
+    "vle_days_since_last_click": 1.0,
+    "vle_clicks_forumng_d30": 40,
+    "vle_clicks_oucontent_d30": 210,
+    "vle_clicks_quiz_d30": 15,
+    "vle_clicks_homepage_d30": 60,
+    "vle_clicks_other_d30": 25,
+    "has_vle_activity_d30": 1,
+    "assessments_submitted_d30": 2,
+    "assessment_banked_d30": 0,
+    "has_early_assessment_submission_d30": 1,
+    "gender": "M",
+    "region": "South Region",
+    "highest_education": "HE Qualification",
+    "imd_band": "60-70%",
+    "age_band": "0-35",
+    "disability": "N"
+  }
+}

@@ -5,7 +5,7 @@
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-red.svg)](https://www.sqlalchemy.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14%20App%20Router-black.svg)](https://nextjs.org/)
 [![Rust](https://img.shields.io/badge/Rust-CLI%201.75%2B-orange.svg)](https://www.rust-lang.org/)
-[![Tests](https://img.shields.io/badge/Tests-86%2F86%20Backend%20%7C%206%2F6%20Frontend%20%7C%207%2F7%20CLI%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-96%2F96%20Backend%20%7C%206%2F6%20Frontend%20%7C%2031%2F31%20CLI%20Passed-brightgreen.svg)]()
 
 > **Core Product Principle:** *“No Alert Without Action.”*
 
@@ -236,26 +236,36 @@ cd frontend && npm test
 
 ## 🦀 Rust CLI (`sutra-cli`)
 
-The standalone Rust CLI communicates exclusively with the backend via HTTPS `/api/v1`:
+The standalone Rust CLI communicates exclusively with the backend via HTTPS `/api/v1`. Full documentation is available in [cli/README.md](cli/README.md).
 
 ```bash
+# Automated Build & Test
+./scripts/build_cli.sh
+
+# Install into ~/.local/bin
+./scripts/install_cli.sh
+
 # General Syntax
-./cli/target/release/sutra [OPTIONS] <COMMAND>
+sutra [OPTIONS] <COMMAND>
 
 # Check service health & DB readiness
-./cli/target/release/sutra health
+sutra health
 
-# List campus-controlled intervention catalogue
-./cli/target/release/sutra --token "$TOKEN" catalogue
+# Authenticate & manage session
+sutra auth login
+sutra auth whoami
 
 # Inspect signal triage queue
-./cli/target/release/sutra --token "$TOKEN" signals list
+sutra signals list
 
 # Query bounded AI review brief for a signal
-./cli/target/release/sutra --token "$TOKEN" ai review-brief <SIGNAL_ID>
+sutra ai review-brief <SIGNAL_ID>
 
 # List and coordinate active cases
-./cli/target/release/sutra --token "$TOKEN" cases list
+sutra cases list
+
+# Run Day-30 early-warning prediction
+sutra predict --file cli/tests/fixtures/valid_sample.json
 ```
 
 ---
