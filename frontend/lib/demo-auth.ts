@@ -104,11 +104,11 @@ export const DEMO_PERSONAS: Record<UserRole, DemoPersona> = {
     name: 'Asha (synthetic)',
     title: 'Enrolled Student • CS-Y2',
     email: 'syn-1007@sutra.edu',
-    userId: 'SYN-1007',
+    userId: '66666666-6666-6666-6666-666666666666',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     badge: 'Student',
     token:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJTWU4tMTAwNyIsImVtYWlsIjoic3luLTEwMDdAc3V0cmEuZWR1IiwiYXVkIjoiYXV0aGVudGljYXRlZCIsInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoyNTAwMDAwMDAwfQ.dummy_token_student',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjY2NjY2Ni02NjY2LTY2NjYtNjY2Ni02NjY2NjY2NjY2NjYiLCJlbWFpbCI6InN5bi0xMDA3QHN1dHJhLmVkdSIsImF1ZCI6ImF1dGhlbnRpY2F0ZWQiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImV4cCI6MjUwMDAwMDAwMH0.uJD7UEXtAtglOlqPg8V5PJqpcFnCn00CjEsxlz5Z2Sc',
     canViewIndividualStudents: false, // strictly restricted to own record
     canReassignCases: false,
     canViewCounselling: false,

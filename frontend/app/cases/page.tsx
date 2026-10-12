@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSkillHub } from "@/lib/store";
 import {
@@ -14,6 +14,8 @@ import {
   ArrowUpRight,
   AlertCircle,
 } from "lucide-react";
+import { StudentCaseSummaryDTO } from "@/lib/types";
+import { api, isDemoMode } from "@/lib/api";
 
 export default function CasesPage() {
   const { user, currentPersona, cases, activeRole, backendError, refreshBackendData } = useSkillHub();
@@ -23,18 +25,120 @@ export default function CasesPage() {
   const isStudent = activeRole === "student";
   const studentId = currentPersona?.userId || "SYN-1007";
 
-  // For students, filter only their own cases; for staff/admin, display permitted cases
-  const relevantCases = isStudent
-    ? cases.filter(
-        (c) => c.student_id === studentId || c.external_student_ref === studentId
-      )
-    : cases;
+  // Authenticated student-scoped case state
+  const [studentCases, setStudentCases] = useState<StudentCaseSummaryDTO[]>([]);
+  const [isLoadingStudentCases, setIsLoadingStudentCases] = useState(isStudent);
+  const [studentCasesError, setStudentCasesError] = useState<string | null>(null);
+
+  const fetchStudentCases = React.useCallback(async () => {
+    if (!isStudent) return;
+    setIsLoadingStudentCases(true);
+    setStudentCasesError(null);
+    try {
+      const response = await api.proposed.getMyCases();
+      setStudentCases(response.items || []);
+    } catch (err: any) {
+      if (isDemoMode()) {
+        const demoFiltered = cases.filter(
+          (c) => c.student_id === studentId || c.external_student_ref === studentId
+        );
+        setStudentCases(
+          demoFiltered.map((c) => ({
+            id: c.id,
+            institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
+            student_id: c.student_id,
+            title: c.selected_intervention_key
+              ? c.selected_intervention_key.replace(/_/g, " ")
+              : "Support Plan",
+            state: c.state,
+            selected_intervention_key: c.selected_intervention_key,
+            primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
+            tasks_count: c.tasks?.length || 0,
+            open_tasks_count:
+              c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
+            created_at: c.created_at,
+            updated_at: c.updated_at,
+          }))
+        );
+      } else {
+        setStudentCasesError(
+          err?.message ||
+            "Unable to retrieve student support cases. Backend endpoint GET /api/v1/cases/my-cases is pending release."
+        );
+        setStudentCases([]);
+      }
+    } finally {
+      setIsLoadingStudentCases(false);
+    }
+  }, [isStudent, studentId, cases]);
+
+  // Load student cases on mount or identity change, clearing stale data
+  React.useEffect(() => {
+    if (!isStudent) {
+      setIsLoadingStudentCases(false);
+      setStudentCasesError(null);
+      return;
+    }
+    let active = true;
+    setIsLoadingStudentCases(true);
+    setStudentCasesError(null);
+    setStudentCases([]);
+
+    api.proposed
+      .getMyCases()
+      .then((res) => {
+        if (!active) return;
+        setStudentCases(res.items || []);
+        setIsLoadingStudentCases(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isDemoMode()) {
+          const demoFiltered = cases.filter(
+            (c) => c.student_id === studentId || c.external_student_ref === studentId
+          );
+          setStudentCases(
+            demoFiltered.map((c) => ({
+              id: c.id,
+              institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
+              student_id: c.student_id,
+              title: c.selected_intervention_key
+                ? c.selected_intervention_key.replace(/_/g, " ")
+                : "Support Plan",
+              state: c.state,
+              selected_intervention_key: c.selected_intervention_key,
+              primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
+              tasks_count: c.tasks?.length || 0,
+              open_tasks_count:
+                c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
+              created_at: c.created_at,
+              updated_at: c.updated_at,
+            }))
+          );
+        } else {
+          setStudentCasesError(
+            err?.message ||
+              "Unable to retrieve student support cases. Backend endpoint GET /api/v1/cases/my-cases is pending release."
+          );
+          setStudentCases([]);
+        }
+        setIsLoadingStudentCases(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isStudent, user.fullName, currentPersona?.userId, studentId, cases]);
+
+  // For students: student-scoped records; for staff: campus-wide authorized queue
+  const relevantCases = isStudent ? (studentCases as any[]) : cases;
 
   // Search & Status filtering
   const filteredCases = relevantCases.filter((c) => {
+    const studentName = (c as any).student_display_name || (c as any).title || "";
     const matchesSearch =
       c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.student_display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.selected_intervention_key &&
         c.selected_intervention_key.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -103,14 +207,39 @@ export default function CasesPage() {
 
       {/* Backend Offline Indicator Banner */}
       {backendError && (
-        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs flex items-center justify-between gap-3">
+        <div
+          className={`p-3.5 rounded-2xl text-xs flex items-center justify-between gap-3 ${
+            backendError.toLowerCase().includes("jwt") ||
+            backendError.toLowerCase().includes("auth") ||
+            backendError.toLowerCase().includes("token") ||
+            backendError.toLowerCase().includes("unauthorized")
+              ? "bg-rose-50 border border-rose-200/80 text-rose-800"
+              : "bg-amber-50 border border-amber-200/80 text-amber-800"
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-            <span>Backend service is unreachable ({backendError}). Viewing local case cache.</span>
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                backendError.toLowerCase().includes("jwt") ||
+                backendError.toLowerCase().includes("auth") ||
+                backendError.toLowerCase().includes("token") ||
+                backendError.toLowerCase().includes("unauthorized")
+                  ? "bg-rose-500"
+                  : "bg-amber-500"
+              }`}
+            />
+            {backendError.toLowerCase().includes("jwt") ||
+            backendError.toLowerCase().includes("auth") ||
+            backendError.toLowerCase().includes("token") ||
+            backendError.toLowerCase().includes("unauthorized") ? (
+              <span>Authentication error ({backendError}). Please sign in to verify your credentials.</span>
+            ) : (
+              <span>Backend service is unreachable ({backendError}). Viewing local case cache.</span>
+            )}
           </div>
           <button
             onClick={() => refreshBackendData()}
-            className="px-3 py-1 bg-white hover:bg-neutral-50 text-neutral-800 rounded-lg text-xs font-semibold border border-amber-200 transition-colors shrink-0"
+            className="px-3 py-1 bg-white hover:bg-neutral-50 text-neutral-800 rounded-lg text-xs font-semibold border border-neutral-200 transition-colors shrink-0"
           >
             Retry Connection
           </button>
@@ -119,7 +248,28 @@ export default function CasesPage() {
 
       {/* Case List */}
       <div className="skill-card bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
-        {filteredCases.length === 0 ? (
+        {isStudent && isLoadingStudentCases ? (
+          <div className="p-6 space-y-4">
+            <div className="h-20 bg-neutral-100 rounded-2xl animate-pulse" />
+            <div className="h-20 bg-neutral-100 rounded-2xl animate-pulse" />
+          </div>
+        ) : isStudent && studentCasesError ? (
+          <div className="p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-neutral-900">Student Case History Service</p>
+                <p className="text-neutral-600 mt-0.5">{studentCasesError}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => fetchStudentCases()}
+              className="px-3.5 py-1.5 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl text-xs font-semibold border border-amber-300 transition-colors shrink-0 self-start sm:self-auto shadow-2xs"
+            >
+              Retry Connection
+            </button>
+          </div>
+        ) : filteredCases.length === 0 ? (
           <div className="p-12 text-center bg-neutral-50 rounded-2xl border border-neutral-100">
             <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
             <h3 className="text-sm font-bold text-neutral-900">
@@ -144,8 +294,10 @@ export default function CasesPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredCases.map((c) => {
+            {filteredCases.map((c: any) => {
               const isResolved = c.state === "RESOLVED" || c.state === "CLOSED";
+              const taskCount = c.tasks_count !== undefined ? c.tasks_count : (c.tasks?.length || 0);
+              const ownerName = c.primary_owner_name || c.primary_owner_user_id || "Faculty Mentor";
               return (
                 <div
                   key={c.id}
@@ -157,8 +309,8 @@ export default function CasesPage() {
                         {c.selected_intervention_key
                           ? c.selected_intervention_key
                               .replace(/_/g, " ")
-                              .replace(/\b\w/g, (l) => l.toUpperCase())
-                          : "Academic Support & Mentorship Plan"}
+                              .replace(/\b\w/g, (l: string) => l.toUpperCase())
+                          : c.title || "Academic Support & Mentorship Plan"}
                       </span>
                       <span className="text-[11px] font-mono text-neutral-400">
                         ({c.id})
@@ -179,9 +331,9 @@ export default function CasesPage() {
                     <p className="text-xs text-neutral-500 flex flex-wrap items-center gap-2">
                       <span>Submitted: {new Date(c.created_at).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</span>
                       <span>•</span>
-                      <span>Assigned to: <strong className="text-neutral-700 font-semibold">{c.primary_owner_user_id || "Faculty Mentor"}</strong></span>
+                      <span>Assigned to: <strong className="text-neutral-700 font-semibold">{ownerName}</strong></span>
                       <span>•</span>
-                      <span>Tasks: {c.tasks?.length || 0} scheduled</span>
+                      <span>Tasks: {taskCount} scheduled</span>
                     </p>
                   </div>
 

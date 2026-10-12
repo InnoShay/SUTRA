@@ -17,14 +17,17 @@ import {
   Shield,
 } from "lucide-react";
 import { RequestCounselorCallModal } from "@/components/RequestCounselorCallModal";
+import { api } from "@/lib/api";
+import { SupportTicketCategory } from "@/lib/types";
 
 export default function RequestSupportPage() {
   const router = useRouter();
   const { user, currentPersona, cases, callRequests, requestCounselorCall } = useSkillHub();
 
   const [subject, setSubject] = useState("");
-  const [category, setCategory] = useState("wellbeing_counseling");
+  const [category, setCategory] = useState<string>("wellbeing_counseling");
   const [description, setDescription] = useState("");
+  const [urgency, setUrgency] = useState<"low" | "medium" | "high" | "critical">("medium");
   const [preferredContact, setPreferredContact] = useState<"phone" | "in_person" | "video">("in_person");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedCaseRef, setSubmittedCaseRef] = useState<string | null>(null);
@@ -54,28 +57,28 @@ export default function RequestSupportPage() {
       label: "Academic Tutoring & Mentorship",
       desc: "Coursework difficulties, exam preparation, and subject guidance.",
       available: false,
-      limitation: "Direct academic ticket dispatch endpoint is pending backend integration. Please request a counselor consultation for immediate triage.",
+      limitation: "Direct academic ticket dispatch endpoint (POST /api/v1/support/tickets) is pending backend integration. Please request a counselor consultation for immediate triage.",
     },
     {
       id: "attendance_support",
       label: "Attendance & Schedule Support",
       desc: "Transit delays, medical absences, or scheduling conflicts.",
       available: false,
-      limitation: "Direct attendance ticket dispatch endpoint is pending backend integration. Contact your faculty mentor directly.",
+      limitation: "Direct attendance ticket dispatch endpoint (POST /api/v1/support/tickets) is pending backend integration. Contact your faculty mentor directly.",
     },
     {
       id: "learning_resources",
       label: "Learning Materials & Resource Grant",
       desc: "Textbooks, lab software access, or hardware requirements.",
       available: false,
-      limitation: "Direct resource grant routing endpoint is pending backend integration.",
+      limitation: "Direct resource grant routing endpoint (POST /api/v1/support/tickets) is pending backend integration.",
     },
     {
       id: "administrative_guidance",
       label: "General Student Support",
       desc: "Enrollment questions, documentation, or institutional guidance.",
       available: false,
-      limitation: "General administrative ticket dispatch endpoint is pending backend integration.",
+      limitation: "General administrative ticket dispatch endpoint (POST /api/v1/support/tickets) is pending backend integration.",
     },
   ];
 
@@ -83,12 +86,21 @@ export default function RequestSupportPage() {
     e.preventDefault();
     setFormError(null);
 
+    // Validation invariants matching contract specifications
     if (subject.trim().length < 5) {
       setFormError("Subject must be at least 5 characters.");
       return;
     }
+    if (subject.trim().length > 120) {
+      setFormError("Subject cannot exceed 120 characters.");
+      return;
+    }
     if (description.trim().length < 10) {
       setFormError("Description must be at least 10 characters.");
+      return;
+    }
+    if (description.trim().length > 2000) {
+      setFormError("Description cannot exceed 2000 characters.");
       return;
     }
 
@@ -96,23 +108,46 @@ export default function RequestSupportPage() {
     if (!selectedCat?.available) {
       setFormError(
         selectedCat?.limitation ||
-          "Direct automated dispatch for this category is awaiting backend API implementation. Please choose Student Wellbeing & Counseling or use Request a Counselor Call."
+          "Direct automated dispatch for this category is awaiting backend API implementation (POST /api/v1/support/tickets). Please choose Student Wellbeing & Counseling or use Request a Counselor Call."
       );
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const res = await requestCounselorCall({
-        student_id: currentPersona?.userId || "SYN-1007",
-        student_notes: `[${selectedCat.label}] ${subject.trim()}: ${description.trim()}`,
-        preferred_contact_method: preferredContact,
-        preferred_time_slot: "afternoon",
-      });
-      setSubmittedCaseRef(res.id);
+      if (category === "wellbeing_counseling") {
+        // Active verified counselor endpoint
+        const res = await requestCounselorCall({
+          student_id: currentPersona?.userId || "SYN-1007",
+          student_notes: `[${selectedCat.label}] ${subject.trim()}: ${description.trim()}`,
+          preferred_contact_method: preferredContact,
+          preferred_time_slot: "afternoon",
+        });
+        setSubmittedCaseRef(res.id);
+        // Clear inputs only on verified server success
+        setSubject("");
+        setDescription("");
+      } else {
+        // General support ticket endpoint
+        const res = await api.proposed.createSupportTicket({
+          category: category as SupportTicketCategory,
+          subject: subject.trim(),
+          description: description.trim(),
+          preferred_contact_method: preferredContact,
+          urgency,
+        });
+        setSubmittedCaseRef(res.reference_number || res.ticket_id);
+        // Clear inputs only on verified server success
+        setSubject("");
+        setDescription("");
+      }
     } catch (err: any) {
-      console.warn("Error submitting request:", err);
-      setFormError(err.message || "Failed to submit request to backend. Please verify backend connectivity.");
+      // Security hygiene: Never log raw student notes or sensitive text to browser logs
+      setFormError(
+        err?.message ||
+          "Failed to submit support request. Backend service endpoint is unreachable or returned an error."
+      );
+      // Notice: form input states are strictly preserved on failure so student can retry
     } finally {
       setIsSubmitting(false);
     }
@@ -337,10 +372,47 @@ export default function RequestSupportPage() {
               />
             </div>
 
+            {/* Urgency Level */}
+            <div>
+              <label className="text-xs font-bold text-neutral-800 block mb-2">
+                4. Urgency Level
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                {(
+                  [
+                    { id: "low", label: "Low", desc: "General inquiry" },
+                    { id: "medium", label: "Medium", desc: "Standard support" },
+                    { id: "high", label: "High", desc: "Affects coursework" },
+                    { id: "critical", label: "Critical", desc: "Urgent assistance" },
+                  ] as const
+                ).map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => setUrgency(u.id)}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      urgency === u.id
+                        ? "bg-neutral-900 text-white border-neutral-900 shadow-2xs"
+                        : "bg-neutral-50/70 hover:bg-neutral-50 border-neutral-200/80 text-neutral-800"
+                    }`}
+                  >
+                    <span className="font-bold text-xs block">{u.label}</span>
+                    <span
+                      className={`text-[10px] block mt-0.5 ${
+                        urgency === u.id ? "text-neutral-300" : "text-neutral-500"
+                      }`}
+                    >
+                      {u.desc}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Contact preference */}
             <div>
               <label className="text-xs font-bold text-neutral-800 block mb-2">
-                4. Preferred Consultation Method
+                5. Preferred Consultation Method
               </label>
               <div className="flex items-center gap-3 text-xs">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -396,11 +468,18 @@ export default function RequestSupportPage() {
               </Link>
               <button
                 type="submit"
-                disabled={isSubmitting || !subject.trim() || !description.trim()}
+                disabled={
+                  isSubmitting ||
+                  !subject.trim() ||
+                  !description.trim() ||
+                  !categories.find((c) => c.id === category)?.available
+                }
                 className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{isSubmitting ? "Submitting..." : "Submit Request"}</span>
+                <span>
+                  {isSubmitting ? "Submitting..." : !categories.find((c) => c.id === category)?.available ? "Category Pending Backend" : "Submit Request"}
+                </span>
               </button>
             </div>
           </form>

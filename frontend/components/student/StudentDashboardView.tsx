@@ -11,33 +11,165 @@ import {
   ChevronRight,
   HeartHandshake,
   ArrowUpRight,
+  AlertCircle,
 } from "lucide-react";
+import { StudentCaseSummaryDTO } from "@/lib/types";
+import { api, isDemoMode } from "@/lib/api";
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatDate(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatDateTime(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const hours = String(d.getUTCHours()).padStart(2, "0");
+    const mins = String(d.getUTCMinutes()).padStart(2, "0");
+    return `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}, ${hours}:${mins}`;
+  } catch {
+    return dateStr;
+  }
+}
 
 export function StudentDashboardView() {
   const { user, currentPersona, cases, activeCampusName, backendError, refreshBackendData } = useSkillHub();
+  const [mounted, setMounted] = React.useState(false);
 
-  // Authenticated student reference (defaults to Asha SYN-1007 for demo)
+  // Authenticated student-scoped case state
+  const [studentCases, setStudentCases] = React.useState<StudentCaseSummaryDTO[]>([]);
+  const [isLoadingCases, setIsLoadingCases] = React.useState(true);
+  const [casesError, setCasesError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Authenticated student reference
   const studentId = currentPersona?.userId || "SYN-1007";
 
-  // Filter cases belonging to this student
-  const studentCases = cases.filter(
-    (c) => c.student_id === studentId || c.external_student_ref === studentId
-  );
+  const fetchStudentCases = React.useCallback(async () => {
+    setIsLoadingCases(true);
+    setCasesError(null);
+    try {
+      const response = await api.proposed.getMyCases();
+      setStudentCases(response.items || []);
+    } catch (err: any) {
+      if (isDemoMode()) {
+        const demoFiltered = cases.filter(
+          (c) => c.student_id === studentId || c.external_student_ref === studentId
+        );
+        setStudentCases(
+          demoFiltered.map((c) => ({
+            id: c.id,
+            institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
+            student_id: c.student_id,
+            title: c.selected_intervention_key
+              ? c.selected_intervention_key.replace(/_/g, " ")
+              : "Support Plan",
+            state: c.state,
+            selected_intervention_key: c.selected_intervention_key,
+            primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
+            tasks_count: c.tasks?.length || 0,
+            open_tasks_count:
+              c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
+            created_at: c.created_at,
+            updated_at: c.updated_at,
+            tasks: c.tasks,
+            events: c.events,
+          } as any))
+        );
+      } else {
+        setCasesError(
+          err?.message ||
+            "Unable to retrieve student support cases. Backend endpoint GET /api/v1/cases/my-cases is pending release."
+        );
+        setStudentCases([]);
+      }
+    } finally {
+      setIsLoadingCases(false);
+    }
+  }, [studentId, cases]);
+
+  // Prevent stale requests and clean state across user / persona changes
+  React.useEffect(() => {
+    let active = true;
+    setIsLoadingCases(true);
+    setCasesError(null);
+    setStudentCases([]);
+
+    api.proposed
+      .getMyCases()
+      .then((res) => {
+        if (!active) return;
+        setStudentCases(res.items || []);
+        setIsLoadingCases(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isDemoMode()) {
+          const demoFiltered = cases.filter(
+            (c) => c.student_id === studentId || c.external_student_ref === studentId
+          );
+          setStudentCases(
+            demoFiltered.map((c) => ({
+              id: c.id,
+              institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
+              student_id: c.student_id,
+              title: c.selected_intervention_key
+                ? c.selected_intervention_key.replace(/_/g, " ")
+                : "Support Plan",
+              state: c.state,
+              selected_intervention_key: c.selected_intervention_key,
+              primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
+              tasks_count: c.tasks?.length || 0,
+              open_tasks_count:
+                c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
+              created_at: c.created_at,
+              updated_at: c.updated_at,
+              tasks: c.tasks,
+              events: c.events,
+            } as any))
+          );
+        } else {
+          setCasesError(
+            err?.message ||
+              "Unable to retrieve student support cases. Backend endpoint GET /api/v1/cases/my-cases is pending release."
+          );
+          setStudentCases([]);
+        }
+        setIsLoadingCases(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentPersona?.userId, studentId, cases]);
 
   // Tasks / Next Steps
-  const nextSteps = studentCases.flatMap((c) =>
-    (c.tasks || []).map((t) => ({
+  const nextSteps = studentCases.flatMap((c: any) =>
+    (c.tasks || []).map((t: any) => ({
       ...t,
       caseId: c.id,
       caseTitle: c.selected_intervention_key
         ? c.selected_intervention_key.replace(/_/g, " ")
-        : "Academic Support Plan",
+        : c.title || "Academic Support Plan",
     }))
   );
 
   // Recent activity events across the student's cases
-  const recentEvents = studentCases.flatMap((c) =>
-    (c.events || []).map((e) => ({
+  const recentEvents = studentCases.flatMap((c: any) =>
+    (c.events || []).map((e: any) => ({
       ...e,
       caseId: c.id,
     }))
@@ -45,19 +177,61 @@ export function StudentDashboardView() {
 
   return (
     <div className="space-y-6">
-      {/* Backend Offline Indicator Banner */}
-      {backendError && (
-        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs flex items-center justify-between gap-3">
+      {/* Backend Offline or Authentication Indicator Banner */}
+      {mounted && backendError && (
+        <div
+          className={`p-3.5 rounded-2xl text-xs flex items-center justify-between gap-3 ${
+            backendError.toLowerCase().includes("jwt") ||
+            backendError.toLowerCase().includes("auth") ||
+            backendError.toLowerCase().includes("token") ||
+            backendError.toLowerCase().includes("unauthorized")
+              ? "bg-rose-50 border border-rose-200/80 text-rose-800"
+              : "bg-amber-50 border border-amber-200/80 text-amber-800"
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-            <span>Backend service is unreachable ({backendError}). Viewing local student state.</span>
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                backendError.toLowerCase().includes("jwt") ||
+                backendError.toLowerCase().includes("auth") ||
+                backendError.toLowerCase().includes("token") ||
+                backendError.toLowerCase().includes("unauthorized")
+                  ? "bg-rose-500"
+                  : "bg-amber-500"
+              }`}
+            />
+            {backendError.toLowerCase().includes("jwt") ||
+            backendError.toLowerCase().includes("auth") ||
+            backendError.toLowerCase().includes("token") ||
+            backendError.toLowerCase().includes("unauthorized") ? (
+              <span>
+                Authentication error ({backendError}). Please sign in to verify your credentials.
+              </span>
+            ) : isDemoMode() ? (
+              <span>Backend service is unreachable ({backendError}). Viewing local student state.</span>
+            ) : (
+              <span>Backend service is unreachable ({backendError}). Unable to load remote records.</span>
+            )}
           </div>
-          <button
-            onClick={() => refreshBackendData()}
-            className="px-3 py-1 bg-white hover:bg-neutral-50 text-neutral-800 rounded-lg text-xs font-semibold border border-amber-200 transition-colors shrink-0"
-          >
-            Retry
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {(backendError.toLowerCase().includes("jwt") ||
+              backendError.toLowerCase().includes("auth") ||
+              backendError.toLowerCase().includes("token") ||
+              backendError.toLowerCase().includes("unauthorized")) && (
+              <Link
+                href="/login"
+                className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                Sign In
+              </Link>
+            )}
+            <button
+              onClick={() => refreshBackendData()}
+              className="px-3 py-1 bg-white hover:bg-neutral-50 text-neutral-800 rounded-lg text-xs font-semibold border border-neutral-200 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       )}
 
@@ -113,7 +287,28 @@ export function StudentDashboardView() {
               </Link>
             </div>
 
-            {studentCases.length === 0 ? (
+            {isLoadingCases ? (
+              <div className="p-4 space-y-3">
+                <div className="h-14 bg-neutral-100 rounded-2xl animate-pulse" />
+                <div className="h-14 bg-neutral-100 rounded-2xl animate-pulse" />
+              </div>
+            ) : casesError ? (
+              <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-neutral-900">Student Case History Service</p>
+                    <p className="text-neutral-600 mt-0.5">{casesError}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => fetchStudentCases()}
+                  className="px-3.5 py-1.5 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl text-xs font-semibold border border-amber-300 transition-colors shrink-0 self-start sm:self-auto shadow-2xs"
+                >
+                  Retry Connection
+                </button>
+              </div>
+            ) : studentCases.length === 0 ? (
               <div className="p-8 text-center bg-neutral-50 rounded-2xl border border-neutral-100">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                 <p className="text-sm font-semibold text-neutral-900">
@@ -146,11 +341,8 @@ export function StudentDashboardView() {
                       <p className="text-xs text-neutral-500 flex items-center gap-2 flex-wrap">
                         <span>
                           Created:{" "}
-                          <span className="text-neutral-600 font-normal">
-                            {new Date(c.created_at).toLocaleDateString([], {
-                              month: "short",
-                              day: "numeric",
-                            })}
+                          <span suppressHydrationWarning className="text-neutral-600 font-normal">
+                            {formatDate(c.created_at)}
                           </span>
                         </span>
                         <span>•</span>
@@ -201,15 +393,10 @@ export function StudentDashboardView() {
                     </div>
                     <div className="flex-1 min-w-0 text-xs">
                       <p className="font-semibold text-neutral-800">
-                        {evt.event_type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                        {evt.event_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())}
                       </p>
-                      <p className="text-[11px] text-neutral-400 mt-0.5">
-                        {new Date(evt.created_at).toLocaleDateString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                      <p suppressHydrationWarning className="text-[11px] text-neutral-400 mt-0.5">
+                        {formatDateTime(evt.created_at)}
                       </p>
                     </div>
                   </div>
@@ -263,7 +450,7 @@ export function StudentDashboardView() {
                       </div>
                     </div>
                     <span className="text-xs font-semibold text-neutral-700 shrink-0 pt-0.5">
-                      {task.state.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                      {task.state.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())}
                     </span>
                   </div>
                 ))}

@@ -49,10 +49,6 @@ export default function AnalyticsPage() {
     dataProvenance,
   } = useSkillHub();
 
-  if (activeRole === "counselor") {
-    return <CounselorAnalyticsPage />;
-  }
-
   const timeframes = ["This Week", "This Month", "This Year"] as const;
 
   // Filter States (Requirement 5)

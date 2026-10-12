@@ -126,6 +126,39 @@ class SupabaseAuthClient {
   }
 
   /**
+   * Refreshes the active Supabase session and updates persisted tokens
+   */
+  async refreshSession(): Promise<SupabaseSession | null> {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error || !data.session) return null;
+
+      const session: SupabaseSession = {
+        access_token: data.session.access_token,
+        token_type: data.session.token_type,
+        expires_in: data.session.expires_in,
+        expires_at: data.session.expires_at,
+        refresh_token: data.session.refresh_token,
+        user: {
+          id: data.session.user.id,
+          email: data.session.user.email || "",
+          user_metadata: data.session.user.user_metadata,
+          app_metadata: data.session.user.app_metadata,
+        },
+      };
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sutra_auth_token", session.access_token);
+        localStorage.setItem("sutra_refresh_token", session.refresh_token);
+        api.setToken(session.access_token);
+      }
+      return session;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Backward-compatible token retrieval
    */
   getToken(): string | null {

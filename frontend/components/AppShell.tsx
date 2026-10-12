@@ -36,6 +36,8 @@ import {
   MessageCircle,
   Briefcase,
   Calendar,
+  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -312,49 +314,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     },
   ];
 
-  const counselorNavItems = [
-    {
-      name: t("nav.dashboard", "Overview"),
-      shortName: t("nav.dashboard_short", "Overview"),
-      href: "/dashboard",
-      icon: LayoutGrid,
-    },
-    {
-      name: "Schedule & Calls",
-      shortName: "Schedule",
-      href: "/schedule",
-      icon: Calendar,
-    },
-    {
-      name: "Students in Need",
-      shortName: "Students",
-      href: "/students",
-      icon: GraduationCap,
-    },
-    {
-      name: "Support Cases",
-      shortName: "Cases",
-      href: "/cases",
-      icon: FileText,
-    },
-    {
-      name: "Counselor Analytics",
-      shortName: "Analytics",
-      href: "/counselor/analytics",
-      icon: BarChart2,
-    },
-  ];
-
-  const isCounselor = activeRole === "counselor";
-
   const mainNavItems = isStudent
     ? studentNavItems
     : isCounselor
     ? counselorNavItems
     : isAdmin
     ? adminNavItems
-    : isCounselor
-    ? counselorNavItems
     : teacherNavItems;
 
   return (
@@ -623,7 +588,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       {/* Clean Group Header */}
                       <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                          Switch Role View
+                          {supabaseSession ? "Active Account" : "Active Persona"}
                         </span>
                       </div>
 
