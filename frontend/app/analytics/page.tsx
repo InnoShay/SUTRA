@@ -11,6 +11,7 @@ import { CohortRiskDistributionChart } from "@/components/analytics/CohortRiskDi
 import { CohortComparisonTable } from "@/components/analytics/CohortComparisonTable";
 import { MultiTierTrendChart } from "@/components/analytics/MultiTierTrendChart";
 import { ModelPerformanceDashboard } from "@/components/analytics/ModelPerformanceDashboard";
+import HistoricalRiskTrendsDashboard from "@/components/analytics/HistoricalRiskTrendsDashboard";
 import {
   computeCaseStateDistribution,
   computeInterventionDistribution,
@@ -31,6 +32,7 @@ import {
   Info,
   ShieldCheck,
   Cpu,
+  History,
 } from "lucide-react";
 import CounselorAnalyticsPage from "../counselor/analytics/page";
 
@@ -54,18 +56,20 @@ export default function AnalyticsPage() {
   const timeframes = ["This Week", "This Month", "This Year"] as const;
 
   // Filter States (Requirement 5)
-  const [analyticsTab, setAnalyticsTab] = useState<"cohort" | "model_performance">("cohort");
+  const [analyticsTab, setAnalyticsTab] = useState<"cohort" | "model_performance" | "historical_trends">("cohort");
   const [selectedCohort, setSelectedCohort] = useState<string>("");
   const [selectedRiskTier, setSelectedRiskTier] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>(new Date().toLocaleTimeString());
 
-  // Listen to ?tab=model-performance URL search parameter
+  // Listen to ?tab=model-performance or ?tab=historical-trends URL search parameters
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("tab") === "model-performance") {
         setAnalyticsTab("model_performance");
+      } else if (params.get("tab") === "historical-trends") {
+        setAnalyticsTab("historical_trends");
       }
     }
   }, []);
@@ -214,10 +218,28 @@ export default function AnalyticsPage() {
           <Cpu className="w-3.5 h-3.5" />
           <span>Model Performance &amp; Evaluation</span>
         </button>
+
+        <button
+          onClick={() => setAnalyticsTab("historical_trends")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            analyticsTab === "historical_trends"
+              ? "bg-neutral-900 text-white shadow-xs"
+              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70"
+          }`}
+        >
+          <History className="w-3.5 h-3.5" />
+          <span>Historical Trends &amp; Monitoring</span>
+        </button>
       </div>
 
       {analyticsTab === "model_performance" ? (
         <ModelPerformanceDashboard />
+      ) : analyticsTab === "historical_trends" ? (
+        <HistoricalRiskTrendsDashboard
+          availableCohorts={availableCohorts}
+          selectedCohort={selectedCohort}
+          onSelectCohort={setSelectedCohort}
+        />
       ) : (
         <>
           {/* 2. Interactive Filter Bar (Requirement 5) */}

@@ -16,10 +16,13 @@ from app.schemas.analytics import (
     CaseLifecycleStateCount,
     CohortAnalyticsSummaryResponse,
     CohortBreakdownItem,
+    CohortRiskTrendResponse,
     GranularRiskTiers,
+    HistoricalPerformanceMonitoringResponse,
     InterventionCategoryCount,
     MultiTierTrendPoint,
     RiskDistributionDTO,
+    StudentRiskTrajectoryResponse,
 )
 from app.schemas.ml import ModelPerformanceResponse
 from app.ml.service import ml_service
@@ -37,7 +40,6 @@ async def get_analytics_model_performance(
     Returns verified model performance metrics for the active or requested model version.
     Includes held-out benchmark metrics, calibration tables, subgroup parity, and live telemetry.
     """
-    current_user = membership.user
     allowed_roles = {"leadership", "faculty", "hod", "mentor", "institution_admin", "counsellor"}
     if not any(r in allowed_roles for r in membership.roles):
         raise PermissionDeniedError(
@@ -48,6 +50,101 @@ async def get_analytics_model_performance(
     telemetry = await ml_service.get_live_monitoring_telemetry(db=db, institution_id=membership.campus_id)
     resp.live_telemetry = telemetry
     return resp
+
+
+@router.get("/risk-trends", response_model=CohortRiskTrendResponse)
+async def get_analytics_risk_trends(
+    cohort: Optional[str] = Query(None, description="Optional cohort code filter (e.g. CS-2026)"),
+    model_version: str = Query("v1.0.0", description="Reference model version for comparability"),
+    cutoff: str = Query("Day 30", description="Operational cutoff window"),
+    retention_days: Optional[int] = Query(365, ge=1, le=1825, description="Retention horizon in days"),
+    db: AsyncSession = Depends(get_db),
+    membership: CampusMembershipContext = Depends(get_campus_membership),
+):
+    """
+    Requirement 1-5, 7-9: Returns longitudinal cohort risk trends across historical prediction snapshots.
+    Enforces distinct counting of unique students vs repeated runs, model version comparability,
+    non-causal outcome disclaimers, anti-fabrication safeguards, ADR-004 small-group privacy,
+    and institutional tenancy isolation.
+    """
+    allowed_roles = {"leadership", "faculty", "hod", "mentor", "institution_admin", "counsellor"}
+    if not any(r in allowed_roles for r in membership.roles):
+        raise PermissionDeniedError(
+            message=f"User roles {membership.roles} are not authorized to access cohort risk trends."
+        )
+
+    is_leadership_only = "leadership" in membership.roles and not any(
+        r in ("hod", "mentor", "faculty", "institution_admin", "counsellor")
+        for r in membership.roles
+    )
+
+    return await ml_service.get_cohort_risk_trends(
+        db=db,
+        institution_id=membership.campus_id,
+        cohort_code=cohort,
+        reference_model_version=model_version,
+        reference_cutoff=cutoff,
+        retention_days=retention_days,
+        is_leadership=is_leadership_only,
+    )
+
+
+@router.get("/student-risk-trajectory/{student_ref}", response_model=StudentRiskTrajectoryResponse)
+async def get_analytics_student_risk_trajectory(
+    student_ref: str,
+    retention_days: Optional[int] = Query(365, ge=1, le=1825, description="Retention horizon in days"),
+    db: AsyncSession = Depends(get_db),
+    membership: CampusMembershipContext = Depends(get_campus_membership),
+):
+    """
+    Requirement 3-5, 8-9: Retrieves chronological risk trajectory for an individual student.
+    Identifies model version and prediction timestamp on each score, calculates score deltas,
+    and flags transitions across model architectures.
+    """
+    # If user is a student, ensure they can only inspect their own trajectory
+    if "student" in membership.roles and not any(
+        r in ("leadership", "faculty", "hod", "mentor", "institution_admin", "counsellor")
+        for r in membership.roles
+    ):
+        # Resolve logged-in student's own record
+        from app.models.student import Student
+        stu_query = select(Student).where(
+            Student.institution_id == membership.campus_id,
+            (Student.id == membership.user.id) | (Student.external_ref == str(membership.user.id)),
+        )
+        res = await db.execute(stu_query)
+        own_student = res.scalars().first()
+        if not own_student or (own_student.external_ref != student_ref and str(own_student.id) != student_ref):
+            raise PermissionDeniedError("Students can only access their own risk trajectory history.")
+
+    return await ml_service.get_student_risk_trajectory(
+        db=db,
+        institution_id=membership.campus_id,
+        student_ref=student_ref,
+        retention_days=retention_days,
+    )
+
+
+@router.get("/performance-monitoring", response_model=HistoricalPerformanceMonitoringResponse)
+async def get_analytics_performance_monitoring(
+    db: AsyncSession = Depends(get_db),
+    membership: CampusMembershipContext = Depends(get_campus_membership),
+):
+    """
+    Requirement 6: Separate process for evaluating predictions against ground-truth outcomes over time.
+    Distinguishes fully labeled historical research holdouts from active live campus terms
+    where outcome labels are pending term completion.
+    """
+    allowed_roles = {"leadership", "faculty", "hod", "mentor", "institution_admin", "counsellor"}
+    if not any(r in allowed_roles for r in membership.roles):
+        raise PermissionDeniedError(
+            message=f"User roles {membership.roles} are not authorized to access performance monitoring."
+        )
+
+    return await ml_service.get_historical_performance_monitoring(
+        db=db,
+        institution_id=membership.campus_id,
+    )
 
 
 

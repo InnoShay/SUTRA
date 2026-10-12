@@ -1586,8 +1586,102 @@ assert(
 );
 console.log("   ✓ Verified frozen model version invariants and clean handling of version mismatch\n");
 
+// ==============================================================================
+// 20. Validating Phase 7 Historical Risk Trends and Monitoring Contracts...
+// ==============================================================================
+console.log("20. Validating Phase 7 Historical Risk Trends and Monitoring Contracts...");
+
+// 20a. Type contracts
+const typesFile = fs.readFileSync(path.join(__dirname, "../lib/types.ts"), "utf-8");
+assert(
+  typesFile.includes("export interface HistoricalSnapshotPoint") &&
+  typesFile.includes("export interface CohortRiskTrendResponse") &&
+  typesFile.includes("export interface StudentRiskTrajectoryPoint") &&
+  typesFile.includes("export interface StudentRiskTrajectoryResponse") &&
+  typesFile.includes("export interface CohortOutcomeEvaluationPoint") &&
+  typesFile.includes("export interface HistoricalPerformanceMonitoringResponse"),
+  "types.ts must export all Phase 7 domain interfaces"
+);
+assert(
+  typesFile.includes("repeated_rescores_count: number") &&
+  typesFile.includes("unique_students_evaluated: number") &&
+  typesFile.includes("rescore_frequency: number") &&
+  typesFile.includes("has_comparable_history: boolean"),
+  "Phase 7 types must distinguish unique students from repeated rescores"
+);
+console.log("   ✓ Verified Phase 7 TypeScript domain interfaces");
+
+// 20b. API client methods
+const apiFile = fs.readFileSync(path.join(__dirname, "../lib/api.ts"), "utf-8");
+assert(
+  apiFile.includes("getRiskTrends:") &&
+  apiFile.includes("getStudentRiskTrajectory:") &&
+  apiFile.includes("getPerformanceMonitoring:"),
+  "api.analytics must expose getRiskTrends, getStudentRiskTrajectory, and getPerformanceMonitoring"
+);
+assert(
+  apiFile.includes("cleanEndpoint.includes('/analytics/risk-trends')") &&
+  apiFile.includes("cleanEndpoint.includes('/analytics/student-risk-trajectory/')") &&
+  apiFile.includes("cleanEndpoint.includes('/analytics/performance-monitoring')"),
+  "api.ts must implement mock handlers for Phase 7 endpoints"
+);
+console.log("   ✓ Verified API client contracts and mock fallbacks");
+
+// 20c. Analytics Page tab switcher & mounting
+const analyticsPageCode = fs.readFileSync(path.join(__dirname, "../app/analytics/page.tsx"), "utf-8");
+assert(
+  analyticsPageCode.includes("Historical Trends") &&
+  analyticsPageCode.includes("HistoricalRiskTrendsDashboard") &&
+  analyticsPageCode.includes("historical-trends"),
+  "analytics/page.tsx must mount HistoricalRiskTrendsDashboard with 3-tab selector and ?tab=historical-trends"
+);
+console.log("   ✓ Verified HistoricalRiskTrendsDashboard mounted in analytics/page.tsx with tab switcher");
+
+// 20d. Historical Risk Trend Chart contracts
+const histChartCode = fs.readFileSync(path.join(__dirname, "../components/analytics/HistoricalRiskTrendChart.tsx"), "utf-8");
+assert(
+  histChartCode.includes("total_prediction_runs") &&
+  histChartCode.includes("unique_students_evaluated") &&
+  histChartCode.includes("repeated_rescores_count"),
+  "HistoricalRiskTrendChart must distinguish total runs from unique students and repeated rescores"
+);
+assert(
+  histChartCode.includes("Insufficient Historical Observations") &&
+  histChartCode.includes("does not synthesize fake predictions"),
+  "HistoricalRiskTrendChart must enforce anti-fabrication data gap notice when history < 2 snapshots"
+);
+assert(
+  histChartCode.includes("Non-Causal Governance Notice") &&
+  histChartCode.includes("causality_disclaimer"),
+  "HistoricalRiskTrendChart must display non-causal governance disclaimer"
+);
+assert(
+  histChartCode.includes("Incompatible Model Version Warning"),
+  "HistoricalRiskTrendChart must warn against silent comparisons of incompatible model versions"
+);
+assert(
+  histChartCode.includes("Show Accessible Data Table"),
+  "HistoricalRiskTrendChart must provide accessible structured table alternative"
+);
+console.log("   ✓ Verified HistoricalRiskTrendChart anti-fabrication, rescore tracking, and non-causal disclaimers");
+
+// 20e. Longitudinal Performance Monitoring contracts (Requirement 6)
+const perfMonitoringCode = fs.readFileSync(path.join(__dirname, "../components/analytics/LongitudinalPerformanceMonitoringCard.tsx"), "utf-8");
+assert(
+  perfMonitoringCode.includes("Longitudinal Model Performance") &&
+  perfMonitoringCode.includes("Certified Outcomes") &&
+  perfMonitoringCode.includes("Pending Day 120"),
+  "LongitudinalPerformanceMonitoringCard must separate certified outcomes from pending Day 120 term"
+);
+assert(
+  perfMonitoringCode.includes("Protocol: Setting 2") &&
+  perfMonitoringCode.includes("evaluation_protocol_notice"),
+  "LongitudinalPerformanceMonitoringCard must disclose longitudinal evaluation protocol"
+);
+console.log("   ✓ Verified separate longitudinal performance monitoring for labeled holdouts vs pending term\n");
 
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
+
 
