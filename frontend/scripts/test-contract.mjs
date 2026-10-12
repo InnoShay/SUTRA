@@ -915,8 +915,85 @@ assert(
 );
 console.log("   ✓ Verified dynamic backend threshold verification and discrete error state handlers\n");
 
+// ==========================================
+// 15. Feature Attribution Visualisations Contracts (Phase 3)
+// ==========================================
+console.log("15. Validating Phase 3 Feature Attribution Visualisation Contracts...");
+
+const chartComponentPath = path.join(__dirname, "../components/FeatureAttributionChart.tsx");
+assert(fs.existsSync(chartComponentPath), "FeatureAttributionChart.tsx component must exist in components directory");
+
+const chartCode = fs.readFileSync(chartComponentPath, "utf-8");
+
+// 15a. Horizontal Diverging Bar Chart and Directional Separation
+assert(
+  chartCode.includes("Diverging Chart") && chartCode.includes("w-1/2"),
+  "Must implement horizontal diverging bar chart centered on zero axis"
+);
+assert(
+  chartCode.includes("risk_driver") && chartCode.includes("protective"),
+  "Must cleanly separate risk drivers (positive) and protective factors (negative)"
+);
+assert(
+  chartCode.includes("Total Risk Drivers") && chartCode.includes("Total Protective Offset"),
+  "Must show summary metrics for risk driver load vs protective offset"
+);
+console.log("   ✓ Verified horizontal diverging bar chart and directional separation");
+
+// 15b. Understandable labels and canonical identifiers
+assert(
+  chartCode.includes("CANONICAL_FEATURE_METADATA") && chartCode.includes("rawFeature"),
+  "Must map canonical feature keys to understandable human labels while preserving audit identifiers"
+);
+assert(
+  liveStudentPageCode.includes("FeatureAttributionChart"),
+  "Student 360 page must mount FeatureAttributionChart"
+);
+console.log("   ✓ Verified human-readable labels with canonical audit keys preserved");
+
+// 15c. Attribution units and directional semantics
+assert(
+  chartCode.includes("Δ Log-Odds") || chartCode.includes("Log-Odds"),
+  "Must explicitly specify attribution units as Log-Odds impact"
+);
+assert(
+  chartCode.includes("Positive (+Δ Log-Odds)") && chartCode.includes("Negative (-Δ Log-Odds)"),
+  "Must explain what positive and negative attribution directions mean"
+);
+console.log("   ✓ Verified attribution units (Δ Log-Odds) and directional explanations");
+
+// 15d. Accessible Table Alternative
+assert(
+  chartCode.includes("<table") && chartCode.includes("caption") && chartCode.includes("scope=\"col\""),
+  "Must provide accessible table alternative with caption and column scopes"
+);
+console.log("   ✓ Verified accessible structured table alternative");
+
+// 15e. Empty, zero, and outlier safety handling
+assert(
+  chartCode.includes("No Feature Attributions Supplied"),
+  "Must provide graceful empty state when attributions are missing"
+);
+assert(
+  chartCode.includes("neutral") && (chartCode.includes("Baseline reference") || chartCode.includes("0.00")),
+  "Must safely handle zero / neutral baseline contributions"
+);
+assert(
+  chartCode.includes("hasOutlier") || chartCode.includes("maxAbsMagnitude"),
+  "Must safely clamp and handle outlier / unusually large attribution values"
+);
+console.log("   ✓ Verified safe handling of empty, zero, invalid and outlier values");
+
+// 15f. Non-causal governance disclaimer
+assert(
+  chartCode.includes("Non-Causal Statistical Association") || chartCode.includes("NOT establish causal mechanisms"),
+  "Must include non-causal governance disclaimer forbidding causal claims"
+);
+console.log("   ✓ Verified non-causal governance disclaimer\n");
+
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
+
 
 

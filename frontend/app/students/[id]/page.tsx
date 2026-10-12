@@ -15,6 +15,7 @@ import {
 import { SignalReviewModal } from "@/components/SignalReviewModal";
 import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
 import { UserAvatar } from "@/components/UserAvatar";
+import { FeatureAttributionChart } from "@/components/FeatureAttributionChart";
 import {
   ArrowLeft,
   Mail,
@@ -674,76 +675,14 @@ export default function StudentDetailPage() {
                 </p>
               </div>
 
-              {/* Attribution Decomposition (Risk Drivers vs Protective Factors) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Risk Drivers */}
-                <div className="p-3.5 rounded-xl bg-neutral-900/60 border border-neutral-800/90 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400">
-                    <TrendingUp className="w-3.5 h-3.5 text-rose-400" />
-                    <span className="uppercase tracking-wider text-[10px]">Top Risk Drivers (Log-Odds Impact)</span>
-                  </div>
-                  {riskDrivers.length > 0 ? (
-                    <div className="space-y-1.5">
-                      {riskDrivers.map((driver, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2 rounded-lg bg-rose-950/20 border border-rose-900/40 text-xs"
-                        >
-                          <div>
-                            <span className="font-medium text-neutral-200 block">
-                              {FEATURE_LABELS[driver.feature] || driver.feature}
-                            </span>
-                            <span className="text-[10px] text-neutral-400 font-mono">
-                              Observed value: {String(driver.value)}
-                            </span>
-                          </div>
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold text-rose-300 bg-rose-950/80 border border-rose-800/60">
-                            +{typeof driver.attribution === "number" ? Math.abs(driver.attribution).toFixed(2) : "0.50"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-neutral-500 italic py-2">
-                      No significant risk-elevating telemetry factors detected.
-                    </p>
-                  )}
-                </div>
-
-                {/* Protective Factors */}
-                <div className="p-3.5 rounded-xl bg-neutral-900/60 border border-neutral-800/90 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                    <TrendingDown className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="uppercase tracking-wider text-[10px]">Protective Factors</span>
-                  </div>
-                  {protectiveFactors.length > 0 ? (
-                    <div className="space-y-1.5">
-                      {protectiveFactors.map((factor, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2 rounded-lg bg-emerald-950/20 border border-emerald-900/40 text-xs"
-                        >
-                          <div>
-                            <span className="font-medium text-neutral-200 block">
-                              {FEATURE_LABELS[factor.feature] || factor.feature}
-                            </span>
-                            <span className="text-[10px] text-neutral-400 font-mono">
-                              Observed value: {String(factor.value)}
-                            </span>
-                          </div>
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-800/60">
-                            -{typeof factor.attribution === "number" ? Math.abs(factor.attribution).toFixed(2) : "0.20"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-neutral-500 italic py-2">
-                      Telemetry does not yet reflect strong protective engagement markers.
-                    </p>
-                  )}
-                </div>
-              </div>
+              {/* Feature Attribution Visualisation (Diverging Bar Chart & Accessible Table) */}
+              <FeatureAttributionChart
+                attributions={attributions}
+                modelName={pred?.evidence_card?.model_name || "Logistic Regression Baseline"}
+                modelVersion={pred?.evidence_card?.model_version || "1.0.0"}
+                threshold={thresholdVal}
+                isSynthetic={isSynthetic}
+              />
 
               {/* Policy & Governance Disclaimers */}
               <div className="pt-2 border-t border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-neutral-400 leading-normal">
