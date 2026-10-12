@@ -133,6 +133,7 @@ interface SkillHubContextType {
   setActiveRole: (role: UserRole) => void;
   authorizedRoles: UserRole[];
   activeCampusName: string;
+  setActiveCampusName: (name: string) => void;
   currentPersona: DemoPersona;
   backendConnected: boolean;
   isLoadingBackend: boolean;
@@ -1129,6 +1130,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         setActiveRole,
         authorizedRoles,
         activeCampusName,
+        setActiveCampusName,
         currentPersona,
         backendConnected,
         isLoadingBackend,
