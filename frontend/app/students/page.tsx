@@ -43,6 +43,40 @@ export default function StudentsPage() {
   const [newCourse, setNewCourse] = useState(courses[0]?.title || "Cohort CS-Y2 (Computer Science)");
   const [newStatus, setNewStatus] = useState<"Active" | "At Risk" | "Completed" | "Inactive">("Active");
 
+  // Student Peer Privacy Safeguard
+  if (activeRole === "student") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-neutral-900 tracking-tight font-heading">
+            Student Access Restricted
+          </h1>
+          <p className="text-xs text-neutral-400 mt-1">
+            Student privacy and peer record protection
+          </p>
+        </div>
+
+        <div className="skill-card p-8 bg-white border border-neutral-200/80 rounded-3xl flex flex-col items-center text-center max-w-xl mx-auto space-y-4 my-8">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-neutral-900">
+            Student Directory Restricted
+          </h3>
+          <p className="text-xs text-neutral-600 leading-relaxed max-w-md">
+            Per campus data governance and student privacy guidelines, enrolled students cannot view the campus student directory or access peer educational records.
+          </p>
+          <Link
+            href="/dashboard"
+            className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-sm transition-all"
+          >
+            Return to My Overview
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Leadership Institutional Privacy Safeguard
   if (activeRole === "leadership") {
     return (

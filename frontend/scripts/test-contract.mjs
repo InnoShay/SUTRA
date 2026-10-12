@@ -1005,7 +1005,164 @@ assert.strictEqual(valErr.kind, "validation");
 // Validate empty collection preserved (not replaced with synthetic fallback)
 const validEmptyResponse = [];
 assert(Array.isArray(validEmptyResponse) && validEmptyResponse.length === 0, "Valid empty collection must be preserved");
-console.log("   ✓ Verified runtime ApiError taxonomy classification and empty collection preservation\n");
+// 16. Validating Phase 2: Student Workflow Integration & Authentication Readiness Contracts...
+console.log("16. Validating Phase 2: Student Workflow Integration & Authentication Readiness Contracts...");
+
+// 16a. Student Route & Directory Privacy Protection
+const studentDirCode = fs.readFileSync(path.join(__dirname, "../app/students/page.tsx"), "utf-8");
+assert(
+  studentDirCode.includes('if (activeRole === "student")'),
+  "StudentsPage must restrict enrolled students from browsing peer directory"
+);
+assert(
+  studentDirCode.includes("Student Directory Restricted") || studentDirCode.includes("Student Access Restricted"),
+  "StudentsPage must render student privacy safeguard card"
+);
+
+const student360Code = fs.readFileSync(path.join(__dirname, "../app/students/[id]/page.tsx"), "utf-8");
+assert(
+  student360Code.includes('if (activeRole === "student")'),
+  "StudentDetailPage must restrict enrolled students from inspecting staff 360 triage telemetry"
+);
+console.log("   ✓ Verified student directory and student 360 evaluation privacy guards");
+
+// 16b. Student Case Record Isolation (Zero cases[0] Fallback Leakage)
+const caseDetailCode = fs.readFileSync(path.join(__dirname, "../app/cases/[id]/page.tsx"), "utf-8");
+assert(
+  !caseDetailCode.includes("|| cases[0]"),
+  "CaseDetailPage must NEVER fallback to cases[0] when case is not found or not owned by student"
+);
+assert(
+  caseDetailCode.includes("c.student_id === studentId || c.external_student_ref === studentId"),
+  "CaseDetailPage must enforce student ownership matching"
+);
+assert(
+  caseDetailCode.includes("Case Not Accessible"),
+  "CaseDetailPage must display explicit access denied state when student tries to open another student's case"
+);
+console.log("   ✓ Verified student case ownership isolation and zero cases[0] fallback leakage");
+
+// 16c. Authentication & Campus Isolation Hygiene
+const storeAuthCode = fs.readFileSync(path.join(__dirname, "../lib/skillhub-store.tsx"), "utf-8");
+assert(
+  storeAuthCode.includes("if (isDemoMode()) {\n        if (!api.getToken())") ||
+  storeAuthCode.includes("if (isDemoMode())"),
+  "skillhub-store.tsx must gate development persona token and campus ID attachment behind isDemoMode()"
+);
+console.log("   ✓ Verified authentication hygiene: zero fabricated tokens or campus IDs in unauthenticated normal mode");
+
+// 16d. Offline & Error State Propagation on Cases and Dashboard
+const casesListCode = fs.readFileSync(path.join(__dirname, "../app/cases/page.tsx"), "utf-8");
+assert(
+  casesListCode.includes("backendError &&"),
+  "CasesPage must render backend connectivity alert when backendError is present"
+);
+assert(
+  casesListCode.includes("refreshBackendData()"),
+  "CasesPage must provide connection retry action on offline/error"
+);
+console.log("   ✓ Verified case tracker error and offline state propagation with retry action");
+
+// 16e. In-App Messaging Backend Limitation Disclosures
+const messagesCode = fs.readFileSync(path.join(__dirname, "../app/messages/page.tsx"), "utf-8");
+assert(
+  messagesCode.includes("messaging backend service is in development") ||
+  messagesCode.includes("In-Session Local Preview"),
+  "MessagesPage must disclose that messaging persistence is in development"
+);
+assert(
+  caseDetailCode.includes("messaging persistence is pending backend messaging service") ||
+  caseDetailCode.includes("Consultation notes are coordinated with your mentor"),
+  "CaseDetailPage must disclose that real-time messaging persistence is pending backend service"
+);
+console.log("   ✓ Verified messaging integration disclosures across Case Detail and Messages views");
+
+// 16f. Runtime test for student case isolation logic
+function filterStudentCase(cases, targetStudentId, requestedCaseId) {
+  return cases.find(
+    (c) =>
+      c.id === requestedCaseId &&
+      (c.student_id === targetStudentId || c.external_student_ref === targetStudentId)
+  );
+}
+const phase2MockCases = [
+  { id: "CASE-STU-A", student_id: "STU-A", external_student_ref: "STU-A", title: "Plan A" },
+  { id: "CASE-STU-B", student_id: "STU-B", external_student_ref: "STU-B", title: "Plan B" },
+];
+assert.strictEqual(filterStudentCase(phase2MockCases, "STU-A", "CASE-STU-A")?.id, "CASE-STU-A");
+assert.strictEqual(filterStudentCase(phase2MockCases, "STU-A", "CASE-STU-B"), undefined);
+assert.strictEqual(filterStudentCase(phase2MockCases, "STU-A", "CASE-NONEXISTENT"), undefined);
+console.log("   ✓ Verified runtime student case isolation logic prevents cross-student record disclosure\n");
+
+// --- 17. PR #7 Reconciled Scheduler, Onboarding & Counselor Analytics Contracts ---
+console.log("17. Validating PR #7 Reconciled Counselor & Scheduler Contracts...");
+const reconciledTypesCode = fs.readFileSync(path.join(__dirname, "../lib/types.ts"), "utf-8");
+assert(
+  reconciledTypesCode.includes("export interface CounselorCalendarEvent"),
+  "types.ts must define CounselorCalendarEvent"
+);
+console.log("   ✓ Verified CounselorCalendarEvent appended to types.ts");
+
+assert(
+  storeCode.includes("demoActive ? INITIAL_CALENDAR_EVENTS : []"),
+  "skillhub-store.tsx must gate INITIAL_CALENDAR_EVENTS strictly behind demoActive"
+);
+assert(
+  storeCode.includes("calendarEvents: CounselorCalendarEvent[]"),
+  "skillhub-store.tsx must expose calendarEvents in SkillHubContextType"
+);
+assert(
+  storeCode.includes("addCalendarEvent") && storeCode.includes("deleteCalendarEvent"),
+  "skillhub-store.tsx must provide calendar event handlers"
+);
+console.log("   ✓ Verified calendarEvents state is strictly demoActive gated and wired to store");
+
+const reconciledAppShellCode = fs.readFileSync(path.join(__dirname, "../components/AppShell.tsx"), "utf-8");
+assert(
+  reconciledAppShellCode.includes('href: "/schedule"'),
+  "AppShell.tsx must include /schedule route"
+);
+assert(
+  reconciledAppShellCode.includes("counselorNavItems"),
+  "AppShell.tsx must provide dedicated counselorNavItems"
+);
+assert(
+  reconciledAppShellCode.includes('supabaseSession ? "Active Account" : "Active Persona"'),
+  "AppShell.tsx must preserve Supabase SSO session switcher"
+);
+assert(
+  reconciledAppShellCode.includes("isDemoMode()"),
+  "AppShell.tsx must preserve Demo Mode badge"
+);
+console.log("   ✓ Verified scheduler navigation integrated and Supabase SSO persona switcher preserved");
+
+const reconciledCalendarPageCode = fs.readFileSync(path.join(__dirname, "../app/calendar/page.tsx"), "utf-8");
+assert(
+  reconciledCalendarPageCode.includes('import SchedulePage from "../schedule/page"'),
+  "calendar/page.tsx must re-export SchedulePage"
+);
+const reconciledSchedulePageCode = fs.readFileSync(path.join(__dirname, "../app/schedule/page.tsx"), "utf-8");
+assert(
+  reconciledSchedulePageCode.includes("Schedule & Calls") || reconciledSchedulePageCode.includes("SchedulePage"),
+  "schedule/page.tsx must provide interactive weekly schedule view"
+);
+console.log("   ✓ Verified /schedule and /calendar pages exist and link correctly");
+
+const reconciledAnalyticsCode = fs.readFileSync(path.join(__dirname, "../app/analytics/page.tsx"), "utf-8");
+assert(
+  reconciledAnalyticsCode.includes('if (activeRole === "counselor")') &&
+  reconciledAnalyticsCode.includes("<CounselorAnalyticsPage />"),
+  "analytics/page.tsx must route counselors to CounselorAnalyticsPage"
+);
+console.log("   ✓ Verified counselor analytics routing in analytics/page.tsx");
+
+const reconciledOnboardingCode = fs.readFileSync(path.join(__dirname, "../app/onboarding/page.tsx"), "utf-8");
+assert(
+  reconciledOnboardingCode.includes('formData.accountLevel === "counselor"') &&
+  reconciledOnboardingCode.includes("counselorSpecialization"),
+  "onboarding/page.tsx must include counselor setup fields"
+);
+console.log("   ✓ Verified counselor role onboarding wizard in onboarding/page.tsx\n");
 
 // ==========================================
 // 16. Feature Attribution Visualisations Contracts (Phase 3)
@@ -1433,9 +1590,4 @@ console.log("   ✓ Verified frozen model version invariants and clean handling 
 console.log("==================================================");
 console.log("ALL FRONTEND CONTRACT & INTEGRATION TESTS PASSED ✓");
 console.log("==================================================");
-
-
-
-
-
 

@@ -9,7 +9,7 @@ import { SkillHubLogo } from "@/components/SkillHubLogo";
 import { UserAvatar } from "@/components/UserAvatar";
 import { supabaseAuth } from "@/lib/supabase";
 
-export type AccountLevel = "student" | "faculty" | "admin";
+export type AccountLevel = "student" | "faculty" | "admin" | "counselor";
 
 interface OnboardingFormData {
   // Step 1: Role
@@ -42,6 +42,13 @@ interface OnboardingFormData {
   adminScope: string;
   escalationEmail: string;
   mfaAcknowledged: boolean;
+
+  counselorId: string;
+  counselorSpecialization: string;
+  counselorOffice: string;
+  counselorAvailableHours: string;
+  counselorVirtualRoom: string;
+  counselorBio: string;
 
   // Step 4: Preferences
   preferredLanguage: string;
@@ -155,6 +162,16 @@ function CustomAdminRoleIcon({ className = "w-7 h-7" }: { className?: string }) 
   );
 }
 
+function CustomCounselorRoleIcon({ className = "w-7 h-7" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+      <path d="M12 5v6" />
+      <path d="M9 8h6" />
+    </svg>
+  );
+}
+
 function CustomGlobeLanguageIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -229,6 +246,14 @@ export default function OnboardingPage() {
     adminScope: "All Institutional Campuses (Multi-Tenant)",
     escalationEmail: "dean.academics@apex.edu",
     mfaAcknowledged: true,
+
+    // Counselor
+    counselorId: "CNS-8041",
+    counselorSpecialization: "Student Wellbeing & Stress Management",
+    counselorOffice: "Student Wellness Center, Suite 204",
+    counselorAvailableHours: "Mon-Fri • 9:00 AM - 5:00 PM",
+    counselorVirtualRoom: "https://meet.google.com/sutra-wellness",
+    counselorBio: "Dedicated to holistic student wellness, empathetic academic de-escalation, and timely intervention.",
 
     // Preferences
     preferredLanguage: "en-US",
@@ -325,6 +350,8 @@ export default function OnboardingPage() {
         setActiveRole("faculty");
       } else if (formData.accountLevel === "admin") {
         setActiveRole("dean");
+      } else if (formData.accountLevel === "counselor") {
+        setActiveRole("counselor");
       } else {
         setActiveRole("faculty");
       }
@@ -437,8 +464,8 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              {/* 3 CLEAN ROLE-BASED BOXES: MONOCHROME MINIMALIST */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 max-w-3xl mx-auto">
+              {/* 4 CLEAN ROLE-BASED BOXES: MONOCHROME MINIMALIST */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 max-w-4xl mx-auto">
                 {/* 1. STUDENT BOX */}
                 <div
                   onClick={() => updateField("accountLevel", "student")}
@@ -489,7 +516,32 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* 3. ADMINISTRATOR BOX */}
+                {/* 3. COUNSELOR BOX */}
+                <div
+                  onClick={() => updateField("accountLevel", "counselor")}
+                  className={`relative p-7 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center text-center justify-center gap-3.5 group min-h-[190px] ${
+                    formData.accountLevel === "counselor"
+                      ? "border-neutral-900 bg-neutral-50/80 shadow-md ring-2 ring-neutral-900/10"
+                      : "border-neutral-200 hover:border-neutral-300 bg-white hover:bg-neutral-50/50"
+                  }`}
+                >
+                  {formData.accountLevel === "counselor" && (
+                    <div className="absolute top-3.5 right-3.5 w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center shadow-xs">
+                      <CustomCheckIcon className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </div>
+                  )}
+
+                  <div className="w-14 h-14 rounded-2xl bg-neutral-100 text-neutral-900 border border-neutral-200 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                    <CustomCounselorRoleIcon className="w-7 h-7" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-neutral-900">Counselor</h3>
+                    <p className="text-xs text-neutral-400 mt-1 font-medium">Wellbeing &amp; Guidance</p>
+                  </div>
+                </div>
+
+                {/* 4. ADMINISTRATOR BOX */}
                 <div
                   onClick={() => updateField("accountLevel", "admin")}
                   className={`relative p-7 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center text-center justify-center gap-3.5 group min-h-[190px] ${
@@ -695,6 +747,7 @@ export default function OnboardingPage() {
                   {formData.accountLevel === "student" && "Academic Program & Enrollment"}
                   {formData.accountLevel === "faculty" && "Department & Faculty Profile"}
                   {formData.accountLevel === "admin" && "Administrative Oversight & Scope"}
+                  {formData.accountLevel === "counselor" && "Clinical Specialization & Student Care Hours"}
                 </h1>
                 <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed">
                   Tailored parameters for your {formData.accountLevel.toUpperCase()} account in Apex University.
@@ -918,6 +971,83 @@ export default function OnboardingPage() {
                   </div>
                 </div>
               )}
+
+              {/* 3D. COUNSELOR FORM */}
+              {formData.accountLevel === "counselor" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-800">Counselor PRN / License ID</label>
+                      <input
+                        type="text"
+                        value={formData.counselorId}
+                        onChange={(e) => updateField("counselorId", e.target.value)}
+                        placeholder="e.g. CNS-8041"
+                        className="w-full h-11 px-3.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-800">Available Consultation Hours</label>
+                      <input
+                        type="text"
+                        value={formData.counselorAvailableHours}
+                        onChange={(e) => updateField("counselorAvailableHours", e.target.value)}
+                        placeholder="e.g. Mon-Fri • 9:00 AM - 5:00 PM"
+                        className="w-full h-11 px-3.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-xs font-semibold text-neutral-800">Primary Specialization Domain</label>
+                      <select
+                        value={formData.counselorSpecialization}
+                        onChange={(e) => updateField("counselorSpecialization", e.target.value)}
+                        className="w-full h-11 px-3.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white font-medium"
+                      >
+                        <option>Student Wellbeing &amp; Stress Management</option>
+                        <option>Academic De-escalation &amp; Retention Support</option>
+                        <option>Career, Vocational &amp; Internship Counseling</option>
+                        <option>Crisis Triage &amp; Emergency Escalation</option>
+                        <option>Peer Mediation &amp; Campus Integration</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-800">Physical Wellness Clinic / Office</label>
+                      <input
+                        type="text"
+                        value={formData.counselorOffice}
+                        onChange={(e) => updateField("counselorOffice", e.target.value)}
+                        placeholder="e.g. Student Wellness Center, Suite 204"
+                        className="w-full h-11 px-3.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-800">Secure Virtual Consultation Room</label>
+                      <input
+                        type="text"
+                        value={formData.counselorVirtualRoom}
+                        onChange={(e) => updateField("counselorVirtualRoom", e.target.value)}
+                        placeholder="https://meet.google.com/sutra-wellness"
+                        className="w-full h-11 px-3.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-xs font-semibold text-neutral-800">Counseling Statement &amp; Approach</label>
+                      <textarea
+                        rows={3}
+                        value={formData.counselorBio}
+                        onChange={(e) => updateField("counselorBio", e.target.value)}
+                        placeholder="Describe your student care methodology and confidential consultation approach..."
+                        className="w-full p-3.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1029,6 +1159,7 @@ export default function OnboardingPage() {
                     {formData.accountLevel === "student" && `${formData.degreeProgram} • ${formData.studentId}`}
                     {formData.accountLevel === "faculty" && `${formData.academicTitle} • ${formData.department}`}
                     {formData.accountLevel === "admin" && `${formData.adminDesignation} • Apex Governance`}
+                    {formData.accountLevel === "counselor" && `${formData.counselorSpecialization} • ${formData.counselorId}`}
                   </p>
                 </div>
               </div>

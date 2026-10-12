@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   Cpu,
 } from "lucide-react";
+import CounselorAnalyticsPage from "../counselor/analytics/page";
 
 
 export default function AnalyticsPage() {
@@ -94,6 +95,10 @@ export default function AnalyticsPage() {
   useEffect(() => {
     fetchCohortAnalytics();
   }, [selectedCohort, analyticsTimeframe, backendConnected]);
+
+  if (activeRole === "counselor") {
+    return <CounselorAnalyticsPage />;
+  }
 
   const isLeadership = activeRole === "leadership";
 

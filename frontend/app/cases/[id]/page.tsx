@@ -25,7 +25,16 @@ export default function CaseDetailPage() {
   const { cases, user, activeRole, currentPersona } = useSkillHub();
 
   const isStudent = activeRole === "student";
-  const matchedCase = cases.find((c) => c.id === caseId) || cases[0];
+  const studentId = currentPersona?.userId || "SYN-1007";
+
+  // Strictly locate matched case without fallback to cases[0]
+  const matchedCase = isStudent
+    ? cases.find(
+        (c) =>
+          c.id === caseId &&
+          (c.student_id === studentId || c.external_student_ref === studentId)
+      )
+    : cases.find((c) => c.id === caseId);
 
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<
@@ -66,15 +75,19 @@ export default function CaseDetailPage() {
 
   if (!matchedCase) {
     return (
-      <div className="p-12 text-center bg-white rounded-3xl border border-neutral-200/80 max-w-xl mx-auto space-y-4">
+      <div className="p-12 text-center bg-white rounded-3xl border border-neutral-200/80 max-w-xl mx-auto space-y-4 my-8">
         <AlertCircle className="w-10 h-10 text-neutral-400 mx-auto" />
-        <h2 className="text-base font-bold text-neutral-900">Case Not Found</h2>
-        <p className="text-xs text-neutral-500">
-          The requested support case could not be located or you may not have permission to view it.
+        <h2 className="text-base font-bold text-neutral-900">
+          {isStudent ? "Case Not Accessible" : "Case Not Found"}
+        </h2>
+        <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
+          {isStudent
+            ? "The requested support case could not be located or does not belong to your student account."
+            : "The requested support case could not be located in the current campus context."}
         </p>
         <Link
           href="/cases"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 text-white rounded-full text-xs font-semibold"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full text-xs font-semibold transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Cases</span>
@@ -232,6 +245,14 @@ export default function CaseDetailPage() {
                 </p>
               </div>
               <MessageSquare className="w-4 h-4 text-neutral-400" />
+            </div>
+
+            {/* Messaging integration status disclosure */}
+            <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/70 text-[11px] text-amber-800 flex items-start gap-2">
+              <Shield className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                Consultation notes are coordinated with your mentor. Direct real-time messaging persistence is pending backend messaging service.
+              </span>
             </div>
 
             {/* Message Feed */}
