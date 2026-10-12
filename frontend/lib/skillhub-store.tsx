@@ -365,6 +365,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [allRedemptions, setAllRedemptions] = useState<RedemptionRecordDTO[]>(
     demoActive ? DEMO_REDEMPTIONS : []
   );
+  const [isLoadingRewards, setIsLoadingRewards] = useState<boolean>(false);
+  const [rewardsError, setRewardsError] = useState<string | null>(null);
   // SUTRA Identity & Avatar Studio State
   const [sutraIdentity, setSutraIdentity] = useState<StudentIdentityDTO | null>(null);
 
