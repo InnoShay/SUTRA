@@ -112,8 +112,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // If on landing page (/) or login page (/login), render clean full-width view without dashboard shell chrome
-  if (pathname === "/login" || pathname === "/") {
+  // If on landing page (/), login page (/login), or onboarding (/onboarding), render clean full-width view without dashboard shell chrome
+  if (pathname === "/login" || pathname === "/" || pathname === "/onboarding") {
     return <>{children}</>;
   }
 
