@@ -13,6 +13,7 @@ from app.models.signal import EvidencePacket, Signal
 from app.models.student import Student
 from app.schemas.signal import (
     EvidenceCardDTO,
+    EvidenceCardItem,
     EvaluateStudentRequest,
     SignalDTO,
     SignalReviewRequest,
@@ -56,7 +57,7 @@ async def evaluate_student_policy(
 
 @router.get("/signals", response_model=List[SignalDTO])
 async def list_signals_queue(
-    reviewed: Optional[bool] = Query(False, description="Filter by review status (default unreviewed queue)"),
+    reviewed: Optional[bool] = Query(None, description="Filter by review status (True for reviewed, False for unreviewed, None for all)"),
     membership: CampusMembershipContext = Depends(get_campus_membership),
     db: AsyncSession = Depends(get_db),
 ):
@@ -69,8 +70,10 @@ async def list_signals_queue(
         .join(EvidencePacket, EvidencePacket.id == Signal.evidence_packet_id)
         .where(Signal.institution_id == membership.campus_id)
     )
-    if not reviewed:
+    if reviewed is False:
         query = query.where(Signal.reviewed_decision.is_(None))
+    elif reviewed is True:
+        query = query.where(Signal.reviewed_decision.is_not(None))
 
     query = query.order_by(Signal.evaluated_at.desc())
     result = await db.execute(query)
@@ -78,11 +81,52 @@ async def list_signals_queue(
 
     dtos = []
     for sig, ext_ref, disp_name, digest in rows:
-        card = EvidenceCardDTO(
-            card_type="deterministic_rule_evidence",
-            model_name=sig.rule_key,
-            classification="Attention Suggested" if sig.result == "attention_suggested" else "Normal",
-        )
+        exp = sig.explanation or {}
+        ml_card = exp.get("ml_evidence_card") or exp.get("evidence_card")
+        if ml_card and isinstance(ml_card, dict):
+            raw_attrs = ml_card.get("top_attributions") or ml_card.get("attributions") or []
+            attrs = [
+                EvidenceCardItem(
+                    feature=str(a.get("feature", "unknown")),
+                    value=a.get("value"),
+                    attribution=a.get("attribution"),
+                    direction=a.get("direction"),
+                )
+                for a in raw_attrs
+                if isinstance(a, dict)
+            ]
+            card = EvidenceCardDTO(
+                card_type=ml_card.get("card_type", "ml_early_warning_evidence"),
+                model_name=ml_card.get("model_name", sig.rule_key),
+                model_version=ml_card.get("model_version", "1.0.0"),
+                prediction_cutoff=ml_card.get("prediction_cutoff", "Day 30"),
+                risk_probability=ml_card.get("risk_probability"),
+                threshold=ml_card.get("threshold", 0.46),
+                classification=ml_card.get("classification", "Attention Suggested"),
+                attributions=attrs,
+                limitations=ml_card.get("limitations", []),
+            )
+        elif exp.get("metrics"):
+            metrics = exp.get("metrics", {})
+            attrs = [
+                EvidenceCardItem(
+                    feature=k,
+                    value=v.get("value") if isinstance(v, dict) else v,
+                )
+                for k, v in metrics.items()
+            ]
+            card = EvidenceCardDTO(
+                card_type="deterministic_rule_evidence",
+                model_name=sig.rule_key,
+                classification="Attention Suggested" if sig.result in ("attention_suggested", "concern") else "Normal",
+                attributions=attrs,
+            )
+        else:
+            card = EvidenceCardDTO(
+                card_type="deterministic_rule_evidence",
+                model_name=sig.rule_key,
+                classification="Attention Suggested" if sig.result in ("attention_suggested", "concern") else "Normal",
+            )
         dtos.append(
             SignalDTO(
                 id=sig.id,

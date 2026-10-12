@@ -46,12 +46,16 @@ class FreshnessMetricsDTO(BaseModel):
     is_stale: bool = False
 
 
+from app.schemas.ml import MLPredictResponse
+
+
 class SupportViewResponse(BaseModel):
     student: StudentSummary
     freshness_metrics: FreshnessMetricsDTO
     active_signals_count: int
     active_cases_count: int
     recent_observations: List[ObservationDTO]
+    ml_prediction: Optional[MLPredictResponse] = None
 
 
 class FinanceViewResponse(BaseModel):

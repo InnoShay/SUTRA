@@ -158,8 +158,9 @@ class ApiClient {
       const parts = cleanEndpoint.split('/');
       const studentId = parts[parts.indexOf('students') + 1] || 'SYN-1007';
       const stu = INITIAL_STUDENTS.find((s) => s.id === studentId) || INITIAL_STUDENTS[0];
-      const matchingCase = DEMO_CASES.find((c) => c.student_id === studentId) || DEMO_CASES[0];
-      const matchingSignal = DEMO_SIGNALS.find((s) => s.student_id === studentId) || DEMO_SIGNALS[0];
+      const isAtRisk = stu.status === 'At Risk' || studentId.includes('1007');
+      const riskProbability = isAtRisk ? 0.68 : 0.24;
+      const classification = isAtRisk ? 'At_Risk' : 'On_Track';
 
       return {
         student: {
@@ -167,26 +168,117 @@ class ApiClient {
           external_ref: stu.id,
           display_name: stu.name,
           enrollment_status: stu.status.toLowerCase(),
-          risk_level: stu.status === 'At Risk' ? 'high' : 'low',
+          risk_level: isAtRisk ? 'high' : 'low',
         },
-        case: matchingCase,
-        signal: matchingSignal,
-        observations: [
+        freshness_metrics: {
+          total_observations: 12,
+          domains_represented: ['attendance', 'academic', 'lms', 'participation'],
+          last_observation_event_at: new Date().toISOString(),
+          last_observation_available_at: new Date().toISOString(),
+          is_stale: false,
+        },
+        active_signals_count: isAtRisk ? 1 : 0,
+        active_cases_count: isAtRisk ? 1 : 0,
+        recent_observations: [
           {
             id: 'OBS-001',
-            student_id: stu.id,
-            feature_name: 'attendance_rate',
-            feature_value: parseFloat(stu.attendance) / 100 || 0.58,
-            observed_at: new Date().toISOString(),
+            domain: 'attendance',
+            metric_key: 'attendance_rate',
+            value: parseFloat(stu.attendance) / 100 || 0.58,
+            unit: '%',
+            quality_state: 'valid',
+            event_at: new Date().toISOString(),
+            ingested_at: new Date().toISOString(),
+            source_system: 'sis_banner',
           },
           {
             id: 'OBS-002',
-            student_id: stu.id,
-            feature_name: 'missing_assignments_count',
-            feature_value: 3,
-            observed_at: new Date().toISOString(),
+            domain: 'academic',
+            metric_key: 'missing_assignments_count',
+            value: isAtRisk ? 3 : 0,
+            unit: 'count',
+            quality_state: 'valid',
+            event_at: new Date().toISOString(),
+            ingested_at: new Date().toISOString(),
+            source_system: 'canvas_lms',
           },
         ],
+        ml_prediction: {
+          external_student_ref: stu.id,
+          risk_probability: riskProbability,
+          threshold: 0.46,
+          classification: classification,
+          evidence_card: {
+            card_type: 'ml_early_warning_evidence',
+            model_name: 'logistic_regression_baseline',
+            model_version: '1.0.0',
+            prediction_cutoff: 'Day 30',
+            risk_probability: riskProbability,
+            threshold: 0.46,
+            classification: classification,
+            top_attributions: isAtRisk
+              ? [
+                  { feature: 'vle_total_clicks_d30', value: 35, attribution: 0.85, direction: 'increases_risk' },
+                  { feature: 'vle_active_days_d30', value: 4, attribution: 0.62, direction: 'increases_risk' },
+                  { feature: 'assessments_submitted_d30', value: 0, attribution: 0.54, direction: 'increases_risk' },
+                  { feature: 'studied_credits', value: 60, attribution: -0.12, direction: 'decreases_risk' },
+                ]
+              : [
+                  { feature: 'vle_total_clicks_d30', value: 240, attribution: -0.92, direction: 'decreases_risk' },
+                  { feature: 'vle_active_days_d30', value: 18, attribution: -0.75, direction: 'decreases_risk' },
+                  { feature: 'assessments_submitted_d30', value: 2, attribution: -0.58, direction: 'decreases_risk' },
+                ],
+            limitations: [
+              'Trained on historical Open University course registrations; not calibrated for non-modular curricula.',
+              'Early assessment grades were excluded to avoid temporal leakage.',
+              'Represents statistical correlation, not causal certainty or personal diagnosis.',
+            ],
+          },
+        },
+      } as unknown as T;
+    }
+
+    // ML Predict single or student predict
+    if (cleanEndpoint.includes('/predict')) {
+      const parts = cleanEndpoint.split('/');
+      const studentId = cleanEndpoint.includes('/students/')
+        ? parts[parts.indexOf('students') + 1] || 'SYN-1007'
+        : 'SYN-1007';
+      const isAtRisk = studentId.includes('1007') || !studentId.includes('1008');
+      const riskProbability = isAtRisk ? 0.68 : 0.24;
+      const classification = isAtRisk ? 'At_Risk' : 'On_Track';
+
+      return {
+        external_student_ref: studentId,
+        risk_probability: riskProbability,
+        threshold: 0.46,
+        classification: classification,
+        evidence_card: {
+          card_type: 'ml_early_warning_evidence',
+          model_name: 'logistic_regression_baseline',
+          model_version: '1.0.0',
+          prediction_cutoff: 'Day 30',
+          risk_probability: riskProbability,
+          threshold: 0.46,
+          classification: classification,
+          top_attributions: isAtRisk
+            ? [
+                { feature: 'vle_total_clicks_d30', value: 35, attribution: 0.85, direction: 'increases_risk' },
+                { feature: 'vle_active_days_d30', value: 4, attribution: 0.62, direction: 'increases_risk' },
+                { feature: 'assessments_submitted_d30', value: 0, attribution: 0.54, direction: 'increases_risk' },
+                { feature: 'studied_credits', value: 60, attribution: -0.12, direction: 'decreases_risk' },
+              ]
+            : [
+                { feature: 'vle_total_clicks_d30', value: 240, attribution: -0.92, direction: 'decreases_risk' },
+                { feature: 'vle_active_days_d30', value: 18, attribution: -0.75, direction: 'decreases_risk' },
+                { feature: 'assessments_submitted_d30', value: 2, attribution: -0.58, direction: 'decreases_risk' },
+              ],
+          limitations: [
+            'Trained on historical Open University course registrations; not calibrated for non-modular curricula.',
+            'Early assessment grades were excluded to avoid temporal leakage.',
+            'Represents statistical correlation, not causal certainty or personal diagnosis.',
+          ],
+        },
       } as unknown as T;
     }
 
@@ -476,6 +568,11 @@ class ApiClient {
       this.request<SupportViewResponse>(`/students/${id}/support-view`),
     getFinanceView: (id: string) =>
       this.request<FinanceViewResponse>(`/students/${id}/finance-view`),
+    predict: (id: string, payload?: any) =>
+      this.request<MLPredictResponse>(`/students/${id}/predict`, {
+        method: 'POST',
+        body: JSON.stringify(payload || {}),
+      }),
   };
 
   // --- Signals & Review ---

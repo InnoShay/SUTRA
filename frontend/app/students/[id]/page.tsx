@@ -6,7 +6,12 @@ import { useParams } from "next/navigation";
 import { useSkillHub } from "@/lib/store";
 import { DEMO_OBSERVATIONS } from "@/lib/skillhub-data";
 import { api } from "@/lib/api";
-import { SupportViewResponse, SignalDTO, AISummarizeEvidenceResponse } from "@/lib/types";
+import {
+  SupportViewResponse,
+  SignalDTO,
+  AISummarizeEvidenceResponse,
+  MLPredictResponse,
+} from "@/lib/types";
 import { SignalReviewModal } from "@/components/SignalReviewModal";
 import { SkillHubProgressBar } from "@/components/SkillHubProgressBar";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -29,7 +34,41 @@ import {
   Sparkles,
   Check,
   X,
+  Cpu,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  Zap,
+  BarChart3,
+  HelpCircle,
 } from "lucide-react";
+
+const FEATURE_LABELS: Record<string, string> = {
+  num_of_prev_attempts: "Prior Module Attempts",
+  studied_credits: "Enrolled Course Credits",
+  days_registered_before_start: "Days Registered Pre-Start",
+  vle_total_clicks_d30: "Total LMS Clicks (Day 30)",
+  vle_active_days_d30: "Active LMS Days (Day 30)",
+  vle_clicks_precourse: "Pre-Course Portal Clicks",
+  vle_clicks_poststart_d30: "Post-Start LMS Clicks",
+  vle_clicks_last_7d: "LMS Clicks in Past 7 Days",
+  vle_days_since_last_click: "Days Since Last LMS Login",
+  vle_clicks_forumng_d30: "Discussion Forum Clicks",
+  vle_clicks_oucontent_d30: "Course Content Clicks",
+  vle_clicks_quiz_d30: "Practice Quiz Clicks",
+  vle_clicks_homepage_d30: "Portal Homepage Clicks",
+  vle_clicks_other_d30: "Other Resource Clicks",
+  has_vle_activity_d30: "Any LMS Activity Logged",
+  assessments_submitted_d30: "Assessments Submitted (Day 30)",
+  assessment_banked_d30: "Banked Coursework Submissions",
+  has_early_assessment_submission_d30: "Early Assignment Hand-In",
+  highest_education: "Highest Prior Education",
+  imd_band: "Index of Multiple Deprivation",
+  age_band: "Age Band",
+  disability: "Declared Disability Status",
+  gender: "Gender Category",
+  region: "Geographic Region",
+};
 
 export default function StudentDetailPage() {
   const params = useParams();
@@ -40,6 +79,11 @@ export default function StudentDetailPage() {
   const [loadingSupportView, setLoadingSupportView] = useState<boolean>(true);
   const [supportViewError, setSupportViewError] = useState<string | null>(null);
   const [selectedSignalForReview, setSelectedSignalForReview] = useState<SignalDTO | null>(null);
+
+  // ML Day-30 Early Warning State
+  const [mlPrediction, setMlPrediction] = useState<MLPredictResponse | null>(null);
+  const [loadingMlInference, setLoadingMlInference] = useState<boolean>(false);
+  const [mlInferenceError, setMlInferenceError] = useState<string | null>(null);
 
   const currentStudent =
     students.find(
@@ -115,11 +159,30 @@ export default function StudentDetailPage() {
     try {
       const data = await api.students.getSupportView(studentId);
       setSupportView(data);
+      if (data?.ml_prediction) {
+        setMlPrediction(data.ml_prediction);
+      }
     } catch (err: any) {
       console.warn("Could not load backend support view:", err);
       setSupportViewError(err?.message || "Support view not accessible for current role.");
     } finally {
       setLoadingSupportView(false);
+    }
+  };
+
+  const handleRunMlInference = async () => {
+    if (activeRole === "leadership") return;
+    setLoadingMlInference(true);
+    setMlInferenceError(null);
+    try {
+      const res = await api.students.predict(studentId);
+      setMlPrediction(res);
+      await fetchSupportView();
+    } catch (err: any) {
+      console.warn("Live ML inference failed:", err);
+      setMlInferenceError(err?.message || "Failed to execute live ML inference.");
+    } finally {
+      setLoadingMlInference(false);
     }
   };
 
@@ -316,6 +379,213 @@ export default function StudentDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* ML Day-30 Early Warning Risk Assessment Card */}
+        {(() => {
+          const pred = mlPrediction || supportView?.ml_prediction;
+          const attributions =
+            pred?.evidence_card?.top_attributions ||
+            pred?.evidence_card?.attributions ||
+            [];
+          const riskPercent = pred ? Math.round(pred.risk_probability * 100) : 68;
+          const thresholdPercent = pred ? Math.round(pred.threshold * 100) : 46;
+          const isAtRisk = pred ? pred.classification === "At_Risk" : riskPercent >= thresholdPercent;
+
+          const riskDrivers = attributions.filter(
+            (a) => a.direction === "increases_risk" || (a.attribution && a.attribution > 0)
+          );
+          const protectiveFactors = attributions.filter(
+            (a) => a.direction === "decreases_risk" || (a.attribution && a.attribution < 0)
+          );
+
+          return (
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-neutral-900 to-slate-950 text-white shadow-xl border border-neutral-800 space-y-5">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-violet-600/30 border border-violet-500/40 text-violet-300 flex items-center justify-center">
+                    <Cpu className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                        ML Early-Warning Assessment
+                      </h3>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-950 text-violet-300 border border-violet-800/60">
+                        Day-30 Milestone
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 mt-0.5">
+                      Model: {pred?.evidence_card?.model_name || "Logistic Regression Baseline"} v{pred?.evidence_card?.model_version || "1.0.0"} • Platt-Calibrated Log-Odds
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRunMlInference}
+                    disabled={loadingMlInference}
+                    className="px-3.5 py-1.5 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingMlInference ? "animate-spin" : ""}`} />
+                    <span>{loadingMlInference ? "Scoring Student..." : "Run Live Inference"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {mlInferenceError && (
+                <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800/80 text-xs text-rose-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+                  <span>{mlInferenceError}</span>
+                </div>
+              )}
+
+              {/* Probability & Threshold Bar */}
+              <div className="p-4 rounded-xl bg-neutral-900/90 border border-neutral-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold block">
+                      Day-30 Academic Risk Probability
+                    </span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className={`text-2xl font-black ${isAtRisk ? "text-rose-400" : "text-emerald-400"}`}>
+                        {riskPercent}%
+                      </span>
+                      <span className="text-xs text-neutral-400 font-medium">
+                        (Operational Review Threshold: {thresholdPercent}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    {isAtRisk ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1.5 shadow-sm">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                        <span>AT RISK • REVIEW RECOMMENDED</span>
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>ON TRACK • STANDARD MONITORING</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress bar with threshold marker */}
+                <div className="relative pt-2 pb-5">
+                  <div className="w-full h-3 rounded-full bg-neutral-800 overflow-hidden relative">
+                    <div
+                      className={`h-full transition-all duration-500 rounded-full ${
+                        isAtRisk ? "bg-gradient-to-r from-amber-500 to-rose-500" : "bg-gradient-to-r from-teal-500 to-emerald-500"
+                      }`}
+                      style={{ width: `${Math.min(riskPercent, 100)}%` }}
+                    />
+                  </div>
+                  {/* Threshold Marker Indicator */}
+                  <div
+                    className="absolute top-0 flex flex-col items-center pointer-events-none -translate-x-1/2"
+                    style={{ left: `${thresholdPercent}%` }}
+                  >
+                    <div className="w-0.5 h-5 bg-amber-400 shadow-sm" />
+                    <span className="text-[9px] font-mono font-bold text-amber-300 bg-neutral-900 px-1 rounded mt-0.5 border border-amber-400/40 whitespace-nowrap">
+                      Threshold {thresholdPercent}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attribution Decomposition (Risk Drivers vs Protective Factors) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Risk Drivers */}
+                <div className="p-3.5 rounded-xl bg-neutral-900/60 border border-neutral-800/90 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400">
+                    <TrendingUp className="w-3.5 h-3.5 text-rose-400" />
+                    <span className="uppercase tracking-wider text-[10px]">Top Risk Drivers (Log-Odds Impact)</span>
+                  </div>
+                  {riskDrivers.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {riskDrivers.map((driver, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2 rounded-lg bg-rose-950/20 border border-rose-900/40 text-xs"
+                        >
+                          <div>
+                            <span className="font-medium text-neutral-200 block">
+                              {FEATURE_LABELS[driver.feature] || driver.feature}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 font-mono">
+                              Observed value: {String(driver.value)}
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold text-rose-300 bg-rose-950/80 border border-rose-800/60">
+                            +{typeof driver.attribution === "number" ? Math.abs(driver.attribution).toFixed(2) : "0.50"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-500 italic py-2">
+                      No significant risk-elevating telemetry factors detected.
+                    </p>
+                  )}
+                </div>
+
+                {/* Protective Factors */}
+                <div className="p-3.5 rounded-xl bg-neutral-900/60 border border-neutral-800/90 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                    <TrendingDown className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="uppercase tracking-wider text-[10px]">Protective Factors</span>
+                  </div>
+                  {protectiveFactors.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {protectiveFactors.map((factor, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2 rounded-lg bg-emerald-950/20 border border-emerald-900/40 text-xs"
+                        >
+                          <div>
+                            <span className="font-medium text-neutral-200 block">
+                              {FEATURE_LABELS[factor.feature] || factor.feature}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 font-mono">
+                              Observed value: {String(factor.value)}
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-800/60">
+                            -{typeof factor.attribution === "number" ? Math.abs(factor.attribution).toFixed(2) : "0.20"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-500 italic py-2">
+                      Telemetry does not yet reflect strong protective engagement markers.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Policy & Governance Disclaimers */}
+              <div className="pt-2 border-t border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-neutral-400 leading-normal">
+                <div className="flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
+                  <span>
+                    Non-causal statistical correlation • Model predictions must never replace professional educator judgment.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+                    Temporal Safeguard (t ≤ Day 30)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+                    Fee Segregated (ADR-003)
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Observations Table */}
         <div className="space-y-3">

@@ -260,13 +260,13 @@ export function getCaseStateDistribution(
 
   for (const c of cases) {
     const s = (c.state || "").toUpperCase();
-    if (["NEW", "TRIAGED", "UNDER_REVIEW", "ACTIONABLE"].includes(s)) {
+    if (["NEW", "TRIAGED", "UNDER_REVIEW", "ACTIONABLE", "SUGGESTED", "ACTION_PLANNED"].includes(s)) {
       triage++;
     } else if (["ASSIGNED", "ACCEPTED"].includes(s)) {
       assigned++;
-    } else if (["IN_PROGRESS", "FOLLOW_UP_REQUIRED"].includes(s)) {
+    } else if (["IN_PROGRESS", "SUPPORT_IN_PROGRESS", "FOLLOW_UP_REQUIRED", "FOLLOW_UP_DUE", "CONTACT_ATTEMPTED"].includes(s)) {
       activeSupport++;
-    } else if (["RESOLVED", "CLOSED"].includes(s)) {
+    } else if (["RESOLVED", "CLOSED", "OUTCOME_REVIEWED", "DISMISSED"].includes(s)) {
       resolved++;
     } else {
       activeSupport++;

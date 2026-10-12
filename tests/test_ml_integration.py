@@ -7,9 +7,11 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from datetime import datetime, timezone
 from app.core.config import settings
 from app.ml.service import ml_service
 from app.models.ml import MLInferenceLog
+from app.models.observation import StudentObservation
 from app.models.student import Student
 from app.services.policy_engine import PolicyEngineService
 from tests.utils import make_jwt
@@ -505,3 +507,71 @@ async def test_ml_inference_audit_logging(
     assert round(log.risk_probability, 2) == 0.68
     assert log.threshold == 0.46
     assert log.classification == "At_Risk"
+
+
+@pytest.mark.asyncio
+async def test_student_support_view_includes_ml_prediction(
+    client: AsyncClient, seed_data, db_session: AsyncSession, valid_features_fixture
+):
+    """
+    Verify that GET /api/v1/students/{id}/support-view returns ml_prediction
+    populated from the latest ML inference audit log.
+    """
+    campus_id = seed_data["campus_1"].id
+    user_id = seed_data["user_faculty_id"]
+    token = make_jwt(user_id=user_id)
+    student = Student(
+        id=uuid.uuid4(),
+        institution_id=campus_id,
+        external_ref="SYN-VIEW-TEST",
+        display_name="ML View Test Student",
+    )
+    db_session.add(student)
+    now = datetime.now(timezone.utc)
+    for feat_k, feat_v in valid_features_fixture["features"].items():
+        obs = StudentObservation(
+            id=uuid.uuid4(),
+            institution_id=campus_id,
+            student_id=student.id,
+            domain="academic",
+            metric_key=feat_k,
+            value={"val": feat_v},
+            quality_state="valid",
+            event_at=now,
+            available_at=now,
+            source_system="synthetic_lms",
+            source_record_ref=f"rec-{feat_k}",
+        )
+        db_session.add(obs)
+    await db_session.commit()
+
+    # 1. First trigger an inference to create an audit log for this student
+    inf_res = await client.post(
+        f"/api/v1/students/{student.id}/predict",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "X-Campus-Id": str(campus_id),
+        },
+    )
+    assert inf_res.status_code == 200
+    inf_data = inf_res.json()
+    assert "risk_probability" in inf_data
+    assert inf_data["threshold"] == 0.46
+
+    # 2. Query support-view
+    view_res = await client.get(
+        f"/api/v1/students/{student.id}/support-view",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "X-Campus-Id": str(campus_id),
+        },
+    )
+    assert view_res.status_code == 200
+    view_data = view_res.json()
+    assert "ml_prediction" in view_data
+    ml_pred = view_data["ml_prediction"]
+    assert ml_pred is not None
+    assert ml_pred["external_student_ref"] == student.external_ref
+    assert ml_pred["threshold"] == 0.46
+    assert "evidence_card" in ml_pred
+    assert len(ml_pred["evidence_card"]["top_attributions"]) > 0

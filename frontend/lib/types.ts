@@ -63,6 +63,7 @@ export interface SupportViewResponse {
   active_signals_count: number;
   active_cases_count: number;
   recent_observations: ObservationDTO[];
+  ml_prediction?: MLPredictResponse | null;
 }
 
 export interface FinanceObservationDTO {
@@ -95,8 +96,9 @@ export interface EvidenceCardDTO {
   risk_probability?: number | null;
   threshold?: number | null;
   classification?: string | null;
-  attributions: EvidenceCardItem[];
-  limitations: string[];
+  attributions?: EvidenceCardItem[];
+  top_attributions?: EvidenceCardItem[];
+  limitations?: string[];
 }
 
 export interface SignalDTO {

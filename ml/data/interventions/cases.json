@@ -19,7 +19,7 @@
     "reviewer_role": "ACADEMIC_ADVISOR",
     "reviewer_id": "STAFF-ADV-01",
     "review_notes": "High grades justify supportive attendance check-in.",
-    "reviewed_at": "2026-10-12T02:01:37.079732+00:00",
+    "reviewed_at": "2026-10-12T12:59:54.602602+00:00",
     "assigned_role": "ACADEMIC_ADVISOR",
     "assignee_id": "STAFF-ADV-04",
     "created_at": "2026-10-15T08:30:00Z",
@@ -48,8 +48,8 @@
         "rationale": "Critical attendance decline flagged. Conflicting strong GPA requires human triage before outreach."
       },
       {
-        "event_id": "EVT-0992CFDF",
-        "timestamp": "2026-10-12T02:01:37.079732+00:00",
+        "event_id": "EVT-BFA111E6",
+        "timestamp": "2026-10-12T12:59:54.602602+00:00",
         "from_status": "AWAITING_REVIEW",
         "to_status": "APPROVED",
         "actor_role": "ACADEMIC_ADVISOR",
@@ -58,8 +58,8 @@
         "rationale": "High grades justify supportive attendance check-in."
       },
       {
-        "event_id": "EVT-3E86323B",
-        "timestamp": "2026-10-12T02:01:37.081021+00:00",
+        "event_id": "EVT-3BB70658",
+        "timestamp": "2026-10-12T12:59:54.603686+00:00",
         "from_status": "APPROVED",
         "to_status": "ASSIGNED",
         "actor_role": "COORDINATOR",

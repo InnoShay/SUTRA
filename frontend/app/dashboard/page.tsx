@@ -55,27 +55,35 @@ export default function DashboardPage() {
   }
 
   // Authoritative operational metrics
+  // Defensive fallbacks to prevent runtime hydration exceptions
+  const safeSignals = signals || [];
+  const safeCases = cases || [];
+  const safeStudents = students || [];
+
+  // Authoritative operational metrics
   const metrics = computeDashboardMetrics(
-    signals,
-    cases,
-    students,
+    safeSignals,
+    safeCases,
+    safeStudents,
     activeRole,
     backendConnected
   );
 
-  const nearestFollowUp = getNearestUpcomingFollowUp(cases);
+  const nearestFollowUp = getNearestUpcomingFollowUp(safeCases);
 
   // Derived SUTRA operational metrics
-  const pendingSignals = signals.filter(
+  const pendingSignals = safeSignals.filter(
     (s) => !s.reviewed_decision || s.reviewed_decision.trim() === ""
   );
-  const openCases = cases.filter(
-    (c) => c.state !== "CLOSED" && c.state !== "RESOLVED"
-  );
+  const openCases = safeCases.filter((c) => {
+    const s = (c.state || "").toUpperCase();
+    return s !== "CLOSED" && s !== "RESOLVED" && s !== "DISMISSED" && s !== "OUTCOME_REVIEWED";
+  });
+  const escalatedCases = safeCases.filter((c) => c.is_escalated);
   const triageActionRate =
-    signals.length > 0
+    safeSignals.length > 0
       ? Math.round(
-          ((signals.length - pendingSignals.length) / signals.length) * 100
+          ((safeSignals.length - pendingSignals.length) / safeSignals.length) * 100
         )
       : 100;
 

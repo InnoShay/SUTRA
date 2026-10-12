@@ -35,6 +35,11 @@ PROCESSED_DIR = ML_DIR / "data" / "processed"
 EXPERIMENTS_DIR = ML_DIR / "artifacts" / "experiments" / "phase_twenty_two"
 AUDIT_METRICS_PATH = ML_DIR / "reports" / "metrics" / "phase_twenty_three_common_cohort_metrics.json"
 
+pytestmark = pytest.mark.skipif(
+    not (PROCESSED_DIR / "phase22_day30_features.csv").exists(),
+    reason="Phase 22 processed datasets not present in checkout",
+)
+
 
 def compute_file_sha256(path: Path) -> str:
     h = hashlib.sha256()

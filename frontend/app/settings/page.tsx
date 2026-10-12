@@ -20,7 +20,13 @@ import {
   Lock,
   Building,
 } from "lucide-react";
-import { SettingsTabId } from "@/components/UserSettingsModal";
+
+export type SettingsTabId =
+  | "profile"
+  | "language"
+  | "alerts"
+  | "security"
+  | "help";
 
 export default function SettingsPage() {
   const router = useRouter();

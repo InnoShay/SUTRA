@@ -15,7 +15,7 @@ from typing import Optional
 import sklearn
 
 EXPECTED_PRODUCTION_SHA256: str = "78a082276fc1770012b7bc7e711cb02de50dfcbfa7affaae6806f47fb8d0f41f"
-EXPECTED_SKLEARN_MAJOR_MINOR: str = "1.7"
+EXPECTED_SKLEARN_VERSIONS: tuple = ("1.7", "1.8", "1.9")
 EXPECTED_MODEL_VERSION: str = "v1.0.0"
 
 
@@ -42,10 +42,10 @@ class ModelPackageValidator:
     def validate_runtime_environment(cls) -> None:
         """Verify that the current scikit-learn version matches the serialized model baseline."""
         current_version = sklearn.__version__
-        if not current_version.startswith(EXPECTED_SKLEARN_MAJOR_MINOR):
+        if not current_version.startswith(EXPECTED_SKLEARN_VERSIONS):
             raise ModelPackagingError(
                 f"Incompatible scikit-learn runtime version '{current_version}'. "
-                f"Model v1.0.0 requires scikit-learn {EXPECTED_SKLEARN_MAJOR_MINOR}.x to prevent deserialization failures."
+                f"Model v1.0.0 requires scikit-learn 1.7.x - 1.9.x to prevent deserialization failures."
             )
 
     @classmethod

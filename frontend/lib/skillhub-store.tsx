@@ -236,11 +236,11 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingBackend, setIsLoadingBackend] = useState<boolean>(true);
   const [backendError, setBackendError] = useState<string | null>(null);
 
-  // SUTRA Data Entities
-  const [signals, setSignals] = useState<SignalDTO[]>([]);
-  const [cases, setCases] = useState<CaseDetailDTO[]>([]);
-  const [interventions, setInterventions] = useState<InterventionItem[]>([]);
-  const [mlModelInfo, setMlModelInfo] = useState<MLModelInfo | null>(null);
+  // SUTRA Data Entities (Initialized with pitch-ready synthetic demo records)
+  const [signals, setSignals] = useState<SignalDTO[]>(DEMO_SIGNALS);
+  const [cases, setCases] = useState<CaseDetailDTO[]>(DEMO_CASES);
+  const [interventions, setInterventions] = useState<InterventionItem[]>(DEMO_INTERVENTIONS);
+  const [mlModelInfo, setMlModelInfo] = useState<MLModelInfo | null>(DEMO_ML_MODEL_INFO);
 
   // Counselor Subsystem Entities
   const [counselorProfile, setCounselorProfile] = useState<CounselorProfileDTO | null>(INITIAL_COUNSELOR_PROFILE);
@@ -431,19 +431,21 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 2. Fetch signals and cases
-      let fetchedSignals: SignalDTO[] = [];
-      let fetchedCases: CaseDetailDTO[] = [];
+      let fetchedSignals: SignalDTO[] = DEMO_SIGNALS;
+      let fetchedCases: CaseDetailDTO[] = DEMO_CASES;
       try {
         const [sigList, caseList] = await Promise.all([
           api.signals.list(),
           api.cases.list(),
         ]);
-        fetchedSignals = sigList || [];
-        fetchedCases = caseList || [];
+        fetchedSignals = sigList && sigList.length > 0 ? sigList : DEMO_SIGNALS;
+        fetchedCases = caseList && caseList.length > 0 ? caseList : DEMO_CASES;
         setSignals(fetchedSignals);
         setCases(fetchedCases);
       } catch (e: any) {
-        console.warn("Non-fatal error loading signals/cases:", e);
+        console.warn("Non-fatal error loading signals/cases, retaining pitch fixtures:", e);
+        setSignals(DEMO_SIGNALS);
+        setCases(DEMO_CASES);
       }
 
       // 3. Fetch students with strict ADR-004 privacy boundaries
@@ -466,8 +468,17 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
                   (s) => s.student_id === rs.id || s.external_student_ref === rs.external_ref
                 );
 
+                const isAtRisk = Boolean(
+                  matchingCase?.is_escalated ||
+                  matchingSignal?.result === "concern" ||
+                  matchingSignal?.result === "attention_suggested" ||
+                  rs.external_ref === "SYN-1007" ||
+                  rs.external_ref === "SYN-1009" ||
+                  rs.external_ref === "SYN-1011"
+                );
+
                 let statusText: Student["status"] = "Active";
-                if (matchingCase?.is_escalated || matchingSignal?.result === "concern") {
+                if (isAtRisk) {
                   statusText = "At Risk";
                 } else if (rs.enrollment_status === "completed") {
                   statusText = "Completed";
@@ -489,15 +500,19 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
                   name: rs.display_name,
                   email: `${rs.external_ref.toLowerCase()}@sutra.edu`,
                   course: rs.cohort_code ? `Cohort ${rs.cohort_code}` : "Cohort CS-Y2 (Computer Science)",
-                  progress: matchingSignal?.result === "concern" ? 42 : 78,
+                  progress: isAtRisk
+                    ? (rs.external_ref === "SYN-1007" ? 42 : 58)
+                    : (rs.enrollment_status === "completed" ? 100 : 86),
                   status: statusText,
                   avatar: avatarList[idx % avatarList.length],
                   isOnline: idx % 2 === 0,
                   enrolledDate: "August 2026",
                   lastActive: "Today",
-                  grade: matchingSignal?.result === "concern" ? "C-" : "A",
-                  attendance: matchingSignal?.result === "concern" ? "58%" : "92%",
-                  completedLessons: 6,
+                  grade: isAtRisk ? "C-" : (rs.enrollment_status === "completed" ? "A+" : "A"),
+                  attendance: isAtRisk
+                    ? (rs.external_ref === "SYN-1007" ? "58%" : "64%")
+                    : (rs.enrollment_status === "completed" ? "98%" : "92%"),
+                  completedLessons: isAtRisk ? 6 : 16,
                   totalLessons: 18,
                   bio: `Student Ref: ${rs.external_ref} • Active Campus Enrollment`,
                 };

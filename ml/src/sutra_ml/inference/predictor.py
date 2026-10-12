@@ -37,6 +37,38 @@ class PredictionResult:
     evidence_card: SutraEvidenceCard
 
 
+CANONICAL_NUMERICAL_FEATURES = [
+    "num_of_prev_attempts",
+    "studied_credits",
+    "days_registered_before_start",
+    "has_missing_registration_date",
+    "vle_total_clicks_d30",
+    "vle_active_days_d30",
+    "vle_clicks_precourse",
+    "vle_clicks_poststart_d30",
+    "vle_clicks_last_7d",
+    "vle_days_since_last_click",
+    "vle_clicks_forumng_d30",
+    "vle_clicks_oucontent_d30",
+    "vle_clicks_quiz_d30",
+    "vle_clicks_homepage_d30",
+    "vle_clicks_other_d30",
+    "has_vle_activity_d30",
+    "assessments_submitted_d30",
+    "assessment_banked_d30",
+    "has_early_assessment_submission_d30",
+]
+
+CANONICAL_CATEGORICAL_FEATURES = [
+    "gender",
+    "region",
+    "highest_education",
+    "imd_band",
+    "age_band",
+    "disability",
+]
+
+
 class SutraRiskPredictor:
     """
     Inference service for the SUTRA Early-Warning model.
@@ -76,8 +108,22 @@ class SutraRiskPredictor:
             self.metadata = json.load(f)
 
         self.pipeline = joblib.load(self.model_path)
-        self.numerical_features = list(self.metadata.get("features", {}).get("numerical", []))
-        self.categorical_features = list(self.metadata.get("features", {}).get("categorical", []))
+        raw_features = self.metadata.get("features") if isinstance(self.metadata.get("features"), dict) else {}
+        num_feats = list(raw_features.get("numerical", []))
+        cat_feats = list(raw_features.get("categorical", []))
+
+        # Dynamic inspection from pipeline preprocessor if metadata omitted features
+        if not num_feats or not cat_feats:
+            if hasattr(self.pipeline, "named_steps") and "preprocessor" in self.pipeline.named_steps:
+                preproc = self.pipeline.named_steps["preprocessor"]
+                for trans_name, _, cols in getattr(preproc, "transformers_", []):
+                    if trans_name == "num" and not num_feats:
+                        num_feats = list(cols)
+                    elif trans_name == "cat" and not cat_feats:
+                        cat_feats = list(cols)
+
+        self.numerical_features = num_feats or list(CANONICAL_NUMERICAL_FEATURES)
+        self.categorical_features = cat_feats or list(CANONICAL_CATEGORICAL_FEATURES)
         self.feature_cols = self.numerical_features + self.categorical_features
 
         self.model_name = self.metadata.get("selected_model", "Regularized Logistic Regression Baseline")

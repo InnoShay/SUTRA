@@ -28,6 +28,11 @@ PROCESSED_DIR = ML_DIR / "data" / "processed"
 ARTIFACTS_DIR = ML_DIR / "artifacts" / "experiments" / "phase_twenty_two"
 METRICS_PATH = ML_DIR / "reports" / "metrics" / "phase_twenty_two_metrics.json"
 
+pytestmark = pytest.mark.skipif(
+    not (PROCESSED_DIR / "phase22_day30_features.csv").exists(),
+    reason="Phase 22 processed datasets not present in checkout",
+)
+
 from sutra_ml.features.build_dual_cutoff_features import (
     aggregate_assessment_cutoff,
     aggregate_vle_cutoff,

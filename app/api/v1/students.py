@@ -10,11 +10,19 @@ from app.core.errors import PermissionDeniedError, ResourceNotFoundError, Unproc
 from app.core.security import CampusMembershipContext, get_campus_membership
 from app.ml.service import ml_service
 from app.models.case import Case
+from app.models.ml import MLInferenceLog
 from app.models.observation import FinanceObservation, StudentObservation
 from app.models.signal import Signal
 from app.models.student import Student
-from app.schemas.ml import DAY30_REQUIRED_FEATURES, FORBIDDEN_LEAKED_FEATURES, MLPredictRequest, MLPredictResponse
 from app.schemas.ai import AISummarizeEvidenceResponse
+from app.schemas.ml import (
+    DAY30_REQUIRED_FEATURES,
+    FORBIDDEN_LEAKED_FEATURES,
+    MLAttribution,
+    MLEvidenceCard,
+    MLPredictRequest,
+    MLPredictResponse,
+)
 from app.schemas.student import (
     FeatureReadinessItem,
     FinanceObservationDTO,
@@ -200,6 +208,51 @@ async def get_student_support_view(
         for o in observations[:20]
     ]
 
+    # Latest ML prediction log for student if available
+    ml_log_query = select(MLInferenceLog).where(
+        MLInferenceLog.institution_id == membership.campus_id,
+        (MLInferenceLog.student_id == student.id) | (MLInferenceLog.external_student_ref == student.external_ref),
+    ).order_by(MLInferenceLog.created_at.desc()).limit(1)
+    ml_log_res = await db.execute(ml_log_query)
+    latest_ml_log = ml_log_res.scalars().first()
+
+    ml_prediction_dto = None
+    if latest_ml_log:
+        raw_attributions = (
+            latest_ml_log.top_attributions
+            if isinstance(latest_ml_log.top_attributions, list)
+            else []
+        )
+        attributions = [
+            MLAttribution(
+                feature=str(a.get("feature", "unknown")),
+                value=float(a.get("value", 0.0)),
+                attribution=float(a.get("attribution", 0.0)),
+                direction="increases_risk" if a.get("direction") == "increases_risk" else "decreases_risk",
+            )
+            for a in raw_attributions
+            if isinstance(a, dict)
+        ]
+
+        evidence_card = MLEvidenceCard(
+            card_type="ml_early_warning_evidence",
+            model_name=latest_ml_log.model_name,
+            model_version=latest_ml_log.model_version,
+            prediction_cutoff=latest_ml_log.prediction_cutoff,
+            risk_probability=round(latest_ml_log.risk_probability, 4),
+            threshold=round(latest_ml_log.threshold, 2),
+            classification="At_Risk" if latest_ml_log.risk_probability >= latest_ml_log.threshold else "On_Track",
+            top_attributions=attributions,
+        )
+
+        ml_prediction_dto = MLPredictResponse(
+            external_student_ref=latest_ml_log.external_student_ref,
+            risk_probability=round(latest_ml_log.risk_probability, 4),
+            threshold=round(latest_ml_log.threshold, 2),
+            classification=evidence_card.classification,
+            evidence_card=evidence_card,
+        )
+
     return SupportViewResponse(
         student=StudentSummary(
             id=student.id,
@@ -214,7 +267,9 @@ async def get_student_support_view(
         active_signals_count=sig_count,
         active_cases_count=case_count,
         recent_observations=obs_dtos,
+        ml_prediction=ml_prediction_dto,
     )
+
 
 
 @router.get("/{student_id}/observations", response_model=List[ObservationDTO])
@@ -429,6 +484,7 @@ async def get_student_feature_readiness(
 
 
 @router.get("/{student_id}/finance", response_model=FinanceViewResponse)
+@router.get("/{student_id}/finance-view", response_model=FinanceViewResponse)
 async def get_student_finance_view(
     student_id: str = Path(..., description="Student UUID or external reference"),
     membership: CampusMembershipContext = Depends(get_campus_membership),
