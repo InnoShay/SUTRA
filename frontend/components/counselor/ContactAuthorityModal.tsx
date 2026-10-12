@@ -3,19 +3,6 @@
 import React, { useState } from "react";
 import { useSkillHub } from "@/lib/store";
 import { AuthorityContactItem } from "@/lib/types";
-import {
-  PhoneCall,
-  X,
-  ShieldAlert,
-  AlertTriangle,
-  Building,
-  CheckCircle2,
-  ExternalLink,
-  Mail,
-  Phone,
-  Clock,
-  Sparkles,
-} from "lucide-react";
 
 interface ContactAuthorityModalProps {
   isOpen: boolean;
@@ -32,7 +19,7 @@ export function ContactAuthorityModal({
   studentId = "SYN-1007",
   studentName = "Asha (synthetic)",
 }: ContactAuthorityModalProps) {
-  const { authorityContacts, escalateCaseToAuthority, cases } = useSkillHub();
+  const { authorityContacts, escalateCaseToAuthority } = useSkillHub();
 
   const [selectedAuthorityId, setSelectedAuthorityId] = useState<string>(
     authorityContacts[0]?.id || "AUTH-01"
@@ -75,7 +62,6 @@ export function ContactAuthorityModal({
       });
       setSubmittedRecord(rec);
 
-      // Trigger actual device calling link if phone selected
       if (communicationMethod === "phone" && selectedAuthority.contact_number) {
         const cleanNumber = selectedAuthority.contact_number.replace(/\s+/g, "");
         window.open(`tel:${cleanNumber}`, "_self");
@@ -106,53 +92,39 @@ export function ContactAuthorityModal({
         className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header (No SVGs) */}
         <div className="flex items-center justify-between p-5 sm:p-6 border-b border-neutral-100 bg-neutral-50/50">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                isUrgent
-                  ? "bg-rose-100 text-rose-700 border border-rose-200"
-                  : "bg-neutral-900 text-white"
-              }`}
-            >
-              {isUrgent ? <ShieldAlert className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+          <div>
+            <div className="flex items-center gap-2">
+              <h3
+                id="contact-authority-title"
+                className="text-base font-bold text-neutral-900 font-heading"
+              >
+                Contact Institutional Authority &amp; Escalate
+              </h3>
+              {isUrgent && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+                  High Priority
+                </span>
+              )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3
-                  id="contact-authority-title"
-                  className="text-base font-bold text-neutral-900 font-heading"
-                >
-                  Contact Institutional Authority &amp; Escalate
-                </h3>
-                {isUrgent && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                    High Priority
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                Targeted institutional coordination for {studentName} ({studentId})
-              </p>
-            </div>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              Targeted institutional coordination for {studentName} ({studentId})
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-neutral-200/60 text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-full hover:bg-neutral-200/60 text-neutral-400 hover:text-neutral-700 transition-colors flex items-center justify-center text-sm font-semibold cursor-pointer"
             title="Close dialog"
             aria-label="Close dialog"
           >
-            <X className="w-4 h-4" />
+            ✕
           </button>
         </div>
 
         {submittedRecord ? (
           /* Confirmation Screen */
           <div className="p-6 sm:p-8 text-center space-y-4">
-            <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
-              <CheckCircle2 className="w-7 h-7" />
-            </div>
             <div className="space-y-1">
               <h4 className="text-base font-bold text-neutral-900">
                 Escalation Recorded &amp; Outreach Initiated
@@ -188,16 +160,11 @@ export function ContactAuthorityModal({
               </div>
               <div className="flex justify-between">
                 <span className="text-neutral-400">Audit Status</span>
-                <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                <span className="font-semibold text-neutral-900 bg-neutral-200 px-2 py-0.5 rounded-full">
                   Contact Attempted
                 </span>
               </div>
             </div>
-
-            <p className="text-[11px] text-neutral-400 italic max-w-sm mx-auto">
-              Notice: The system records that contact was initiated. Mark as confirmed once the
-              institutional authority acknowledges receipt.
-            </p>
 
             <div className="pt-2">
               <button
@@ -226,51 +193,37 @@ export function ContactAuthorityModal({
                       onClick={() => handleSelectAuthority(auth)}
                       className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         isSelected
-                          ? "bg-neutral-900 text-white border-neutral-900 shadow-xs"
+                          ? "bg-neutral-50/90 border-2 border-neutral-900 shadow-xs"
                           : "bg-white hover:bg-neutral-50 text-neutral-800 border-neutral-200/80"
                       }`}
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold truncate">{auth.service_name}</span>
+                          <span className="text-xs font-bold text-neutral-900 truncate">{auth.service_name}</span>
                           {auth.is_emergency && (
-                            <span
-                              className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${
-                                isSelected
-                                  ? "bg-rose-500 text-white"
-                                  : "bg-rose-50 text-rose-700 border border-rose-200"
-                              }`}
-                            >
+                            <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-red-50 text-red-700 border border-red-200">
                               24/7 Emergency
                             </span>
                           )}
                         </div>
-                        <p
-                          className={`text-xs mt-0.5 ${
-                            isSelected ? "text-neutral-300" : "text-neutral-500"
-                          }`}
-                        >
+                        <p className="text-xs mt-0.5 text-neutral-600 font-medium">
                           {auth.contact_name} • {auth.designation}
                         </p>
-                        <p
-                          className={`text-[11px] font-mono mt-0.5 ${
-                            isSelected ? "text-neutral-400" : "text-neutral-400"
-                          }`}
-                        >
+                        <p className="text-[11px] font-mono mt-0.5 text-neutral-500">
                           {auth.contact_number} • {auth.availability}
                         </p>
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                            isSelected
-                              ? "bg-neutral-800 text-neutral-200"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                          }`}
-                        >
-                          Verified
-                        </span>
+                        {isSelected ? (
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-neutral-900 text-white">
+                            Selected
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-neutral-100 text-neutral-800 border border-neutral-300">
+                            Verified
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -295,16 +248,12 @@ export function ContactAuthorityModal({
                     onClick={() => setCommunicationMethod(mode.id as any)}
                     className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       communicationMethod === mode.id
-                        ? "bg-neutral-900 text-white border-neutral-900 shadow-2xs"
+                        ? "bg-neutral-50 border-2 border-neutral-900 text-neutral-900 shadow-xs"
                         : "bg-white hover:bg-neutral-50 text-neutral-800 border-neutral-200/80"
                     }`}
                   >
-                    <div className="text-xs font-bold">{mode.label}</div>
-                    <div
-                      className={`text-[10px] truncate mt-0.5 ${
-                        communicationMethod === mode.id ? "text-neutral-300" : "text-neutral-400"
-                      }`}
-                    >
+                    <div className="text-xs font-bold text-neutral-900">{mode.label}</div>
+                    <div className="text-[10px] truncate mt-0.5 text-neutral-500 font-mono">
                       {mode.desc}
                     </div>
                   </button>
@@ -336,19 +285,16 @@ export function ContactAuthorityModal({
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g. Dean office review requested before Thursday senate committee..."
+                placeholder="e.g. Administration review requested before committee session..."
                 className="w-full px-3.5 py-2 rounded-xl border border-neutral-200/80 text-xs text-neutral-900 bg-neutral-50 focus:bg-white focus:outline-none focus:border-neutral-900 transition-all"
               />
             </div>
 
             {/* Emergency Checkbox */}
             <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/70 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="text-xs font-semibold text-neutral-800">
-                  Mark as Urgent Emergency Escalation
-                </span>
-              </div>
+              <span className="text-xs font-semibold text-neutral-900">
+                Mark as Urgent Emergency Escalation
+              </span>
               <input
                 type="checkbox"
                 checked={isUrgent}
@@ -369,13 +315,12 @@ export function ContactAuthorityModal({
               <button
                 type="submit"
                 disabled={isSubmitting || !reason.trim()}
-                className={`px-5 py-2 rounded-full text-xs font-semibold shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 ${
+                className={`px-5 py-2.5 rounded-full text-xs font-semibold shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 ${
                   isUrgent
-                    ? "bg-rose-600 hover:bg-rose-700 text-white"
+                    ? "bg-red-600 hover:bg-red-700 text-white"
                     : "bg-neutral-900 hover:bg-neutral-800 text-white"
                 }`}
               >
-                <PhoneCall className="w-3.5 h-3.5" />
                 <span>
                   {isSubmitting
                     ? "Recording..."

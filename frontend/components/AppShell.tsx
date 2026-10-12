@@ -34,6 +34,7 @@ import {
   HeartHandshake,
   MessageCircle,
   Briefcase,
+  Calendar,
 } from "lucide-react";
 import { DEMO_PERSONAS } from "@/lib/demo-auth";
 import { UserRole } from "@/lib/types";
@@ -91,13 +92,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       avatar: DEMO_PERSONAS.faculty.avatar,
     },
     {
-      role: "student",
-      displayLabel: "Student (Asha)",
-      fullName: DEMO_PERSONAS.student.name,
-      title: DEMO_PERSONAS.student.title,
-      avatar: DEMO_PERSONAS.student.avatar,
-    },
-    {
       role: "counselor",
       displayLabel: "Counselor (Dr. Nambiar)",
       fullName: DEMO_PERSONAS.counselor.name,
@@ -105,33 +99,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       avatar: DEMO_PERSONAS.counselor.avatar,
     },
     {
-      role: "dean",
-      displayLabel: "Dean / HOD (Dr. Rao)",
-      fullName: DEMO_PERSONAS.dean.name,
-      title: DEMO_PERSONAS.dean.title,
-      avatar: DEMO_PERSONAS.dean.avatar,
-    },
-    {
-      role: "leadership",
-      displayLabel: "Leadership (Prof. Kulkarni)",
-      fullName: DEMO_PERSONAS.leadership.name,
-      title: DEMO_PERSONAS.leadership.title,
-      avatar: DEMO_PERSONAS.leadership.avatar,
-      badge: "ADR-004",
+      role: "student",
+      displayLabel: "Student (Asha)",
+      fullName: DEMO_PERSONAS.student.name,
+      title: DEMO_PERSONAS.student.title,
+      avatar: DEMO_PERSONAS.student.avatar,
     },
     {
       role: "admin",
-      displayLabel: "Administrator",
-      fullName: DEMO_PERSONAS.admin.name,
-      title: DEMO_PERSONAS.admin.title,
+      displayLabel: "Admin",
+      fullName: "Admin",
+      title: "System Admin",
       avatar: DEMO_PERSONAS.admin.avatar,
-    },
-    {
-      role: "superadmin",
-      displayLabel: "Superadmin",
-      fullName: DEMO_PERSONAS.superadmin.name,
-      title: DEMO_PERSONAS.superadmin.title,
-      avatar: DEMO_PERSONAS.superadmin.avatar,
     },
   ];
 
@@ -140,10 +119,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const handleRoleSelect = (role: UserRole) => {
     setIsPersonaMenuOpen(false);
-    if (authorizedRoles.length > 0 && !authorizedRoles.includes(role)) {
-      console.warn(`[SUTRA Auth] Unauthorized role selection rejected: ${role}`);
-      return;
-    }
     if (role === activeRole) return;
     setActiveRole(role);
     if (pathname !== "/dashboard") {
@@ -266,10 +241,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     },
   ];
 
+  const counselorNavItems = [
+    {
+      name: t("nav.dashboard", "Overview"),
+      shortName: t("nav.dashboard_short", "Overview"),
+      href: "/dashboard",
+      icon: LayoutGrid,
+    },
+    {
+      name: "Schedule & Calls",
+      shortName: "Schedule",
+      href: "/schedule",
+      icon: Calendar,
+    },
+    {
+      name: "Students in Need",
+      shortName: "Students",
+      href: "/students",
+      icon: GraduationCap,
+    },
+    {
+      name: "Support Cases",
+      shortName: "Cases",
+      href: "/cases",
+      icon: FileText,
+    },
+    {
+      name: "Counselor Analytics",
+      shortName: "Analytics",
+      href: "/counselor/analytics",
+      icon: BarChart2,
+    },
+  ];
+
+  const isCounselor = activeRole === "counselor";
+
   const mainNavItems = isStudent
     ? studentNavItems
     : isAdmin
     ? adminNavItems
+    : isCounselor
+    ? counselorNavItems
     : teacherNavItems;
 
   return (
@@ -524,95 +536,56 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     />
 
                     {/* Apple / iOS-style Floating Glass Menu */}
-                    <div className="absolute right-0 top-full mt-2 w-80 bg-white/95 backdrop-blur-xl border border-neutral-200/80 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                      {/* iOS Group Header */}
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 backdrop-blur-xl border border-neutral-200/80 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.04)] p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      {/* Clean Group Header */}
                       <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                          {supabaseSession ? "Active Account" : "Active Persona"}
+                          Switch Role View
                         </span>
-                        <span
-                          className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-full ${
-                            supabaseSession
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200/60 font-semibold"
-                              : "bg-neutral-100 text-neutral-600"
-                          }`}
-                        >
-                          {supabaseSession ? "Google SSO Active" : "Role Context"}
-                        </span>
-                      </div>
-
-                      {/* User Card if Authenticated */}
-                      {supabaseSession && (
-                        <div className="mx-1 my-1.5 p-2.5 bg-neutral-50/90 rounded-xl border border-neutral-100 flex items-center gap-2.5">
-                          <UserAvatar
-                            src={user.avatar}
-                            name={user.fullName || user.name}
-                            className="w-8 h-8 ring-2 ring-emerald-400/60 shrink-0"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-bold text-neutral-900 truncate">
-                              {user.fullName || user.name}
-                            </div>
-                            <div className="text-[10px] text-neutral-500 truncate">
-                              {user.email}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Header for Roles / Personas */}
-                      <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                        {supabaseSession ? "Switch Role View" : "Available Personas"}
                       </div>
 
                       {/* Options List */}
-                      <div className="py-1 space-y-0.5 max-h-72 overflow-y-auto">
-                        {personaList
-                          .filter(
-                            (p) =>
-                              authorizedRoles.length === 0 ||
-                              authorizedRoles.includes(p.role)
-                          )
-                          .map((p) => {
-                            const isSelected = activeRole === p.role;
-                            return (
-                              <button
-                                key={p.role}
-                                type="button"
-                                onClick={() => handleRoleSelect(p.role)}
-                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all cursor-pointer ${
-                                  isSelected
-                                    ? "bg-neutral-100/90 text-neutral-900 shadow-2xs font-semibold"
-                                    : "hover:bg-neutral-50 active:bg-neutral-100/80 text-neutral-700"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                  <UserAvatar
-                                    src={p.avatar}
-                                    name={p.fullName}
-                                    className="w-7 h-7 ring-1 ring-neutral-200/80"
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-semibold text-neutral-900 truncate flex items-center gap-1.5">
-                                      <span>{p.displayLabel}</span>
-                                      {p.badge && (
-                                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-mono font-bold">
-                                          {p.badge}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-[10px] text-neutral-400 truncate">
-                                      {p.title}
-                                    </div>
+                      <div className="py-1 space-y-0.5 max-h-80 overflow-y-auto">
+                        {personaList.map((p) => {
+                          const isSelected = activeRole === p.role;
+                          return (
+                            <button
+                              key={p.role}
+                              type="button"
+                              onClick={() => handleRoleSelect(p.role)}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-neutral-100/90 text-neutral-900 shadow-2xs font-semibold"
+                                  : "hover:bg-neutral-50 active:bg-neutral-100/80 text-neutral-700"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <UserAvatar
+                                  src={p.avatar}
+                                  name={p.fullName}
+                                  className="w-7 h-7 ring-1 ring-neutral-200/80"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-semibold text-neutral-900 truncate flex items-center gap-1.5">
+                                    <span>{p.displayLabel}</span>
+                                    {p.badge && (
+                                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-mono font-bold">
+                                        {p.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-400 truncate">
+                                    {p.title}
                                   </div>
                                 </div>
+                              </div>
 
-                                {isSelected && (
-                                  <Check className="w-4 h-4 text-neutral-900 shrink-0 ml-2" />
-                                )}
-                              </button>
-                            );
-                          })}
+                              {isSelected && (
+                                <Check className="w-4 h-4 text-neutral-900 shrink-0 ml-2" />
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </>

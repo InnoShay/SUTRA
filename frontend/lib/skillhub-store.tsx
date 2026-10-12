@@ -17,9 +17,11 @@ import {
   INITIAL_AUTHORITY_CONTACTS,
   INITIAL_CALL_REQUESTS,
   INITIAL_ESCALATIONS,
+  INITIAL_CALENDAR_EVENTS,
 } from "./skillhub-data";
 import {
   UserRole,
+  CounselorCalendarEvent,
   SignalDTO,
   CaseDetailDTO,
   InterventionItem,
@@ -168,6 +170,10 @@ interface SkillHubContextType {
   escalateCaseToAuthority: (req: EscalationRequest) => Promise<EscalationRecordDTO>;
   requestCounselorCall: (input: CreateCallRequestInput) => Promise<CounselorCallRequestDTO>;
   updateCallRequestStatus: (id: string, status: string, notes?: string, incrementAttempt?: boolean) => Promise<void>;
+  calendarEvents: CounselorCalendarEvent[];
+  addCalendarEvent: (event: Omit<CounselorCalendarEvent, "id">) => void;
+  updateCalendarEvent: (id: string, updates: Partial<CounselorCalendarEvent>) => void;
+  deleteCalendarEvent: (id: string) => void;
 
   // Existing UI compatibility state
   user: typeof CURRENT_USER;
@@ -224,7 +230,12 @@ const SkillHubContext = createContext<SkillHubContextType | undefined>(undefined
 export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   // 1. Role and Authentication State
   const [activeRole, setActiveRoleState] = useState<UserRole>("faculty");
-  const [authorizedRoles, setAuthorizedRoles] = useState<UserRole[]>(["faculty", "student", "admin"]);
+  const [authorizedRoles, setAuthorizedRoles] = useState<UserRole[]>([
+    "faculty",
+    "counselor",
+    "student",
+    "admin",
+  ]);
   const currentPersona = DEMO_PERSONAS[activeRole] || DEMO_PERSONAS.faculty;
 
   const [supabaseSession, setSupabaseSession] = useState<SupabaseSession | null>(null);
@@ -242,11 +253,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const [interventions, setInterventions] = useState<InterventionItem[]>(DEMO_INTERVENTIONS);
   const [mlModelInfo, setMlModelInfo] = useState<MLModelInfo | null>(DEMO_ML_MODEL_INFO);
 
-  // Counselor Subsystem Entities
+  // Counselor Subsystem Entities & Calendar
   const [counselorProfile, setCounselorProfile] = useState<CounselorProfileDTO | null>(INITIAL_COUNSELOR_PROFILE);
   const [authorityContacts, setAuthorityContacts] = useState<AuthorityContactItem[]>(INITIAL_AUTHORITY_CONTACTS);
   const [escalations, setEscalations] = useState<EscalationRecordDTO[]>(INITIAL_ESCALATIONS);
   const [callRequests, setCallRequests] = useState<CounselorCallRequestDTO[]>(INITIAL_CALL_REQUESTS);
+  const [calendarEvents, setCalendarEvents] = useState<CounselorCalendarEvent[]>(INITIAL_CALENDAR_EVENTS);
 
   // UI state initialized with canonical synthetic fixtures
   const [user, setUser] = useState({
@@ -366,9 +378,9 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
                 .map((r) => (r === "teacher" ? "faculty" : (r as UserRole)))
             )
           );
-          // Always ensure the 3 primary MVP roles are accessible for role demonstration
+          // Always ensure the primary demo roles are accessible for role demonstration
           const combined = Array.from(
-            new Set([...userRoles, "faculty", "student", "admin"] as UserRole[])
+            new Set([...userRoles, "faculty", "counselor", "student", "admin"] as UserRole[])
           );
           setAuthorizedRoles(combined);
           if (!combined.includes(activeRole)) {
@@ -377,12 +389,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         api.setCampusId(DEMO_CAMPUS_ID);
-        setAuthorizedRoles(["faculty", "student", "admin"]);
+        setAuthorizedRoles(["faculty", "counselor", "student", "admin"]);
       }
     } catch (e) {
       console.warn("Could not retrieve membership from /auth/me:", e);
       api.setCampusId(DEMO_CAMPUS_ID);
-      setAuthorizedRoles(["faculty", "student", "admin"]);
+      setAuthorizedRoles(["faculty", "counselor", "student", "admin"]);
     }
 
     setUser((prev) => ({
@@ -991,6 +1003,24 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addCalendarEvent = (eventData: Omit<CounselorCalendarEvent, "id">) => {
+    const newEvent: CounselorCalendarEvent = {
+      ...eventData,
+      id: `evt-${Date.now()}`,
+    };
+    setCalendarEvents((prev) => [newEvent, ...prev]);
+  };
+
+  const updateCalendarEvent = (id: string, updates: Partial<CounselorCalendarEvent>) => {
+    setCalendarEvents((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
+    );
+  };
+
+  const deleteCalendarEvent = (id: string) => {
+    setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
   const updateUser = (data: Partial<typeof CURRENT_USER>) => {
     setUser((prev) => ({
       ...prev,
@@ -1176,6 +1206,10 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         escalateCaseToAuthority,
         requestCounselorCall,
         updateCallRequestStatus,
+        calendarEvents,
+        addCalendarEvent,
+        updateCalendarEvent,
+        deleteCalendarEvent,
         user,
         updateUser,
         courses,

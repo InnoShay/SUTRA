@@ -23,6 +23,7 @@ import {
   Download,
   AlertTriangle,
 } from "lucide-react";
+import CounselorAnalyticsPage from "../counselor/analytics/page";
 
 export default function AnalyticsPage() {
   const {
@@ -35,6 +36,10 @@ export default function AnalyticsPage() {
     backendConnected,
     dataProvenance,
   } = useSkillHub();
+
+  if (activeRole === "counselor") {
+    return <CounselorAnalyticsPage />;
+  }
 
   const timeframes = ["This Week", "This Month", "This Year"] as const;
 
@@ -74,11 +79,10 @@ export default function AnalyticsPage() {
               <button
                 key={tf}
                 onClick={() => setAnalyticsTimeframe(tf)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  analyticsTimeframe === tf
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${analyticsTimeframe === tf
                     ? "bg-white text-neutral-900 shadow-sm"
                     : "text-neutral-500 hover:text-neutral-800"
-                }`}
+                  }`}
               >
                 {tf}
               </button>

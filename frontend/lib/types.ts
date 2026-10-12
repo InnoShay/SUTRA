@@ -539,3 +539,22 @@ export interface CreateCallRequestInput {
   preferred_time_slot: 'morning' | 'afternoon' | 'flexible';
   student_notes?: string;
 }
+
+export interface CounselorCalendarEvent {
+  id: string;
+  title: string;
+  studentId: string;
+  studentName: string;
+  category: 'math' | 'art' | 'physics' | 'sport' | 'academic' | 'wellbeing' | 'career' | 'attendance';
+  dayOfWeek: number; // 1 (Mon) to 7 (Sun)
+  dateStr?: string;
+  startTime: string; // e.g. "07:00"
+  endTime: string; // e.g. "07:40"
+  durationLabel: string; // e.g. "7:00am - 7:40am"
+  status: 'confirmed' | 'pending' | 'completed';
+  color: 'lavender' | 'sky' | 'peach' | 'mint' | 'rose';
+  locationOrMode?: string;
+  notes?: string;
+  hasAttachment?: boolean;
+  attachmentTitle?: string;
+}
