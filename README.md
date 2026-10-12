@@ -193,7 +193,16 @@ The contract address, deployment transaction, block, deployer, gas used, and ver
 
 <!-- BASE_SEPOLIA_REGISTRY_START -->
 
-**Status: Not deployed from this checkout yet.** Target network: Base Sepolia (Chain ID 84532). Start the frontend and open [http://localhost:3000/documents/deploy](http://localhost:3000/documents/deploy) in Brave with MetaMask enabled. The page deploys the locally compiled registry bytecode; review and approve the transaction in MetaMask. After confirmation, copy the public contract address into the backend `.env` as `BASE_SEPOLIA_CONTRACT_ADDRESS` and restart the backend. Never export a wallet private key or paste one into chat, source control, command arguments, or the README.
+**Status: Deployed and verified on Base Sepolia (Chain ID 84532).**
+
+- Contract: [`0x0e1ef70c8473E33111112Ffc91a05376A773e5B6`](https://sepolia.basescan.org/address/0x0e1ef70c8473E33111112Ffc91a05376A773e5B6)
+- Deployment transaction: [`0x22e88fd0054d5dd5e922660398c7baa3cd7215d60b71741674801249e29c5c99`](https://sepolia.basescan.org/tx/0x22e88fd0054d5dd5e922660398c7baa3cd7215d60b71741674801249e29c5c99)
+- Deployment block: `48036553`
+- Deployer wallet: `0x1d09dbbb685f355a67dae742111e88849446b1e7`
+- Gas used: `253152`
+- Network: `Base Sepolia (Chain ID 84532)`
+- Verified at: `2026-10-13 04:14 UTC`
+- Contract source: [`contracts/SutraDocumentRegistry.sol`](contracts/SutraDocumentRegistry.sol)
 
 <!-- BASE_SEPOLIA_REGISTRY_END -->
 

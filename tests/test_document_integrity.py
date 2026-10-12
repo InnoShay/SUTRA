@@ -143,11 +143,12 @@ async def test_document_generation_and_draft_state(client: AsyncClient, setup_do
 
 
 @pytest.mark.asyncio
-async def test_document_finalization_and_anchoring_lifecycle(client: AsyncClient, setup_document_env):
+async def test_document_finalization_and_anchoring_lifecycle(client: AsyncClient, setup_document_env, monkeypatch):
     """
     Without a deployed registry, finalization must remain usable while anchoring fails
     explicitly instead of creating a simulated proof.
     """
+    monkeypatch.setattr(base_sepolia_service, "registry_anchor_ready", lambda: False)
     env = setup_document_env
     headers = {
         "Authorization": f"Bearer {env['faculty_token']}",
