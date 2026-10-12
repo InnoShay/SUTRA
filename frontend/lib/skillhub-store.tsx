@@ -24,6 +24,8 @@ import {
   DEMO_POINTS_TRANSACTIONS,
   DEMO_LEADERBOARD_WEEKLY,
   DEMO_LEADERBOARD_MONTHLY,
+  DEMO_MY_PRIVATE_RANK_WEEKLY,
+  DEMO_MY_PRIVATE_RANK_MONTHLY,
   DEMO_REDEMPTIONS,
 } from "./skillhub-data";
 import {
@@ -60,6 +62,7 @@ import {
   EligibleActivityDTO,
   LeaderboardResponseDTO,
   LeaderboardPeriod,
+  StudentPrivateRankDTO,
   RewardItemDTO,
   RedemptionRecordDTO,
   RedemptionStatus,
@@ -219,12 +222,15 @@ interface SkillHubContextType {
   eligibleActivities: EligibleActivityDTO[];
   leaderboardWeekly: LeaderboardResponseDTO | null;
   leaderboardMonthly: LeaderboardResponseDTO | null;
+  myPrivateRankWeekly: StudentPrivateRankDTO | null;
+  myPrivateRankMonthly: StudentPrivateRankDTO | null;
   rewardsCatalog: RewardItemDTO[];
   myRedemptions: RedemptionRecordDTO[];
   allRedemptions: RedemptionRecordDTO[];
   isLoadingRewards: boolean;
   rewardsError: string | null;
   refreshRewardsData: () => Promise<void>;
+  refreshMyRankData: () => Promise<void>;
   claimEligibleActivity: (activityKey: string) => Promise<ClaimActivityResponseDTO>;
   redeemStoreReward: (rewardId: string, notes?: string) => Promise<RedeemRewardResponseDTO>;
   updateAdminRedemptionStatus: (redemptionId: string, status: RedemptionStatus, notes?: string) => Promise<RedemptionRecordDTO>;
@@ -340,6 +346,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   );
   const [leaderboardMonthly, setLeaderboardMonthly] = useState<LeaderboardResponseDTO | null>(
     demoActive ? DEMO_LEADERBOARD_MONTHLY : null
+  );
+  const [myPrivateRankWeekly, setMyPrivateRankWeekly] = useState<StudentPrivateRankDTO | null>(
+    demoActive ? DEMO_MY_PRIVATE_RANK_WEEKLY : null
+  );
+  const [myPrivateRankMonthly, setMyPrivateRankMonthly] = useState<StudentPrivateRankDTO | null>(
+    demoActive ? DEMO_MY_PRIVATE_RANK_MONTHLY : null
   );
   const [rewardsCatalog, setRewardsCatalog] = useState<RewardItemDTO[]>(PUBLISHED_REWARDS_CATALOG);
   const [myRedemptions, setMyRedemptions] = useState<RedemptionRecordDTO[]>(
@@ -811,6 +823,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
           setPointsTransactions(DEMO_POINTS_TRANSACTIONS);
           setLeaderboardWeekly(DEMO_LEADERBOARD_WEEKLY);
           setLeaderboardMonthly(DEMO_LEADERBOARD_MONTHLY);
+          setMyPrivateRankWeekly(DEMO_MY_PRIVATE_RANK_WEEKLY);
+          setMyPrivateRankMonthly(DEMO_MY_PRIVATE_RANK_MONTHLY);
           setMyRedemptions(DEMO_REDEMPTIONS);
           setAllRedemptions(DEMO_REDEMPTIONS);
           setIsLoadingBackend(false);
@@ -1409,6 +1423,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       setEligibleActivities(ELIGIBLE_ACTIVITIES);
       setLeaderboardWeekly(DEMO_LEADERBOARD_WEEKLY);
       setLeaderboardMonthly(DEMO_LEADERBOARD_MONTHLY);
+      setMyPrivateRankWeekly(DEMO_MY_PRIVATE_RANK_WEEKLY);
+      setMyPrivateRankMonthly(DEMO_MY_PRIVATE_RANK_MONTHLY);
       setRewardsCatalog(PUBLISHED_REWARDS_CATALOG);
       setMyRedemptions(DEMO_REDEMPTIONS);
       setAllRedemptions(DEMO_REDEMPTIONS);
@@ -1417,7 +1433,7 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const [walletRes, txsRes, actRes, weeklyRes, monthlyRes, catRes, myRedRes] =
+      const [walletRes, txsRes, actRes, weeklyRes, monthlyRes, catRes, myRedRes, myRankWeeklyRes, myRankMonthlyRes] =
         await Promise.allSettled([
           api.proposed.getMyWallet(),
           api.proposed.getMyTransactions(),
@@ -1426,6 +1442,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
           api.proposed.getLeaderboard("monthly"),
           api.proposed.getRewardsCatalog(),
           api.proposed.getMyRedemptions(),
+          api.proposed.getMyPrivateRank("weekly"),
+          api.proposed.getMyPrivateRank("monthly"),
         ]);
 
       if (walletRes.status === "fulfilled") setPointsWallet(walletRes.value);
@@ -1435,6 +1453,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
       if (monthlyRes.status === "fulfilled") setLeaderboardMonthly(monthlyRes.value);
       if (catRes.status === "fulfilled") setRewardsCatalog(catRes.value || []);
       if (myRedRes.status === "fulfilled") setMyRedemptions(myRedRes.value || []);
+      if (myRankWeeklyRes.status === "fulfilled") setMyPrivateRankWeekly(myRankWeeklyRes.value);
+      if (myRankMonthlyRes.status === "fulfilled") setMyPrivateRankMonthly(myRankMonthlyRes.value);
 
       if (activeRole === "admin" || activeRole === "superadmin") {
         try {
@@ -1862,6 +1882,26 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         eligibleActivities,
         leaderboardWeekly,
         leaderboardMonthly,
+        myPrivateRankWeekly,
+        myPrivateRankMonthly,
+        refreshMyRankData: async () => {
+          try {
+            const [w, m] = await Promise.all([
+              api.proposed.getMyPrivateRank("weekly"),
+              api.proposed.getMyPrivateRank("monthly"),
+            ]);
+            setMyPrivateRankWeekly(w);
+            setMyPrivateRankMonthly(m);
+          } catch {
+            if (isDemoMode()) {
+              setMyPrivateRankWeekly(DEMO_MY_PRIVATE_RANK_WEEKLY);
+              setMyPrivateRankMonthly(DEMO_MY_PRIVATE_RANK_MONTHLY);
+            } else {
+              setMyPrivateRankWeekly(null);
+              setMyPrivateRankMonthly(null);
+            }
+          }
+        },
         rewardsCatalog,
         myRedemptions,
         allRedemptions,

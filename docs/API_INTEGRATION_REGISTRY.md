@@ -508,38 +508,43 @@ The following endpoints are required to complete student-facing workflows. They 
 
 ---
 
-### Endpoint 12: Period-Based Student Leaderboard
+### Endpoint 12: Private Student Rank & Progress ("My Progress")
 * **HTTP Method**: `GET`
-* **Route**: `/api/v1/rewards/leaderboard`
+* **Route**: `/api/v1/rewards/my-rank`
 * **Query Parameters**: `period`: `"weekly"` (default) or `"monthly"`
-* **Purpose**: Retrieve period-specific rankings based strictly on eligible participation points earned in the current cycle.
-* **Security & Privacy Safeguards**:
-  * Displays pseudonymized student display names only (e.g. "Asha K.", "Rohan M.").
-  * Strictly excludes student IDs, emails, phone numbers, and Happiness Pulse answers.
-  * Lifetime points are NEVER used for ranking.
+* **Purpose**: Retrieve the authenticated student's private ranking position, period points, lifetime points, previous period rank, and next reward milestone.
+* **Strict Privacy & Anti-Ranking Invariants**:
+  * **Strict Personal Privacy**: Every student's position is private by default and visible *only to that student*.
+  * **Zero Public Peer Lists**: The endpoint returns strictly the authenticated student's own record. No arrays of other students, peer names, or competitive scoreboards are ever returned.
+  * **Derived Identity**: Derived exclusively from the authenticated JWT session (`auth.users.id`). Never trusts client-supplied student IDs.
+  * **Happiness Decoupling**: Ranks reflect period-specific voluntary participation points only. Happiness Index answers are strictly excluded.
 * **Response Schema (`200 OK`)**:
   ```json
   {
+    "student_id": "SYN-1007",
     "period": "weekly",
     "cycle_label": "Current Week (Oct 7 – Oct 13, 2026)",
-    "total_participants": 64,
-    "last_updated_at": "2026-10-13T10:00:00Z",
-    "entries": [
-      { "rank": 1, "display_name": "Rohan M.", "avatar": "RM", "points_in_period": 45, "activities_count": 4 },
-      { "rank": 2, "display_name": "Kavita S.", "avatar": "KS", "points_in_period": 40, "activities_count": 3 },
-      { "rank": 3, "display_name": "Asha K.", "avatar": "AK", "points_in_period": 35, "activities_count": 3, "is_current_user": true }
-    ],
-    "current_user_entry": {
-      "rank": 3,
-      "display_name": "Asha K.",
-      "avatar": "AK",
-      "points_in_period": 35,
-      "activities_count": 3,
-      "is_current_user": true
-    }
+    "current_rank": 12,
+    "period_points": 85,
+    "total_lifetime_points: 385,
+    "previous_rank": 14,
+    "rank_change": 2,
+    "next_reward_name": "College merchandise",
+    "points_to_next_reward": 115,
+    "next_reward_target_points": 500,
+    "total_participants_in_period": 142,
+    "as_of": "2026-10-13T00:00:00Z"
   }
   ```
-* **Frontend Call Site**: `api.proposed.getLeaderboard(period)` in `useSkillHub().refreshRewardsData`
+* **Frontend Call Site**: `api.proposed.getMyPrivateRank(period)` in `useSkillHub().refreshMyRankData` and `LeaderboardView`
+
+---
+
+### Endpoint 12B: Administrative Aggregate Programme Telemetry (Staff Only)
+* **HTTP Method**: `GET`
+* **Route**: `/api/v1/rewards/admin/programme-summary`
+* **Purpose**: Retrieve aggregate engagement statistics (total participants, total points issued, distribution tiers) without exposing individual student rankings.
+* **Security & Auth**: Authorized Administrators only. Ordinary students cannot access this route.
 
 ---
 

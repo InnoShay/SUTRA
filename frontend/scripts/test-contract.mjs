@@ -2232,20 +2232,34 @@ assert(
 );
 console.log("   ✓ Verified Points Wallet card, milestone progress bar, and eligible activities list");
 
-// 25.6: Period-Based Leaderboard & Privacy Controls
+// 25.6: Period-Based Private Standing & Strict Zero-Public-Ranking Privacy Controls
 assert(
   leaderboardViewTsx.includes("Weekly Cycle") &&
   leaderboardViewTsx.includes("Monthly Cycle") &&
-  leaderboardViewTsx.includes("Pseudonymized display names"),
-  "LeaderboardView must support period toggle (weekly vs monthly) and pseudonymized display names"
+  leaderboardViewTsx.includes("My Progress") &&
+  leaderboardViewTsx.includes("My Rank") &&
+  leaderboardViewTsx.includes("My Points") &&
+  leaderboardViewTsx.includes("My Total Points") &&
+  leaderboardViewTsx.includes("Next Reward") &&
+  leaderboardViewTsx.includes("Strictly Private"),
+  "LeaderboardView must render private My Progress view with personal rank, points, and next reward"
 );
 assert(
+  !leaderboardViewTsx.includes("<table") &&
+  !leaderboardViewTsx.includes("Top 10") &&
+  !leaderboardViewTsx.includes("Top 100") &&
   !leaderboardViewTsx.includes("student_id") &&
   !leaderboardViewTsx.includes("email") &&
   !leaderboardViewTsx.includes("pulse_score"),
-  "LeaderboardView must not leak student IDs, emails, or Happiness Pulse answers"
+  "LeaderboardView must never render public peer tables, top lists, student IDs, or pulse answers"
 );
-console.log("   ✓ Verified period-based rankings, standard competition tie-breaking, and privacy controls");
+assert(
+  happinessStoreCode.includes("myPrivateRankWeekly") &&
+  happinessStoreCode.includes("myPrivateRankMonthly") &&
+  apiCode.includes("getMyPrivateRank"),
+  "Store and API client must provide strictly private student ranking contracts without peer exposure"
+);
+console.log("   ✓ Verified private standing dashboard (My Progress), zero public ranking tables, and privacy controls");
 
 // 25.7: Rewards Catalogue & Authoritative Redemption Flow
 assert(

@@ -288,3 +288,32 @@ export function hasClaimedActivityInPeriod(
     return txTime >= startTime;
   });
 }
+
+/**
+ * Calculates rank change between current period and previous period.
+ * Positive integer = improvement (e.g. from #14 to #12 = +2).
+ * Negative integer = drop (e.g. from #10 to #12 = -2).
+ * 0 = no change.
+ * null = no previous rank recorded.
+ */
+export function computePrivateRankChange(
+  currentRank: number,
+  previousRank: number | null | undefined
+): number | null {
+  if (previousRank === null || previousRank === undefined || previousRank <= 0) {
+    return null;
+  }
+  return previousRank - currentRank;
+}
+
+/**
+ * Validates that private student payload never exposes peer student rankings or rosters.
+ */
+export function assertPrivateStandingSecurity(data: any): boolean {
+  if (!data) return true;
+  if (Array.isArray(data.entries) && data.entries.length > 1) {
+    return false;
+  }
+  return true;
+}
+

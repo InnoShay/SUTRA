@@ -75,6 +75,7 @@ import {
   EligibleActivityDTO,
   LeaderboardResponseDTO,
   LeaderboardPeriod,
+  StudentPrivateRankDTO,
   RewardItemDTO,
   RedemptionRecordDTO,
   ClaimActivityRequestDTO,
@@ -1805,6 +1806,8 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    getMyPrivateRank: (period: LeaderboardPeriod = 'weekly') =>
+      this.request<StudentPrivateRankDTO>(`/rewards/my-rank?period=${period}`),
     getLeaderboard: (period: LeaderboardPeriod = 'weekly') =>
       this.request<LeaderboardResponseDTO>(`/rewards/leaderboard?period=${period}`),
     getRewardsCatalog: () =>

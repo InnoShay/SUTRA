@@ -60,6 +60,7 @@ export function StudentDashboardView() {
     studentPulseSubmitted,
     pointsWallet,
     leaderboardWeekly,
+    myPrivateRankWeekly,
   } = useSkillHub();
   const [mounted, setMounted] = React.useState(false);
   const [isPulseModalOpen, setIsPulseModalOpen] = React.useState(false);
@@ -383,14 +384,14 @@ export function StudentDashboardView() {
                 Points &amp; Rewards
               </span>
               <span suppressHydrationWarning className="text-xs text-neutral-500">
-                {pointsWallet?.points_this_week ?? 35} pts this week • Rank #{leaderboardWeekly?.current_user_entry?.rank ?? 3}
+                {pointsWallet?.points_this_week ?? 85} pts this week • Rank #{myPrivateRankWeekly?.current_rank ?? 12} (Private)
               </span>
             </div>
             <h3 suppressHydrationWarning className="text-sm sm:text-base font-bold text-neutral-900 font-heading mt-1">
               Your SUTRA Points: {(pointsWallet?.available_balance ?? 385).toLocaleString()} Available
             </h3>
             <p className="text-xs text-neutral-600 mt-0.5 max-w-xl">
-              Earned through voluntary participation in pulses, workshops, and campus initiatives. Redeem for official merchandise and badges.
+              Earned through voluntary participation in pulses, workshops, and campus initiatives. Keep your position private.
             </p>
           </div>
         </div>
@@ -408,7 +409,7 @@ export function StudentDashboardView() {
             className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 border border-neutral-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
           >
             <Trophy className="w-3.5 h-3.5 text-amber-600" />
-            <span>Leaderboard</span>
+            <span>My Progress</span>
           </Link>
         </div>
       </div>

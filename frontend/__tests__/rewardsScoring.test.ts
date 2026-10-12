@@ -12,6 +12,8 @@ import {
   rankLeaderboardEntries,
   validateRedemptionEligibility,
   hasClaimedActivityInPeriod,
+  computePrivateRankChange,
+  assertPrivateStandingSecurity,
   ELIGIBLE_ACTIVITIES,
   PUBLISHED_REWARDS_CATALOG,
 } from "../lib/rewardsScoring";
@@ -126,3 +128,27 @@ assert.strictEqual(hasClaimedActivityInPeriod("weekly_pulse", sampleTxs), true);
 assert.strictEqual(hasClaimedActivityInPeriod("approved_workshop", sampleTxs), false);
 assert.strictEqual(hasClaimedActivityInPeriod("daily_micro_challenge", sampleTxs), false);
 console.log("   ✓ Duplicate claim guards verified.\n");
+
+// --- TEST 7: Private Rank Change Arithmetic ---
+console.log("7. Validating private rank change calculations...");
+assert.strictEqual(computePrivateRankChange(12, 14), 2); // Moved up from #14 to #12
+assert.strictEqual(computePrivateRankChange(12, 10), -2); // Moved down from #10 to #12
+assert.strictEqual(computePrivateRankChange(12, 12), 0); // Unchanged
+assert.strictEqual(computePrivateRankChange(12, null), null); // No historical comparison
+assert.strictEqual(computePrivateRankChange(12, undefined), null);
+console.log("   ✓ Private rank change arithmetic verified (+2 improvement, -2 drop, null baseline).\n");
+
+// --- TEST 8: Strict Private Standing Invariant ---
+console.log("8. Validating zero peer ranking exposure security invariant...");
+assert.strictEqual(assertPrivateStandingSecurity({ rank: 12 }), true);
+assert.strictEqual(assertPrivateStandingSecurity({ rank: 12, entries: [] }), true);
+assert.strictEqual(assertPrivateStandingSecurity({ rank: 12, entries: [{ display_name: "You" }] }), true);
+assert.strictEqual(
+  assertPrivateStandingSecurity({
+    rank: 12,
+    entries: [{ display_name: "Aarav P." }, { display_name: "Priya S." }],
+  }),
+  false
+);
+console.log("   ✓ Zero public peer ranking exposure security invariant confirmed.\n");
+

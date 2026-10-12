@@ -14,6 +14,7 @@ import {
   PointsWalletDTO,
   PointsTransactionDTO,
   LeaderboardResponseDTO,
+  StudentPrivateRankDTO,
   RedemptionRecordDTO,
 } from "./types";
 import { DEMO_CAMPUS_ID } from "./demo-auth";
@@ -1333,6 +1334,40 @@ export const DEMO_POINTS_TRANSACTIONS: PointsTransactionDTO[] = [
   },
 ];
 
+export const DEMO_MY_PRIVATE_RANK_WEEKLY: StudentPrivateRankDTO = {
+  student_id: "SYN-1007",
+  period: "weekly",
+  cycle_label: "Current Week (Oct 7 – Oct 13, 2026)",
+  current_rank: 12,
+  period_points: 85,
+  total_lifetime_points: 385,
+  previous_rank: 14,
+  rank_change: 2,
+  next_reward_name: "College Merchandise T-Shirt",
+  points_to_next_reward: 115,
+  next_reward_target_points: 500,
+  total_participants_in_period: 64,
+  as_of: "2026-10-13T00:00:00Z",
+  is_demo_data: true,
+};
+
+export const DEMO_MY_PRIVATE_RANK_MONTHLY: StudentPrivateRankDTO = {
+  student_id: "SYN-1007",
+  period: "monthly",
+  cycle_label: "October 2026 Engagement Cycle",
+  current_rank: 8,
+  period_points: 210,
+  total_lifetime_points: 385,
+  previous_rank: 10,
+  rank_change: 2,
+  next_reward_name: "College Merchandise T-Shirt",
+  points_to_next_reward: 115,
+  next_reward_target_points: 500,
+  total_participants_in_period: 112,
+  as_of: "2026-10-13T00:00:00Z",
+  is_demo_data: true,
+};
+
 export const DEMO_LEADERBOARD_WEEKLY: LeaderboardResponseDTO = {
   period: "weekly",
   cycle_label: "Current Week (Oct 7 – Oct 13, 2026)",
@@ -1340,21 +1375,14 @@ export const DEMO_LEADERBOARD_WEEKLY: LeaderboardResponseDTO = {
   last_updated_at: new Date().toISOString(),
   is_demo_data: true,
   entries: [
-    { rank: 1, display_name: "Rohan M.", avatar: "RM", points_in_period: 45, activities_count: 4, is_current_user: false },
-    { rank: 2, display_name: "Kavita S.", avatar: "KS", points_in_period: 40, activities_count: 3, is_current_user: false },
-    { rank: 3, display_name: "Asha K.", avatar: "AK", points_in_period: 35, activities_count: 3, is_current_user: true },
-    { rank: 4, display_name: "Dev P.", avatar: "DP", points_in_period: 30, activities_count: 2, is_current_user: false },
-    { rank: 5, display_name: "Pooja V.", avatar: "PV", points_in_period: 25, activities_count: 2, is_current_user: false },
-    { rank: 6, display_name: "Arjun N.", avatar: "AN", points_in_period: 20, activities_count: 2, is_current_user: false },
-    { rank: 7, display_name: "Meera T.", avatar: "MT", points_in_period: 15, activities_count: 1, is_current_user: false },
-    { rank: 8, display_name: "Vikram R.", avatar: "VR", points_in_period: 10, activities_count: 1, is_current_user: false },
+    { rank: 12, display_name: "You (Private Standing)", avatar: "ME", points_in_period: 85, activities_count: 5, is_current_user: true },
   ],
   current_user_entry: {
-    rank: 3,
-    display_name: "Asha K.",
-    avatar: "AK",
-    points_in_period: 35,
-    activities_count: 3,
+    rank: 12,
+    display_name: "You (Private Standing)",
+    avatar: "ME",
+    points_in_period: 85,
+    activities_count: 5,
     is_current_user: true,
   },
 };
@@ -1366,20 +1394,14 @@ export const DEMO_LEADERBOARD_MONTHLY: LeaderboardResponseDTO = {
   last_updated_at: new Date().toISOString(),
   is_demo_data: true,
   entries: [
-    { rank: 1, display_name: "Kavita S.", avatar: "KS", points_in_period: 140, activities_count: 11, is_current_user: false },
-    { rank: 2, display_name: "Rohan M.", avatar: "RM", points_in_period: 130, activities_count: 10, is_current_user: false },
-    { rank: 3, display_name: "Asha K.", avatar: "AK", points_in_period: 115, activities_count: 9, is_current_user: true },
-    { rank: 4, display_name: "Dev P.", avatar: "DP", points_in_period: 95, activities_count: 8, is_current_user: false },
-    { rank: 5, display_name: "Pooja V.", avatar: "PV", points_in_period: 85, activities_count: 7, is_current_user: false },
-    { rank: 6, display_name: "Arjun N.", avatar: "AN", points_in_period: 70, activities_count: 6, is_current_user: false },
-    { rank: 7, display_name: "Meera T.", avatar: "MT", points_in_period: 60, activities_count: 5, is_current_user: false },
+    { rank: 8, display_name: "You (Private Standing)", avatar: "ME", points_in_period: 210, activities_count: 14, is_current_user: true },
   ],
   current_user_entry: {
-    rank: 3,
-    display_name: "Asha K.",
-    avatar: "AK",
-    points_in_period: 115,
-    activities_count: 9,
+    rank: 8,
+    display_name: "You (Private Standing)",
+    avatar: "ME",
+    points_in_period: 210,
+    activities_count: 14,
     is_current_user: true,
   },
 };

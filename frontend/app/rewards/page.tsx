@@ -50,7 +50,7 @@ function RewardsPageContent() {
   const tabs: { id: RewardsTab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
     { id: "wallet", label: "Points Wallet", icon: Coins },
     { id: "store", label: "Rewards Store", icon: Gift },
-    { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+    { id: "leaderboard", label: "My Progress", icon: Trophy },
     { id: "activities", label: "Eligible Activities", icon: ListCheck },
     { id: "report", label: "Participation Report", icon: FileText },
     ...(isAdmin ? [{ id: "admin" as RewardsTab, label: "Admin Fulfilment", icon: Settings, adminOnly: true }] : []),
@@ -70,7 +70,7 @@ function RewardsPageContent() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-neutral-500 mt-1 max-w-2xl">
-            Recognize voluntary student engagement through participation points, milestone rewards, and weekly community recognition.
+            Track your progress. Earn rewards. Keep your position private.
           </p>
         </div>
 

@@ -1294,6 +1294,23 @@ export interface LeaderboardResponseDTO {
   is_demo_data?: boolean;
 }
 
+export interface StudentPrivateRankDTO {
+  student_id: string;
+  period: LeaderboardPeriod;
+  cycle_label: string;
+  current_rank: number;
+  period_points: number;
+  total_lifetime_points: number;
+  previous_rank?: number | null;
+  rank_change?: number | null; // e.g. +2 (improved), -1 (dropped), 0 (held)
+  next_reward_name: string;
+  points_to_next_reward: number;
+  next_reward_target_points: number;
+  total_participants_in_period?: number;
+  as_of: string;
+  is_demo_data?: boolean;
+}
+
 export type RewardCategory = "digital" | "merchandise" | "experience";
 
 export type RedemptionStatus =
