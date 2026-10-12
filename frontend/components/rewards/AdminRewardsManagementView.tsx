@@ -17,8 +17,8 @@ import {
 
 export function AdminRewardsManagementView() {
   const {
-    rewardsCatalog,
-    allRedemptions,
+    rewardsCatalog = [],
+    allRedemptions = [],
     updateAdminRedemptionStatus,
     activeRole,
     isLoadingRewards,
@@ -121,11 +121,11 @@ export function AdminRewardsManagementView() {
             </p>
           </div>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700">
-            {allRedemptions.length} Total Orders
+            {(allRedemptions?.length ?? 0)} Total Orders
           </span>
         </div>
 
-        {allRedemptions.length === 0 ? (
+        {(allRedemptions?.length ?? 0) === 0 ? (
           <div className="p-8 text-center text-xs text-neutral-400 italic">
             No student redemptions in fulfillment queue.
           </div>
@@ -142,7 +142,7 @@ export function AdminRewardsManagementView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {allRedemptions.map((red) => {
+                {(allRedemptions || []).map((red) => {
                   const isUpdating = updatingId === red.id;
                   return (
                     <tr key={red.id} className="hover:bg-neutral-50/50 transition-colors">
