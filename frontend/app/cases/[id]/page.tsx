@@ -250,7 +250,7 @@ export default function CaseDetailPage() {
             <div className="space-y-3">
               {(matchedCase.tasks || []).length === 0 ? (
                 <div className="p-4 rounded-2xl bg-neutral-50/60 border border-dashed border-neutral-200 text-center text-xs text-neutral-400">
-                  No action items assigned yet. Click "Add Item" above to create one.
+                  No action items assigned yet. Click &quot;Add Item&quot; above to create one.
                 </div>
               ) : (
                 (matchedCase.tasks || []).map((t) => (
