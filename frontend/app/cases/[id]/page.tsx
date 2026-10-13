@@ -16,14 +16,15 @@ import {
   User,
   AlertCircle,
   Send,
+  Plus,
 } from "lucide-react";
-import { isDemoMode } from "@/lib/api";
+import { api, isDemoMode } from "@/lib/api";
 import { DEMO_CASES } from "@/lib/skillhub-data";
 
 export default function CaseDetailPage() {
   const params = useParams();
   const caseId = (params?.id as string) || "CASE-SYN-1007";
-  const { cases, user, activeRole, currentPersona } = useSkillHub();
+  const { cases, user, activeRole, currentPersona, createCaseTask, sendMessageToStudent } = useSkillHub();
 
   const isStudent = activeRole === "student";
   const studentId = currentPersona?.userId || "SYN-1007";
@@ -46,6 +47,8 @@ export default function CaseDetailPage() {
       (isDemoMode() ? DEMO_CASES.find((c) => c.id === caseId) || null : null);
 
   const [newMessage, setNewMessage] = useState("");
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
   const [messages, setMessages] = useState<
     { id: string; sender: string; time: string; text: string; isStudent: boolean }[]
   >([
@@ -67,19 +70,38 @@ export default function CaseDetailPage() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !matchedCase) return;
 
+    const messageText = newMessage.trim();
     setMessages((prev) => [
       ...prev,
       {
         id: `m-${Date.now()}`,
         sender: user.fullName || user.name || "Student",
         time: "Just now",
-        text: newMessage,
+        text: messageText,
         isStudent: true,
       },
     ]);
+    sendMessageToStudent(matchedCase.student_id, messageText);
+    api.proposed.sendCaseMessage(matchedCase.id, { text: messageText }).catch(console.warn);
     setNewMessage("");
+  };
+
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim() || !matchedCase) return;
+    try {
+      await createCaseTask(matchedCase.id, {
+        generic_label: newTaskTitle.trim(),
+        domain: "academic",
+        due_at: new Date(Date.now() + 86400000 * 2).toISOString(),
+      });
+      setNewTaskTitle("");
+      setIsAddingTask(false);
+    } catch (err: any) {
+      console.warn("Failed to create task", err);
+    }
   };
 
   if (!matchedCase) {
@@ -174,37 +196,85 @@ export default function CaseDetailPage() {
         {/* Left Column: Milestones */}
         <div className="lg:col-span-7 space-y-6">
           <div className="skill-card bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">
-            <div className="pb-3 border-b border-neutral-100">
-              <h2 className="text-base font-bold text-neutral-900 font-heading">
-                Action Items &amp; Next Steps
-              </h2>
-              <p className="text-xs text-neutral-500 mt-0.5">
-                Tasks arranged by your mentor to support your academic progress.
-              </p>
+            <div className="pb-3 border-b border-neutral-100 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-bold text-neutral-900 font-heading">
+                  Action Items &amp; Next Steps
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Tasks arranged by your mentor to support your academic progress.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingTask(!isAddingTask)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-2xs transition-all shrink-0 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Item</span>
+              </button>
             </div>
 
-            <div className="space-y-3">
-              {(matchedCase.tasks || []).map((t) => (
-                <div
-                  key={t.id}
-                  className="p-4 bg-neutral-50/80 rounded-2xl border border-neutral-200/60 flex items-start gap-3"
-                >
-                  <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl mt-0.5 shrink-0">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-neutral-900">
-                      {t.generic_label}
-                    </h4>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">
-                      Target Window: Within 48 hours • Assignee: Faculty Mentor
-                    </p>
-                  </div>
-                  <span className="text-xs font-mono text-neutral-500 shrink-0">
-                    {t.state}
-                  </span>
+            {/* Inline Task Creation Form */}
+            {isAddingTask && (
+              <form onSubmit={handleCreateTask} className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-2.5 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-900">New Support Action Item</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingTask(false)}
+                    className="text-xs text-neutral-400 hover:text-neutral-700"
+                  >
+                    Cancel
+                  </button>
                 </div>
-              ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    placeholder="Enter action item description..."
+                    className="flex-1 px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-xl shrink-0 cursor-pointer"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="space-y-3">
+              {(matchedCase.tasks || []).length === 0 ? (
+                <div className="p-4 rounded-2xl bg-neutral-50/60 border border-dashed border-neutral-200 text-center text-xs text-neutral-400">
+                  No action items assigned yet. Click "Add Item" above to create one.
+                </div>
+              ) : (
+                (matchedCase.tasks || []).map((t) => (
+                  <div
+                    key={t.id}
+                    className="p-4 bg-neutral-50/80 rounded-2xl border border-neutral-200/60 flex items-start gap-3"
+                  >
+                    <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl mt-0.5 shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-bold text-neutral-900">
+                        {t.generic_label}
+                      </h4>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        Target Window: Within 48 hours • Assignee: Faculty Mentor
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono text-neutral-500 shrink-0">
+                      {t.state}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -234,6 +304,31 @@ export default function CaseDetailPage() {
                       day: "numeric",
                     })}
                   </span>
+                </div>
+              ))}
+
+              {/* Logged Follow-Ups in Activity */}
+              {(matchedCase.follow_ups || []).map((fu, idx) => (
+                <div
+                  key={fu.id || idx}
+                  className="p-3 bg-neutral-50/60 rounded-xl border border-neutral-100 text-xs space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-neutral-900 capitalize">
+                      {fu.follow_up_type.replace(/_/g, " ")} • {fu.contact_status || "Completed"}
+                    </span>
+                    <span className="text-[11px] text-neutral-400">
+                      {new Date(fu.occurred_at || fu.created_at).toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  {fu.sanitized_note && (
+                    <p className="text-neutral-600 text-[11px] leading-relaxed">
+                      {fu.sanitized_note}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

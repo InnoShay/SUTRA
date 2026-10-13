@@ -1115,6 +1115,13 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const createCaseTask = async (id: string, req: CreateTaskRequest): Promise<CaseTaskDTO> => {
     try {
       const res = await api.cases.createTask(id, req);
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? { ...c, tasks: [...(c.tasks || []), res] }
+            : c
+        )
+      );
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
@@ -1131,6 +1138,13 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         due_at: req.due_at || new Date(Date.now() + 86400000 * 2).toISOString(),
         deadline_version: 1,
       };
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? { ...c, tasks: [...(c.tasks || []), newTask] }
+            : c
+        )
+      );
       return newTask;
     }
   };
@@ -1138,6 +1152,13 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const recordCaseFollowUp = async (id: string, req: FollowUpRequest): Promise<FollowUpDTO> => {
     try {
       const res = await api.cases.recordFollowUp(id, req);
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? { ...c, follow_ups: [...(c.follow_ups || []), res] }
+            : c
+        )
+      );
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
@@ -1156,6 +1177,13 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         proof_ref: req.proof_ref || "local_proof",
         created_at: new Date().toISOString(),
       };
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? { ...c, follow_ups: [...(c.follow_ups || []), newFollowUp] }
+            : c
+        )
+      );
       return newFollowUp;
     }
   };
@@ -1163,6 +1191,13 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const recordCaseOutcome = async (id: string, req: OutcomeRequest): Promise<CaseOutcomeDTO> => {
     try {
       const res = await api.cases.recordOutcome(id, req);
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? { ...c, state: "RESOLVED" }
+            : c
+        )
+      );
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
@@ -1178,6 +1213,13 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         recorded_by: "USR-DEMO",
         recorded_at: new Date().toISOString(),
       };
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? { ...c, state: "RESOLVED" }
+            : c
+        )
+      );
       return newOutcome;
     }
   };
