@@ -1,13 +1,14 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, ArrowUpRight } from "lucide-react";
 import { LanguageSelector } from "../LanguageSelector";
+import { supabaseAuth } from "@/lib/supabase";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,6 +17,25 @@ export default function Navbar() {
 
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      try {
+        const session = await supabaseAuth.getSession();
+        if (session && session.access_token) {
+          setIsAuthenticated(true);
+          return;
+        }
+        if (typeof window !== "undefined") {
+          const token = localStorage.getItem("sutra_auth_token");
+          if (token) {
+            setIsAuthenticated(true);
+          }
+        }
+      } catch {}
+    };
+    checkAuth();
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -76,19 +96,31 @@ export default function Navbar() {
         {/* Right Section: Action Buttons & Indic Language Selector */}
         <div className="hidden sm:flex flex-1 items-center justify-end gap-4 lg:gap-5">
           <LanguageSelector variant="landing" />
-          <Link
-            href="/login"
-            className="text-xs font-bold uppercase tracking-wider text-white/90 hover:text-white transition-colors duration-200"
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/onboarding"
-            className="px-5 py-2.5 rounded-full bg-[#d2f831] hover:bg-[#c3ea22] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 group select-none"
-          >
-            <span>Get Started</span>
-            <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href="/dashboard"
+              className="px-5 py-2.5 rounded-full bg-[#d2f831] hover:bg-[#c3ea22] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 group select-none"
+            >
+              <span>Go to Dashboard</span>
+              <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-xs font-bold uppercase tracking-wider text-white/90 hover:text-white transition-colors duration-200"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/onboarding"
+                className="px-5 py-2.5 rounded-full bg-[#d2f831] hover:bg-[#c3ea22] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 group select-none"
+              >
+                <span>Get Started</span>
+                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Hamburger Toggle & Language Selector */}
@@ -139,21 +171,47 @@ export default function Navbar() {
           </div>
 
           <div className="pt-3 border-t border-white/10 space-y-2">
-            <Link
-              href="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full block text-center py-2.5 rounded-full bg-white/10 text-white font-bold text-xs uppercase tracking-wider hover:bg-white/20 transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/onboarding"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-[#d2f831] text-slate-950 font-bold text-xs uppercase tracking-wider hover:bg-[#c3ea22] transition-colors"
-            >
-              <span>Get Started</span>
-              <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-[#d2f831] text-slate-950 font-bold text-xs uppercase tracking-wider hover:bg-[#c3ea22] transition-colors"
+                >
+                  <span>Go to Dashboard</span>
+                  <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setMobileMenuOpen(false);
+                    await supabaseAuth.signOut();
+                    setIsAuthenticated(false);
+                  }}
+                  className="w-full block text-center py-2.5 rounded-full bg-white/10 text-white font-bold text-xs uppercase tracking-wider hover:bg-white/20 transition-colors cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full block text-center py-2.5 rounded-full bg-white/10 text-white font-bold text-xs uppercase tracking-wider hover:bg-white/20 transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/onboarding"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-[#d2f831] text-slate-950 font-bold text-xs uppercase tracking-wider hover:bg-[#c3ea22] transition-colors"
+                >
+                  <span>Get Started</span>
+                  <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

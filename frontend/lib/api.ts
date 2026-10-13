@@ -1337,8 +1337,35 @@ class ApiClient {
       headers['Content-Type'] = 'application/json';
     }
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    // Retrieve active token with localStorage and Supabase session fallbacks
+    let activeToken = this.token;
+    if (!activeToken && typeof window !== 'undefined') {
+      activeToken = localStorage.getItem('sutra_auth_token');
+      if (!activeToken) {
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+              const raw = localStorage.getItem(k);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed?.access_token && typeof parsed.access_token === 'string') {
+                  activeToken = parsed.access_token;
+                  localStorage.setItem('sutra_auth_token', parsed.access_token);
+                  break;
+                }
+              }
+            }
+          }
+        } catch {}
+      }
+      if (activeToken) {
+        this.token = activeToken;
+      }
+    }
+
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
     }
     if (this.campusId) {
       headers['X-Campus-Id'] = this.campusId;

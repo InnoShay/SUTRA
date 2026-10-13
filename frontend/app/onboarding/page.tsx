@@ -330,23 +330,43 @@ export default function OnboardingPage() {
     }
   };
 
+  const isLoggedIn = Boolean(
+    supabaseSession ||
+    googleAutofilled ||
+    (formData.email && formData.email.includes("@")) ||
+    (typeof window !== "undefined" && Boolean(localStorage.getItem("sutra_auth_token")))
+  );
+
   const handleFinish = async () => {
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      // Provisioning is idempotent per authenticated user; minting returns that user's unique token.
-      await api.identity.provisionIdentity();
-      if (formData.avatar.startsWith("/avatars/")) {
-        await api.identity.updateAvatar({
-          avatar_url: formData.avatar,
-        });
+      // 1. Ensure token is synchronized from Supabase session if available
+      try {
+        const session = await supabaseAuth.getSession();
+        if (session?.access_token) {
+          api.setToken(session.access_token);
+        }
+      } catch (sessErr) {
+        console.warn("Session check during onboarding completion:", sessErr);
       }
-      await api.identity.mintNFT({});
-      // Do not claim a mint when Web3 is unavailable, but never prevent account
-      // creation. The profile NFT card can complete a real mint after a wallet
-      // is connected and the backend's Base Sepolia contract is ready.
-      await fetchIdentity();
+
+      // 2. Provision identity and mint avatar NFT if authenticated with backend
+      try {
+        await api.identity.provisionIdentity();
+        if (formData.avatar.startsWith("/avatars/")) {
+          await api.identity.updateAvatar({
+            avatar_url: formData.avatar,
+          });
+        }
+        await api.identity.mintNFT({});
+        await fetchIdentity();
+      } catch (idErr) {
+        // Non-blocking: If backend identity minting fails (offline, guest demo, or token pending),
+        // we do not block account creation or entering SUTRA!
+        console.warn("Non-fatal identity NFT provisioning during onboarding:", idErr);
+      }
 
       updateUser({
         name: formData.displayName || formData.fullName.split(" ")[0] || "User",
@@ -384,8 +404,8 @@ export default function OnboardingPage() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       router.push("/dashboard");
     } catch (err) {
-      console.error("Could not finish signup with identity NFT:", err);
-      setSubmitError(err instanceof Error ? err.message : "We couldn't mint your identity NFT. Please try again.");
+      console.error("Could not finish signup:", err);
+      setSubmitError(err instanceof Error ? err.message : "We couldn't finalize your setup. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -399,17 +419,38 @@ export default function OnboardingPage() {
           <SkillHubLogo />
         </Link>
 
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-neutral-400 font-medium hidden sm:inline">
-            Already have an account?
-          </span>
-          <Link
-            href="/login"
-            className="px-4 py-1.5 rounded-full bg-white hover:bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-800 shadow-2xs transition-all"
-          >
-            Sign In
-          </Link>
-        </div>
+        {isLoggedIn ? (
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-medium text-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="max-w-[140px] sm:max-w-[200px] truncate">
+                {formData.email || user.email || "Signed In"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await supabaseAuth.signOut();
+                router.push("/login?logged_out=1");
+              }}
+              className="px-3 py-1.5 rounded-full bg-white hover:bg-neutral-50 border border-neutral-200 text-[11px] font-semibold text-neutral-600 transition-all cursor-pointer shadow-2xs"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-neutral-400 font-medium hidden sm:inline">
+              Already have an account?
+            </span>
+            <Link
+              href="/login"
+              className="px-4 py-1.5 rounded-full bg-white hover:bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-800 shadow-2xs transition-all"
+            >
+              Sign In
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* MAIN ONBOARDING CARD CONTAINER */}
@@ -1167,10 +1208,10 @@ export default function OnboardingPage() {
             </button>
           ) : (
             <Link
-              href="/login"
+              href={isLoggedIn ? "/dashboard" : "/login"}
               className="text-xs font-semibold text-neutral-400 hover:text-neutral-700 transition-colors"
             >
-              Cancel
+              {isLoggedIn ? "Exit to Dashboard" : "Cancel"}
             </Link>
           )}
 

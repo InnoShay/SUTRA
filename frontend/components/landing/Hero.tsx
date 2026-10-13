@@ -4,12 +4,14 @@ import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "./Navbar";
 import { ArrowUpRight, Plus, Star } from "lucide-react";
+import { supabaseAuth } from "@/lib/supabase";
 
 export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const ribbonRef = useRef<HTMLDivElement>(null);
   const [isRibbonDragging, setIsRibbonDragging] = useState(false);
   const [isRibbonHovered, setIsRibbonHovered] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const startXRef = useRef(0);
   const scrollLeftRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
@@ -22,6 +24,23 @@ export default function Hero() {
       videoRef.current.playbackRate = 0.8;
       videoRef.current.play().catch(() => {});
     }
+
+    const checkAuth = async () => {
+      try {
+        const session = await supabaseAuth.getSession();
+        if (session && session.access_token) {
+          setIsAuthenticated(true);
+          return;
+        }
+        if (typeof window !== "undefined") {
+          const token = localStorage.getItem("sutra_auth_token");
+          if (token) {
+            setIsAuthenticated(true);
+          }
+        }
+      } catch {}
+    };
+    checkAuth();
   }, []);
 
   // Ribbon Drag to Scroll on Mouse/Touch (Drag-only mode, autoplay disabled)
@@ -227,10 +246,10 @@ export default function Hero() {
           {/* Action CTA */}
           <div className="mt-6 sm:mt-8 flex items-center justify-center">
             <Link
-              href="/onboarding"
+              href={isAuthenticated ? "/dashboard" : "/onboarding"}
               className="pl-6 pr-2.5 py-2 rounded-full bg-[#d2f831] hover:bg-[#c4ec26] text-slate-950 text-xs font-bold uppercase tracking-wider transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center gap-3 group shadow-md"
             >
-              <span>GET STARTED</span>
+              <span>{isAuthenticated ? "GO TO DASHBOARD" : "GET STARTED"}</span>
               <div className="w-7 h-7 rounded-full bg-slate-950 text-white flex items-center justify-center transition-transform group-hover:rotate-45">
                 <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
               </div>

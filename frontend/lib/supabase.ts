@@ -110,25 +110,104 @@ class SupabaseAuthClient {
   }
 
   /**
-   * Retrieves current session token
+   * Formats and synchronously syncs Supabase session with local storage and API client
    */
-  async getSession(): Promise<SupabaseSession | null> {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) return null;
-
-    return {
-      access_token: data.session.access_token,
-      token_type: data.session.token_type,
-      expires_in: data.session.expires_in,
-      expires_at: data.session.expires_at,
-      refresh_token: data.session.refresh_token,
+  public formatAndPersistSession(session: any): SupabaseSession {
+    const formatted: SupabaseSession = {
+      access_token: session.access_token,
+      token_type: session.token_type || "bearer",
+      expires_in: session.expires_in || 3600,
+      expires_at: session.expires_at,
+      refresh_token: session.refresh_token || "",
       user: {
-        id: data.session.user.id,
-        email: data.session.user.email || "",
-        user_metadata: data.session.user.user_metadata,
-        app_metadata: data.session.user.app_metadata,
+        id: session.user?.id || "",
+        email: session.user?.email || "",
+        user_metadata: session.user?.user_metadata,
+        app_metadata: session.user?.app_metadata,
       },
     };
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sutra_auth_token", formatted.access_token);
+      if (formatted.refresh_token) {
+        localStorage.setItem("sutra_refresh_token", formatted.refresh_token);
+      }
+      api.setToken(formatted.access_token);
+
+      if (formatted.user.email) {
+        try {
+          const profile = {
+            id: formatted.user.id,
+            email: formatted.user.email,
+            name:
+              formatted.user.user_metadata?.full_name ||
+              formatted.user.user_metadata?.name ||
+              formatted.user.email.split("@")[0],
+            avatar:
+              formatted.user.user_metadata?.avatar_url ||
+              formatted.user.user_metadata?.picture ||
+              "",
+          };
+          localStorage.setItem("sutra_user_profile", JSON.stringify(profile));
+        } catch {}
+      }
+    }
+
+    return formatted;
+  }
+
+  /**
+   * Retrieves current session token, automatically exchanging PKCE codes in URL,
+   * detecting hash tokens, and synchronizing with localStorage and the API client.
+   */
+  async getSession(): Promise<SupabaseSession | null> {
+    // 1. Detect and exchange PKCE code from query parameters if present (OAuth redirect)
+    if (typeof window !== "undefined") {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get("code");
+        if (code) {
+          const { data: exchangeData, error: exchangeErr } =
+            await supabase.auth.exchangeCodeForSession(code);
+          if (!exchangeErr && exchangeData?.session) {
+            // Strip code from address bar to prevent reuse
+            urlParams.delete("code");
+            const qs = urlParams.toString();
+            const cleanUrl = window.location.pathname + (qs ? `?${qs}` : "");
+            window.history.replaceState({}, document.title, cleanUrl);
+            return this.formatAndPersistSession(exchangeData.session);
+          }
+        }
+      } catch (e) {
+        console.warn("OAuth PKCE code exchange error:", e);
+      }
+    }
+
+    // 2. Fetch active session from Supabase client
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      return this.formatAndPersistSession(data.session);
+    }
+
+    // 3. Fallback: Recover from Supabase's internal localStorage storage key
+    if (typeof window !== "undefined") {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed?.access_token) {
+                return this.formatAndPersistSession(parsed);
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
+    return null;
   }
 
   /**
