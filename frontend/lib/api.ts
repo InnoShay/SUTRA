@@ -98,14 +98,44 @@ import {
 } from './skillhub-data';
 
 export function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.location) {
+  // 1. Explicit build-time or runtime environment variable (highest priority)
+  let envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (envUrl) {
+    envUrl = envUrl.replace(/\/+$/, '');
+    if (!envUrl.endsWith('/api/v1')) {
+      envUrl = `${envUrl}/api/v1`;
+    }
+    return envUrl;
+  }
+
+  // 2. Client-side runtime override via window or localStorage (useful for debugging without redeploying)
+  if (typeof window !== 'undefined') {
+    try {
+      const runtimeOverride =
+        (window as any).__SUTRA_API_URL__ ||
+        window.localStorage.getItem('sutra_backend_url');
+      if (runtimeOverride && typeof runtimeOverride === 'string' && runtimeOverride.trim()) {
+        let override = runtimeOverride.trim().replace(/\/+$/, '');
+        if (!override.endsWith('/api/v1')) {
+          override = `${override}/api/v1`;
+        }
+        return override;
+      }
+    } catch {
+      // Ignore localStorage exceptions in restricted contexts
+    }
+
     const host = window.location.hostname;
-    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+    // Only connect to port 8000 if actively on localhost / loopback
+    if (host === 'localhost' || host === '127.0.0.1') {
       return `http://${host}:8000/api/v1`;
     }
   }
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+  // 3. Fallback for local development or SSR
+  return 'http://localhost:8000/api/v1';
 }
+
 
 const API_BASE_URL = getApiBaseUrl();
 
