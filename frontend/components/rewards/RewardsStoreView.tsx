@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useSkillHub } from "@/lib/store";
 import { RewardItemDTO } from "@/lib/types";
 import { RedemptionModal } from "./RedemptionModal";
@@ -68,19 +69,29 @@ export function RewardsStoreView() {
           </p>
         </div>
 
-        {/* Current Available Points Badge */}
-        <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-neutral-200 shadow-2xs shrink-0 self-start sm:self-auto">
-          <div className="p-1.5 rounded-xl bg-amber-100 text-amber-700">
-            <Coins className="w-4 h-4" />
+        <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto flex-wrap">
+          {/* Current Available Points Badge */}
+          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-neutral-200 shadow-2xs">
+            <div className="p-1.5 rounded-xl bg-amber-100 text-amber-700">
+              <Coins className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                Your Balance
+              </p>
+              <p className="text-sm font-extrabold text-neutral-900 font-heading leading-tight">
+                {availablePoints.toLocaleString()} <span className="text-xs font-bold text-amber-700">pts</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-              Your Balance
-            </p>
-            <p className="text-sm font-extrabold text-neutral-900 font-heading leading-tight">
-              {availablePoints.toLocaleString()} <span className="text-xs font-bold text-amber-700">pts</span>
-            </p>
-          </div>
+
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+          >
+            <Gift className="w-3.5 h-3.5 text-amber-300" />
+            <span>Open SUTRA SUPPLY (/shop)</span>
+          </Link>
         </div>
       </div>
 

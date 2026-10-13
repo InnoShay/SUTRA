@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSkillHub } from "@/lib/store";
 import { PointsWalletCard } from "@/components/rewards/PointsWalletCard";
 import { EligibleActivitiesList } from "@/components/rewards/EligibleActivitiesList";
@@ -26,11 +27,12 @@ import {
 type RewardsTab = "wallet" | "store" | "leaderboard" | "activities" | "report" | "admin";
 
 function RewardsPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { activeRole, studentPulseSubmitted, pointsWallet } = useSkillHub();
 
   const initialTab = (searchParams.get("tab") as RewardsTab) || "wallet";
-  const [activeTab, setActiveTab] = useState<RewardsTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<RewardsTab>(initialTab === "store" ? "wallet" : initialTab);
   const [isPulseModalOpen, setIsPulseModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -40,10 +42,14 @@ function RewardsPageContent() {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as RewardsTab | null;
-    if (tabParam && ["wallet", "store", "leaderboard", "activities", "report", "admin"].includes(tabParam)) {
+    if (tabParam === "store") {
+      router.push("/shop");
+      return;
+    }
+    if (tabParam && ["wallet", "leaderboard", "activities", "report", "admin"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const isAdmin = activeRole === "admin" || activeRole === "superadmin";
 
@@ -99,6 +105,18 @@ function RewardsPageContent() {
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          if (tab.id === "store") {
+            return (
+              <Link
+                key={tab.id}
+                href="/shop"
+                className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-2xl transition-all whitespace-nowrap cursor-pointer text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100/80"
+              >
+                <Icon className="w-4 h-4 text-neutral-400" />
+                <span>{tab.label}</span>
+              </Link>
+            );
+          }
           return (
             <button
               key={tab.id}
@@ -122,7 +140,7 @@ function RewardsPageContent() {
         {activeTab === "wallet" && (
           <div className="space-y-6">
             <PointsWalletCard
-              onOpenStore={() => setActiveTab("store")}
+              onOpenStore={() => router.push("/shop")}
               onOpenActivities={() => setActiveTab("activities")}
             />
             <div className="skill-card bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-2xs space-y-4">

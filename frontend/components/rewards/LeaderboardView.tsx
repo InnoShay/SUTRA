@@ -268,7 +268,7 @@ export function LeaderboardView() {
             </p>
           </div>
           <Link
-            href="/rewards?tab=store"
+            href="/shop"
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all shrink-0 self-start sm:self-auto cursor-pointer"
           >
             <Gift className="w-3.5 h-3.5 text-amber-300" />

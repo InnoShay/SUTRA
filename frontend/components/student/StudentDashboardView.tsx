@@ -398,7 +398,8 @@ export function StudentDashboardView() {
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <Link
-            href="/rewards?tab=store"
+            href="/shop"
+            data-legacy-href="/rewards?tab=store"
             className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
           >
             <Gift className="w-3.5 h-3.5 text-white" />

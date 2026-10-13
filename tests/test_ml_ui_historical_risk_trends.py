@@ -117,10 +117,10 @@ async def setup_phase7_env(db_session):
     await db_session.flush()
 
     now = datetime.now(timezone.utc)
-    t_minus_10 = now - timedelta(days=10)
-    t_minus_5 = now - timedelta(days=5)
-    t_minus_1 = now - timedelta(days=1)
-    t_old = now - timedelta(days=400)  # Beyond 365d retention
+    t_minus_10 = (now - timedelta(days=10)).replace(hour=12, minute=0, second=0, microsecond=0)
+    t_minus_5 = (now - timedelta(days=5)).replace(hour=12, minute=0, second=0, microsecond=0)
+    t_minus_1 = (now - timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
+    t_old = (now - timedelta(days=400)).replace(hour=12, minute=0, second=0, microsecond=0)  # Beyond 365d retention
 
     # Snapshot 1: 10 days ago (5 students evaluated, 1 rescore on STU-001) -> Total runs = 6, Unique = 5
     logs = [

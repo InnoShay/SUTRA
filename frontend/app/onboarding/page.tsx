@@ -1124,6 +1124,25 @@ export default function OnboardingPage() {
                   </p>
                 </div>
               </div>
+
+              {formData.accountLevel === "student" && (
+                <div className="p-4 rounded-2xl border border-violet-200/80 bg-violet-50/70 flex items-start gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-neutral-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <CustomSparklesIcon className="w-4 h-4 text-amber-300" />
+                  </div>
+                  <div className="min-w-0 flex-1 text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-neutral-900">SUTRA Student Identity NFT</span>
+                      <span className="px-2 py-0.5 rounded-full bg-violet-200/70 text-violet-900 text-[10px] font-mono font-semibold">
+                        Soulbound · Zero PII
+                      </span>
+                    </div>
+                    <p className="text-neutral-600 mt-1 leading-relaxed text-[11px]">
+                      Your signup automatically generates a permanent, non-transferable pseudonymous identity with a unique algorithmic painting title (e.g. <em>Solar Current through Tidal Glass</em>). This protects your personal privacy across academic records while preserving a verifiable on-chain credential on Base Sepolia.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

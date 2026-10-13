@@ -190,8 +190,8 @@ export function PointsWalletCard({
             </button>
           ) : (
             <Link
-              href="/rewards?tab=store"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all"
+              href="/shop"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <Gift className="w-3.5 h-3.5 text-amber-300" />
               <span>Browse Rewards Store</span>

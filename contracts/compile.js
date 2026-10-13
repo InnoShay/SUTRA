@@ -60,12 +60,10 @@ for (const c of contractsToCompile) {
     const artifactPath = path.join(__dirname, c.artifact);
     fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2), 'utf8');
     console.log(`✓ Compiled ${c.name} -> ${c.artifact} (ABI items: ${artifact.abi.length}, bytecode: ${artifact.bytecode.length} chars)`);
-    if (c.name === 'SutraDocumentRegistry') {
-      const publicContractsDir = path.join(__dirname, '..', 'frontend', 'public', 'contracts');
-      fs.mkdirSync(publicContractsDir, { recursive: true });
-      fs.writeFileSync(path.join(publicContractsDir, c.artifact), JSON.stringify(artifact, null, 2), 'utf8');
-      console.log(`✓ Published public deployment artifact -> frontend/public/contracts/${c.artifact}`);
-    }
+    const publicContractsDir = path.join(__dirname, '..', 'frontend', 'public', 'contracts');
+    fs.mkdirSync(publicContractsDir, { recursive: true });
+    fs.writeFileSync(path.join(publicContractsDir, c.artifact), JSON.stringify(artifact, null, 2), 'utf8');
+    console.log(`✓ Published public deployment artifact -> frontend/public/contracts/${c.artifact}`);
   }
 }
 
