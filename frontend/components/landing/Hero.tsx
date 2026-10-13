@@ -12,18 +12,14 @@ export default function Hero() {
   const [isRibbonDragging, setIsRibbonDragging] = useState(false);
   const [isRibbonHovered, setIsRibbonHovered] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const startXRef = useRef(0);
   const scrollLeftRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
 
   // Ensure background video is reliably muted, autoplays, and slowed down smoothly to ~0.8x
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.defaultMuted = true;
-      videoRef.current.muted = true;
-      videoRef.current.playbackRate = 0.8;
-      videoRef.current.play().catch(() => {});
-    }
+    setIsMounted(true);
 
     const checkAuth = async () => {
       try {
@@ -42,6 +38,15 @@ export default function Hero() {
     };
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (isMounted && videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.playbackRate = 0.8;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isMounted]);
 
   // Ribbon Drag to Scroll on Mouse/Touch (Drag-only mode, autoplay disabled)
   const handleRibbonMouseDown = (e: React.MouseEvent) => {
@@ -211,17 +216,19 @@ export default function Hero() {
       <div className="relative rounded-[24px] sm:rounded-[32px] md:rounded-[40px] overflow-hidden bg-gradient-to-b from-[#1075d9] via-[#1a84ec] to-[#3ca3fa] min-h-[700px] sm:min-h-[780px] lg:min-h-[860px] flex flex-col justify-between shadow-none transition-all duration-300">
         
         {/* Muted Background Video (Autoplay, Seamless Loop) */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <video
-            ref={videoRef}
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-          >
-            <source src="/gemini_generated_video_a63509ef.mp4" type="video/mp4" />
-          </video>
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" suppressHydrationWarning>
+          {isMounted && (
+            <video
+              ref={videoRef}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            >
+              <source src="/gemini_generated_video_a63509ef.mp4" type="video/mp4" />
+            </video>
+          )}
           {/* Subtle translucent gradient overlay to harmonize with theme and ensure clear typography contrast */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#1075d9]/40 via-transparent to-[#1075d9]/60" />
         </div>

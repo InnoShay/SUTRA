@@ -421,7 +421,24 @@ async def create_call_request(
     """Allows an eligible student or supporting staff to request counselor contact."""
     now = datetime.now(timezone.utc)
     rec_id = uuid.uuid4()
-    student_uuid = uuid.UUID(payload.student_id) if len(payload.student_id) == 36 else uuid.uuid4()
+    student_uuid = None
+    try:
+        if len(payload.student_id) == 36:
+            student_uuid = uuid.UUID(payload.student_id)
+    except (ValueError, TypeError):
+        pass
+
+    if not student_uuid:
+        from app.models.student import Student
+        stu_q = select(Student).where(
+            (Student.external_ref == payload.student_id) & (Student.institution_id == membership.campus_id)
+        )
+        stu_res = await db.execute(stu_q)
+        stu_obj = stu_res.scalars().first()
+        if stu_obj:
+            student_uuid = stu_obj.id
+        else:
+            student_uuid = membership.user.id if hasattr(membership, 'user') and membership.user else uuid.uuid4()
 
     new_req = CounselorCallRequest(
         id=rec_id,

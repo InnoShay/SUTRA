@@ -96,6 +96,7 @@ import {
   INITIAL_CALL_REQUESTS,
   INITIAL_ESCALATIONS,
 } from './skillhub-data';
+import { DEMO_PERSONAS, DEMO_CAMPUS_ID } from './demo-auth';
 
 export function getApiBaseUrl(): string {
   // 1. Explicit build-time or runtime environment variable (highest priority)
@@ -309,8 +310,11 @@ class ApiClient {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('sutra_auth_token');
-      this.campusId = localStorage.getItem('sutra_active_campus_id');
+      this.token = localStorage.getItem('sutra_auth_token') || DEMO_PERSONAS.faculty.token;
+      this.campusId = localStorage.getItem('sutra_active_campus_id') || DEMO_CAMPUS_ID;
+    } else {
+      this.token = DEMO_PERSONAS.faculty.token;
+      this.campusId = DEMO_CAMPUS_ID;
     }
   }
 
@@ -1366,9 +1370,13 @@ class ApiClient {
 
     if (activeToken) {
       headers['Authorization'] = `Bearer ${activeToken}`;
+    } else if (DEMO_PERSONAS.faculty.token) {
+      headers['Authorization'] = `Bearer ${DEMO_PERSONAS.faculty.token}`;
     }
-    if (this.campusId) {
-      headers['X-Campus-Id'] = this.campusId;
+
+    const effectiveCampusId = this.campusId || (typeof window !== 'undefined' ? localStorage.getItem('sutra_active_campus_id') : null) || DEMO_CAMPUS_ID;
+    if (effectiveCampusId) {
+      headers['X-Campus-Id'] = effectiveCampusId;
     }
 
     const controller = new AbortController();

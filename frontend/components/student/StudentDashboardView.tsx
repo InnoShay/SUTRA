@@ -54,6 +54,7 @@ export function StudentDashboardView() {
     user,
     currentPersona,
     cases,
+    callRequests,
     activeCampusName,
     backendError,
     refreshBackendData,
@@ -78,13 +79,58 @@ export function StudentDashboardView() {
   // Authenticated student reference
   const studentId = currentPersona?.userId || "SYN-1007";
 
+  const mapCallRequestToSummary = React.useCallback((r: any): StudentCaseSummaryDTO => {
+    let title = "Student Support Request";
+    if (r.student_notes && r.student_notes.startsWith("[")) {
+      const endBracket = r.student_notes.indexOf("]");
+      if (endBracket !== -1) {
+        title = r.student_notes.substring(1, endBracket);
+      }
+    } else if (r.student_notes) {
+      title = r.student_notes.split(":")[0].slice(0, 40);
+    }
+
+    return {
+      id: r.id,
+      institution_id: "00000000-0000-0000-0000-000000000001",
+      student_id: r.student_id,
+      title: title,
+      state: (r.status || "REQUESTED").toUpperCase(),
+      severity: (r.risk_score || 0) >= 0.7 ? "HIGH" : "MEDIUM",
+      selected_intervention_key: "counselling_referral",
+      primary_owner_name: r.assigned_counselor_name || "Counselor / Wellbeing Staff",
+      tasks_count: 1,
+      open_tasks_count: r.status === "contact_completed" ? 0 : 1,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    };
+  }, []);
+
   const fetchStudentCases = React.useCallback(async () => {
     setIsLoadingCases(true);
     setCasesError(null);
     setIsDemoPreview(false);
     try {
       const response = await api.proposed.getMyCases();
-      setStudentCases(response.items || []);
+      const backendItems = response.items || [];
+      const matchingCalls = callRequests
+        .filter(
+          (r) =>
+            r.student_id === studentId ||
+            r.external_student_ref === studentId ||
+            studentId === "SYN-1007" ||
+            r.student_id === "66666666-6666-6666-6666-666666666666" ||
+            r.external_student_ref === "66666666-6666-6666-6666-666666666666"
+        )
+        .map(mapCallRequestToSummary);
+
+      const merged = [...matchingCalls];
+      for (const item of backendItems) {
+        if (!merged.some((m) => m.id === item.id)) {
+          merged.push(item);
+        }
+      }
+      setStudentCases(merged);
     } catch (err: any) {
       if (isDemoMode()) {
         const demoFiltered = cases.filter(
@@ -95,8 +141,101 @@ export function StudentDashboardView() {
             c.external_student_ref === "SYN-1007"
         );
         const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
-        setStudentCases(
-          resolvedList.map((c) => ({
+        const matchingCalls = callRequests
+          .filter(
+            (r) =>
+              r.student_id === studentId ||
+              r.external_student_ref === studentId ||
+              studentId === "SYN-1007"
+          )
+          .map(mapCallRequestToSummary);
+
+        const mappedCases = resolvedList.map((c) => ({
+          id: c.id,
+          institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
+          student_id: c.student_id,
+          title: c.selected_intervention_key
+            ? c.selected_intervention_key.replace(/_/g, " ")
+            : "Support Plan",
+          state: c.state,
+          selected_intervention_key: c.selected_intervention_key,
+          primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
+          tasks_count: c.tasks?.length || 0,
+          open_tasks_count:
+            c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+          tasks: c.tasks,
+          events: c.events,
+        } as any));
+
+        setStudentCases([...matchingCalls, ...mappedCases]);
+      } else {
+        setCasesError(
+          err?.message ||
+            "Unable to retrieve student support cases. Backend endpoint GET /api/v1/cases/my-cases is pending release."
+        );
+        setStudentCases([]);
+      }
+    } finally {
+      setIsLoadingCases(false);
+    }
+  }, [studentId, cases, callRequests, mapCallRequestToSummary]);
+
+  // Prevent stale requests and clean state across user / persona changes
+  React.useEffect(() => {
+    let active = true;
+    setIsLoadingCases(true);
+    setCasesError(null);
+    setIsDemoPreview(false);
+    setStudentCases([]);
+
+    api.proposed
+      .getMyCases()
+      .then((res) => {
+        if (!active) return;
+        const backendItems = res.items || [];
+        const matchingCalls = callRequests
+          .filter(
+            (r) =>
+              r.student_id === studentId ||
+              r.external_student_ref === studentId ||
+              studentId === "SYN-1007" ||
+              r.student_id === "66666666-6666-6666-6666-666666666666" ||
+              r.external_student_ref === "66666666-6666-6666-6666-666666666666"
+          )
+          .map(mapCallRequestToSummary);
+
+        const merged = [...matchingCalls];
+        for (const item of backendItems) {
+          if (!merged.some((m) => m.id === item.id)) {
+            merged.push(item);
+          }
+        }
+        setStudentCases(merged);
+        setIsLoadingCases(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isDemoMode()) {
+          const demoFiltered = cases.filter(
+            (c) =>
+              c.student_id === studentId ||
+              c.external_student_ref === studentId ||
+              c.student_id === "SYN-1007" ||
+              c.external_student_ref === "SYN-1007"
+          );
+          const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
+          const matchingCalls = callRequests
+            .filter(
+              (r) =>
+                r.student_id === studentId ||
+                r.external_student_ref === studentId ||
+                studentId === "SYN-1007"
+            )
+            .map(mapCallRequestToSummary);
+
+          const mappedCases = resolvedList.map((c) => ({
             id: c.id,
             institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
             student_id: c.student_id,
@@ -113,66 +252,9 @@ export function StudentDashboardView() {
             updated_at: c.updated_at,
             tasks: c.tasks,
             events: c.events,
-          } as any))
-        );
-      } else {
-        setCasesError(
-          err?.message ||
-            "Unable to retrieve student support cases. Backend endpoint GET /api/v1/cases/my-cases is pending release."
-        );
-        setStudentCases([]);
-      }
-    } finally {
-      setIsLoadingCases(false);
-    }
-  }, [studentId, cases]);
+          } as any));
 
-  // Prevent stale requests and clean state across user / persona changes
-  React.useEffect(() => {
-    let active = true;
-    setIsLoadingCases(true);
-    setCasesError(null);
-    setIsDemoPreview(false);
-    setStudentCases([]);
-
-    api.proposed
-      .getMyCases()
-      .then((res) => {
-        if (!active) return;
-        setStudentCases(res.items || []);
-        setIsLoadingCases(false);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isDemoMode()) {
-          const demoFiltered = cases.filter(
-            (c) =>
-              c.student_id === studentId ||
-              c.external_student_ref === studentId ||
-              c.student_id === "SYN-1007" ||
-              c.external_student_ref === "SYN-1007"
-          );
-          const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
-          setStudentCases(
-            resolvedList.map((c) => ({
-              id: c.id,
-              institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
-              student_id: c.student_id,
-              title: c.selected_intervention_key
-                ? c.selected_intervention_key.replace(/_/g, " ")
-                : "Support Plan",
-              state: c.state,
-              selected_intervention_key: c.selected_intervention_key,
-              primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
-              tasks_count: c.tasks?.length || 0,
-              open_tasks_count:
-                c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
-              created_at: c.created_at,
-              updated_at: c.updated_at,
-              tasks: c.tasks,
-              events: c.events,
-            } as any))
-          );
+          setStudentCases([...matchingCalls, ...mappedCases]);
         } else {
           setCasesError(
             err?.message ||
@@ -186,7 +268,7 @@ export function StudentDashboardView() {
     return () => {
       active = false;
     };
-  }, [currentPersona?.userId, studentId, cases]);
+  }, [currentPersona?.userId, studentId, cases, callRequests, mapCallRequestToSummary]);
 
   // Tasks / Next Steps
   const nextSteps = studentCases.flatMap((c: any) =>

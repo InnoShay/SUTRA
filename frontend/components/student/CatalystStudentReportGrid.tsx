@@ -45,6 +45,10 @@ interface CatalystStudentReportGridProps {
   onRunInference: () => void;
   loadingInference: boolean;
   onSelectTab: (tab: "all" | "ml_risk" | "evidence" | "scenarios" | "observations" | "guidance") => void;
+  inferenceStatus?: "idle" | "loading" | "success" | "auth_error" | "validation_error" | "service_error";
+  inferenceError?: string | null;
+  predictionSource?: "fresh_live" | "cached_historical" | "synthetic_offline" | null;
+  predictionTimestamp?: string | null;
 }
 
 type Timeframe = "1D" | "1W" | "1M" | "3M" | "1Y";
@@ -59,6 +63,10 @@ export function CatalystStudentReportGrid({
   onRunInference,
   loadingInference,
   onSelectTab,
+  inferenceStatus = "idle",
+  inferenceError = null,
+  predictionSource = "cached_historical",
+  predictionTimestamp = null,
 }: CatalystStudentReportGridProps) {
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1W");
   const [selectedTerm, setSelectedTerm] = useState("Fall 2026 Term");
@@ -576,6 +584,21 @@ export function CatalystStudentReportGrid({
             )}
           </div>
 
+          {/* Status feedback pill if success */}
+          {inferenceStatus === "success" && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold animate-in fade-in slide-in-from-right-1 shadow-2xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Live ML Scored: {riskPercent}% ({isAtRisk ? "At Risk" : "On Track"})</span>
+              <button
+                type="button"
+                onClick={() => onSelectTab("ml_risk")}
+                className="underline hover:text-emerald-950 ml-1 text-[11px] cursor-pointer"
+              >
+                Evidence Card &rarr;
+              </button>
+            </div>
+          )}
+
           {/* Primary Catalyst Orange Action Button */}
           <button
             type="button"
@@ -584,10 +607,21 @@ export function CatalystStudentReportGrid({
             className="px-4 py-2 bg-[#ff5b1a] hover:bg-[#ea580c] active:bg-[#c2410c] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-98"
           >
             <Sparkles className={`w-3.5 h-3.5 ${loadingInference ? "animate-spin" : ""}`} />
-            <span>{loadingInference ? "Scoring..." : "+ Run Live Inference"}</span>
+            <span>{loadingInference ? "Scoring Student..." : "+ Run Live Inference"}</span>
           </button>
         </div>
       </div>
+
+      {/* Inline alert if inference error */}
+      {inferenceStatus && inferenceStatus !== "idle" && inferenceStatus !== "loading" && inferenceStatus !== "success" && inferenceError && (
+        <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs flex items-start gap-2.5 text-rose-800 animate-in fade-in slide-in-from-top-1 shadow-2xs">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+          <div className="flex-1">
+            <span className="font-bold block">Inference Error:</span>
+            <span className="text-neutral-700 leading-relaxed block mt-0.5">{inferenceError}</span>
+          </div>
+        </div>
+      )}
 
       {/* ============================================================== */}
       {/* 2. CATALYST 6-CARD DASHBOARD BENTO GRID                        */}
@@ -742,8 +776,13 @@ export function CatalystStudentReportGrid({
         <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-xs flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-neutral-600">
+              <span className="text-xs font-semibold text-neutral-600 flex items-center gap-1.5">
                 Day-30 Risk Telemetry
+                {predictionSource === "fresh_live" && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-bold tracking-wider uppercase border border-emerald-200">
+                    Live Scored
+                  </span>
+                )}
               </span>
               <button
                 type="button"

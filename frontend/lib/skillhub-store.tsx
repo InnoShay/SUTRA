@@ -428,10 +428,8 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     setActiveRoleState(newRole);
     const persona = DEMO_PERSONAS[newRole];
     if (!supabaseSession?.access_token) {
-      if (isDemoMode()) {
-        api.setToken(persona.token);
-        api.setCampusId(DEMO_CAMPUS_ID);
-      }
+      api.setToken(persona.token);
+      api.setCampusId(DEMO_CAMPUS_ID);
       setUser({
         ...CURRENT_USER,
         name: persona.name.split(" ")[0],
@@ -558,14 +556,12 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingBackend(true);
     setBackendError(null);
     try {
-      // Attach development persona token/campus strictly in explicit demo mode
-      if (isDemoMode()) {
-        if (!api.getToken()) {
-          api.setToken(currentPersona.token);
-        }
-        if (!api.getCampusId()) {
-          api.setCampusId(DEMO_CAMPUS_ID);
-        }
+      // Attach development persona token/campus when no Supabase session is present
+      if (!api.getToken()) {
+        api.setToken(currentPersona.token);
+      }
+      if (!api.getCampusId()) {
+        api.setCampusId(DEMO_CAMPUS_ID);
       }
 
       // Check backend health
@@ -1312,7 +1308,52 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
   const requestCounselorCall = async (input: CreateCallRequestInput): Promise<CounselorCallRequestDTO> => {
     try {
       const res = await api.counselors.createCallRequest(input);
-      setCallRequests((prev) => [res, ...prev.filter((r) => r.student_id !== input.student_id)]);
+      setCallRequests((prev) => [res, ...prev.filter((r) => r.id !== res.id)]);
+
+      // Synthesize case record so it appears immediately across student cases & views
+      const synthesizedCase: CaseDetailDTO = {
+        id: res.id,
+        institution_id: DEMO_CAMPUS_ID,
+        student_id: input.student_id,
+        student_display_name: input.student_id === "SYN-1007" ? "Asha (synthetic)" : input.student_id,
+        external_student_ref: input.student_id,
+        primary_owner_user_id: DEMO_PERSONAS.counselor.userId,
+        originating_signal_id: res.signal_id || "sig-support-01",
+        selected_intervention_key: "counselling_referral",
+        state: "REQUESTED",
+        is_escalated: false,
+        version: 1,
+        tasks: [
+          {
+            id: `task-${res.id}-1`,
+            generic_label: "Counselor Consultation & Triage Check-in",
+            domain: "wellbeing",
+            state: "OPEN",
+            due_at: new Date(Date.now() + 86400000 * 2).toISOString(),
+            deadline_version: 1,
+          },
+        ],
+        events: [
+          {
+            id: `evt-${res.id}-1`,
+            event_type: "support_requested",
+            actor_user_id: input.student_id,
+            actor_kind: "student",
+            event_metadata: {
+              notes: input.student_notes,
+              contact_method: input.preferred_contact_method,
+              time_slot: input.preferred_time_slot,
+            },
+            created_at: new Date().toISOString(),
+          },
+        ],
+        follow_ups: [],
+        outcome: null,
+        created_at: res.created_at || new Date().toISOString(),
+        updated_at: res.updated_at || new Date().toISOString(),
+      };
+      setCases((prev) => [synthesizedCase, ...prev.filter((c) => c.id !== res.id)]);
+
       await refreshBackendData().catch(console.warn);
       return res;
     } catch (err: any) {
@@ -1339,7 +1380,51 @@ export function SkillHubProvider({ children }: { children: React.ReactNode }) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      setCallRequests((prev) => [newReq, ...prev.filter((r) => r.student_id !== input.student_id)]);
+      setCallRequests((prev) => [newReq, ...prev.filter((r) => r.id !== newReq.id)]);
+
+      const demoCase: CaseDetailDTO = {
+        id: newReq.id,
+        institution_id: DEMO_CAMPUS_ID,
+        student_id: input.student_id,
+        student_display_name: input.student_id === "SYN-1007" ? "Asha (synthetic)" : input.student_id,
+        external_student_ref: input.student_id,
+        primary_owner_user_id: DEMO_PERSONAS.counselor.userId,
+        originating_signal_id: "sig-support-01",
+        selected_intervention_key: "counselling_referral",
+        state: "REQUESTED",
+        is_escalated: false,
+        version: 1,
+        tasks: [
+          {
+            id: `task-${newReq.id}-1`,
+            generic_label: "Counselor Consultation & Triage Check-in",
+            domain: "wellbeing",
+            state: "OPEN",
+            due_at: new Date(Date.now() + 86400000 * 2).toISOString(),
+            deadline_version: 1,
+          },
+        ],
+        events: [
+          {
+            id: `evt-${newReq.id}-1`,
+            event_type: "support_requested",
+            actor_user_id: input.student_id,
+            actor_kind: "student",
+            event_metadata: {
+              notes: input.student_notes,
+              contact_method: input.preferred_contact_method,
+              time_slot: input.preferred_time_slot,
+            },
+            created_at: new Date().toISOString(),
+          },
+        ],
+        follow_ups: [],
+        outcome: null,
+        created_at: newReq.created_at,
+        updated_at: newReq.updated_at,
+      };
+      setCases((prev) => [demoCase, ...prev.filter((c) => c.id !== newReq.id)]);
+
       return newReq;
     }
   };

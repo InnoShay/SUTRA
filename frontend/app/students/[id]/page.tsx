@@ -724,6 +724,10 @@ export default function StudentDetailPage() {
         signals={studentSignals}
         onRunInference={handleRunMlInference}
         loadingInference={loadingMlInference}
+        inferenceStatus={mlInferenceStatus}
+        inferenceError={mlInferenceError}
+        predictionSource={predictionSource}
+        predictionTimestamp={predictionTimestamp}
         onSelectTab={(tab) => {
           setActiveTab(tab);
           setIsTechnicalDossierOpen(true);

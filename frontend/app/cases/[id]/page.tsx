@@ -20,17 +20,72 @@ import {
 } from "lucide-react";
 import { api, isDemoMode } from "@/lib/api";
 import { DEMO_CASES } from "@/lib/skillhub-data";
+import { CaseDetailDTO } from "@/lib/types";
 
 export default function CaseDetailPage() {
   const params = useParams();
   const caseId = (params?.id as string) || "CASE-SYN-1007";
-  const { cases, user, activeRole, currentPersona, createCaseTask, sendMessageToStudent } = useSkillHub();
+  const { cases, callRequests, user, activeRole, currentPersona, createCaseTask, sendMessageToStudent } = useSkillHub();
+  const [asyncCase, setAsyncCase] = useState<CaseDetailDTO | null>(null);
 
   const isStudent = activeRole === "student";
   const studentId = currentPersona?.userId || "SYN-1007";
 
+  const matchingCall = callRequests.find(
+    (r) =>
+      r.id === caseId ||
+      r.id.toLowerCase() === caseId.toLowerCase() ||
+      (r.id.startsWith("CALL-REQ-") && caseId.includes(r.id.replace("CALL-REQ-", "")))
+  );
+
+  const synthesizedFromCall: CaseDetailDTO | null = matchingCall
+    ? {
+        id: matchingCall.id,
+        institution_id: "00000000-0000-0000-0000-000000000001",
+        student_id: matchingCall.student_id,
+        student_display_name: matchingCall.student_name || "Asha (synthetic)",
+        external_student_ref: matchingCall.external_student_ref || "SYN-1007",
+        originating_signal_id: matchingCall.signal_id || "sig-support-01",
+        selected_intervention_key: "counselling_referral",
+        state: matchingCall.status?.toUpperCase() || "REQUESTED",
+        primary_owner_user_id: matchingCall.assigned_counselor_name || "Dr. Meera Nambiar (Counselor)",
+        due_at: new Date(Date.now() + 86400000 * 2).toISOString(),
+        accepted_at: matchingCall.created_at,
+        is_escalated: false,
+        version: 1,
+        created_at: matchingCall.created_at,
+        updated_at: matchingCall.updated_at,
+        tasks: [
+          {
+            id: `task-${matchingCall.id}-1`,
+            generic_label: "Counselor Consultation & Triage Check-in",
+            domain: "wellbeing",
+            state: matchingCall.status === "contact_completed" ? "COMPLETED" : "OPEN",
+            due_at: new Date(Date.now() + 86400000 * 2).toISOString(),
+            deadline_version: 1,
+          },
+        ],
+        events: [
+          {
+            id: `evt-${matchingCall.id}-1`,
+            event_type: "support_requested",
+            actor_user_id: matchingCall.student_id,
+            actor_kind: "student",
+            event_metadata: {
+              notes: matchingCall.student_notes,
+              contact_method: matchingCall.preferred_contact_method,
+              time_slot: matchingCall.preferred_time_slot,
+            },
+            created_at: matchingCall.created_at,
+          },
+        ],
+        follow_ups: [],
+        outcome: null,
+      }
+    : null;
+
   // Strictly locate matched case without fallback to cases[0]
-  const matchedCase = isStudent
+  const baseMatchedCase = isStudent
     ? cases.find(
         (c) =>
           c.id === caseId &&
@@ -45,6 +100,19 @@ export default function CaseDetailPage() {
         : null)
     : cases.find((c) => c.id === caseId) ||
       (isDemoMode() ? DEMO_CASES.find((c) => c.id === caseId) || null : null);
+
+  const matchedCase = baseMatchedCase || synthesizedFromCall || asyncCase;
+
+  React.useEffect(() => {
+    if (!matchedCase && caseId) {
+      api.cases
+        .get(caseId)
+        .then((res) => {
+          if (res) setAsyncCase(res);
+        })
+        .catch(console.warn);
+    }
+  }, [caseId, matchedCase]);
 
   const [newMessage, setNewMessage] = useState("");
   const [isAddingTask, setIsAddingTask] = useState(false);

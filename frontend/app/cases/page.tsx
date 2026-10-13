@@ -19,7 +19,7 @@ import { api, isDemoMode } from "@/lib/api";
 import { DEMO_CASES } from "@/lib/skillhub-data";
 
 export default function CasesPage() {
-  const { user, currentPersona, cases, activeRole, backendConnected, backendError, refreshBackendData } = useSkillHub();
+  const { user, currentPersona, cases, callRequests, activeRole, backendConnected, backendError, refreshBackendData } = useSkillHub();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
@@ -31,13 +31,58 @@ export default function CasesPage() {
   const [isLoadingStudentCases, setIsLoadingStudentCases] = useState(isStudent);
   const [studentCasesError, setStudentCasesError] = useState<string | null>(null);
 
+  const mapCallRequestToSummary = React.useCallback((r: any): StudentCaseSummaryDTO => {
+    let title = "Student Support Request";
+    if (r.student_notes && r.student_notes.startsWith("[")) {
+      const endBracket = r.student_notes.indexOf("]");
+      if (endBracket !== -1) {
+        title = r.student_notes.substring(1, endBracket);
+      }
+    } else if (r.student_notes) {
+      title = r.student_notes.split(":")[0].slice(0, 40);
+    }
+
+    return {
+      id: r.id,
+      institution_id: "00000000-0000-0000-0000-000000000001",
+      student_id: r.student_id,
+      title: title,
+      state: (r.status || "REQUESTED").toUpperCase(),
+      severity: (r.risk_score || 0) >= 0.7 ? "HIGH" : "MEDIUM",
+      selected_intervention_key: "counselling_referral",
+      primary_owner_name: r.assigned_counselor_name || "Counselor / Wellbeing Staff",
+      tasks_count: 1,
+      open_tasks_count: r.status === "contact_completed" ? 0 : 1,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    };
+  }, []);
+
   const fetchStudentCases = React.useCallback(async () => {
     if (!isStudent) return;
     setIsLoadingStudentCases(true);
     setStudentCasesError(null);
     try {
       const response = await api.proposed.getMyCases();
-      setStudentCases(response.items || []);
+      const backendItems = response.items || [];
+      const matchingCalls = callRequests
+        .filter(
+          (r) =>
+            r.student_id === studentId ||
+            r.external_student_ref === studentId ||
+            studentId === "SYN-1007" ||
+            r.student_id === "66666666-6666-6666-6666-666666666666" ||
+            r.external_student_ref === "66666666-6666-6666-6666-666666666666"
+        )
+        .map(mapCallRequestToSummary);
+
+      const merged = [...matchingCalls];
+      for (const item of backendItems) {
+        if (!merged.some((m) => m.id === item.id)) {
+          merged.push(item);
+        }
+      }
+      setStudentCases(merged);
     } catch (err: any) {
       if (isDemoMode()) {
         const demoFiltered = cases.filter(
@@ -48,24 +93,33 @@ export default function CasesPage() {
             c.external_student_ref === "SYN-1007"
         );
         const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
-        setStudentCases(
-          resolvedList.map((c) => ({
-            id: c.id,
-            institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
-            student_id: c.student_id,
-            title: c.selected_intervention_key
-              ? c.selected_intervention_key.replace(/_/g, " ")
-              : "Support Plan",
-            state: c.state,
-            selected_intervention_key: c.selected_intervention_key,
-            primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
-            tasks_count: c.tasks?.length || 0,
-            open_tasks_count:
-              c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
-            created_at: c.created_at,
-            updated_at: c.updated_at,
-          }))
-        );
+        const matchingCalls = callRequests
+          .filter(
+            (r) =>
+              r.student_id === studentId ||
+              r.external_student_ref === studentId ||
+              studentId === "SYN-1007"
+          )
+          .map(mapCallRequestToSummary);
+
+        const mappedCases = resolvedList.map((c) => ({
+          id: c.id,
+          institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
+          student_id: c.student_id,
+          title: c.selected_intervention_key
+            ? c.selected_intervention_key.replace(/_/g, " ")
+            : "Support Plan",
+          state: c.state,
+          selected_intervention_key: c.selected_intervention_key,
+          primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
+          tasks_count: c.tasks?.length || 0,
+          open_tasks_count:
+            c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+        }));
+
+        setStudentCases([...matchingCalls, ...mappedCases]);
       } else {
         setStudentCasesError(
           err?.message ||
@@ -76,7 +130,7 @@ export default function CasesPage() {
     } finally {
       setIsLoadingStudentCases(false);
     }
-  }, [isStudent, studentId, cases]);
+  }, [isStudent, studentId, cases, callRequests, mapCallRequestToSummary]);
 
   // Load student cases on mount or identity change, clearing stale data
   React.useEffect(() => {
@@ -94,7 +148,25 @@ export default function CasesPage() {
       .getMyCases()
       .then((res) => {
         if (!active) return;
-        setStudentCases(res.items || []);
+        const backendItems = res.items || [];
+        const matchingCalls = callRequests
+          .filter(
+            (r) =>
+              r.student_id === studentId ||
+              r.external_student_ref === studentId ||
+              studentId === "SYN-1007" ||
+              r.student_id === "66666666-6666-6666-6666-666666666666" ||
+              r.external_student_ref === "66666666-6666-6666-6666-666666666666"
+          )
+          .map(mapCallRequestToSummary);
+
+        const merged = [...matchingCalls];
+        for (const item of backendItems) {
+          if (!merged.some((m) => m.id === item.id)) {
+            merged.push(item);
+          }
+        }
+        setStudentCases(merged);
         setIsLoadingStudentCases(false);
       })
       .catch((err) => {
@@ -108,24 +180,33 @@ export default function CasesPage() {
               c.external_student_ref === "SYN-1007"
           );
           const resolvedList = demoFiltered.length > 0 ? demoFiltered : DEMO_CASES;
-          setStudentCases(
-            resolvedList.map((c) => ({
-              id: c.id,
-              institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
-              student_id: c.student_id,
-              title: c.selected_intervention_key
-                ? c.selected_intervention_key.replace(/_/g, " ")
-                : "Support Plan",
-              state: c.state,
-              selected_intervention_key: c.selected_intervention_key,
-              primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
-              tasks_count: c.tasks?.length || 0,
-              open_tasks_count:
-                c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
-              created_at: c.created_at,
-              updated_at: c.updated_at,
-            }))
-          );
+          const matchingCalls = callRequests
+            .filter(
+              (r) =>
+                r.student_id === studentId ||
+                r.external_student_ref === studentId ||
+                studentId === "SYN-1007"
+            )
+            .map(mapCallRequestToSummary);
+
+          const mappedCases = resolvedList.map((c) => ({
+            id: c.id,
+            institution_id: c.institution_id || "00000000-0000-0000-0000-000000000001",
+            student_id: c.student_id,
+            title: c.selected_intervention_key
+              ? c.selected_intervention_key.replace(/_/g, " ")
+              : "Support Plan",
+            state: c.state,
+            selected_intervention_key: c.selected_intervention_key,
+            primary_owner_name: c.primary_owner_user_id || "Faculty Mentor",
+            tasks_count: c.tasks?.length || 0,
+            open_tasks_count:
+              c.tasks?.filter((t) => t.state !== "DONE" && t.state !== "COMPLETED").length || 0,
+            created_at: c.created_at,
+            updated_at: c.updated_at,
+          }));
+
+          setStudentCases([...matchingCalls, ...mappedCases]);
         } else {
           setStudentCasesError(
             err?.message ||
@@ -139,7 +220,7 @@ export default function CasesPage() {
     return () => {
       active = false;
     };
-  }, [isStudent, user.fullName, currentPersona?.userId, studentId, cases]);
+  }, [isStudent, user.fullName, currentPersona?.userId, studentId, cases, callRequests, mapCallRequestToSummary]);
 
   // For students: student-scoped records; for staff: campus-wide authorized queue
   const relevantCases = isStudent ? (studentCases as any[]) : cases;
